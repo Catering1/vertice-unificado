@@ -23,10 +23,13 @@ interface StoreContextType {
   updateProduct: (p: Product) => void;
   deleteProduct: (id: string) => void;
   addPurchase: (p: Omit<Purchase, "id">) => void;
+  updatePurchase: (p: Purchase) => void;
   deletePurchase: (id: string) => void;
   addSale: (s: Omit<Sale, "id" | "profit">) => Sale;
+  updateSale: (s: Omit<Sale, "profit">) => void;
   deleteSale: (id: string) => void;
   addCategory: (c: string) => void;
+  updateCategory: (oldName: string, newName: string) => void;
   deleteCategory: (c: string) => void;
   getProduct: (id: string) => Product | undefined;
 }
@@ -57,6 +60,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addPurchase = (p: Omit<Purchase, "id">) => setPurchases(prev => [...prev, { ...p, id: generateId() }]);
+  const updatePurchase = (p: Purchase) => setPurchases(prev => prev.map(x => x.id === p.id ? p : x));
   const deletePurchase = (id: string) => setPurchases(prev => prev.filter(x => x.id !== id));
 
   const addSale = (s: Omit<Sale, "id" | "profit">) => {
@@ -67,10 +71,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setSales(prev => [...prev, sale]);
     return sale;
   };
+  const updateSale = (s: Omit<Sale, "profit">) => {
+    const product = getProduct(s.productId);
+    const costPerUnit = product?.purchasePrice ?? 0;
+    const profit = (s.salePrice - costPerUnit) * s.quantity;
+    setSales(prev => prev.map(x => x.id === s.id ? { ...s, profit } : x));
+  };
   const deleteSale = (id: string) => setSales(prev => prev.filter(x => x.id !== id));
 
   const addCategory = (c: string) => {
     if (!categories.includes(c)) setCategories(prev => [...prev, c]);
+  };
+  const updateCategory = (oldName: string, newName: string) => {
+    if (!newName.trim() || categories.includes(newName.trim())) return;
+    setCategories(prev => prev.map(c => c === oldName ? newName.trim() : c));
+    // Update products that use this category
+    setProducts(prev => prev.map(p => p.category === oldName ? { ...p, category: newName.trim() } : p));
   };
   const deleteCategory = (c: string) => setCategories(prev => prev.filter(x => x !== c));
 
@@ -78,9 +94,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     <StoreContext.Provider value={{
       products, purchases, sales, categories,
       addProduct, updateProduct, deleteProduct,
-      addPurchase, deletePurchase,
-      addSale, deleteSale,
-      addCategory, deleteCategory, getProduct,
+      addPurchase, updatePurchase, deletePurchase,
+      addSale, updateSale, deleteSale,
+      addCategory, updateCategory, deleteCategory, getProduct,
     }}>
       {children}
     </StoreContext.Provider>

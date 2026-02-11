@@ -1,18 +1,20 @@
 import { useState } from "react";
 import { useStore } from "@/lib/store";
+import { Sale } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Sales() {
-  const { sales, products, addSale, deleteSale, getProduct } = useStore();
+  const { sales, products, addSale, updateSale, deleteSale, getProduct } = useStore();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [productId, setProductId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [salePrice, setSalePrice] = useState("");
@@ -21,12 +23,32 @@ export default function Sales() {
   const [searchDate, setSearchDate] = useState("");
   const [productFilter, setProductFilter] = useState("all");
 
+  const openNew = () => {
+    setEditingSale(null);
+    setProductId(""); setQuantity(""); setSalePrice(""); setDate(new Date().toISOString().slice(0, 10));
+    setDialogOpen(true);
+  };
+
+  const openEdit = (s: Sale) => {
+    setEditingSale(s);
+    setProductId(s.productId);
+    setQuantity(String(s.quantity));
+    setSalePrice(String(s.salePrice));
+    setDate(s.date);
+    setDialogOpen(true);
+  };
+
   const save = () => {
     if (!productId || !quantity || !salePrice || !date) { toast.error("Preencha todos os campos"); return; }
-    const sale = addSale({ productId, quantity: Number(quantity), salePrice: Number(salePrice), date });
-    toast.success(`Venda registrada — Lucro: ${sale.profit.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}`);
+    if (editingSale) {
+      updateSale({ id: editingSale.id, productId, quantity: Number(quantity), salePrice: Number(salePrice), date });
+      toast.success("Venda atualizada");
+    } else {
+      const sale = addSale({ productId, quantity: Number(quantity), salePrice: Number(salePrice), date });
+      toast.success(`Venda registrada — Lucro: ${sale.profit.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}`);
+    }
     setDialogOpen(false);
-    setProductId(""); setQuantity(""); setSalePrice("");
+    setEditingSale(null);
   };
 
   const filtered = sales.filter(s => {
@@ -51,12 +73,11 @@ export default function Sales() {
 
         <div className="flex-1" />
 
+        <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" />Nova Venda</Button>
+
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Nova Venda</Button>
-          </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Registrar Venda</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editingSale ? "Editar Venda" : "Registrar Venda"}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-2">
               <div>
                 <Label>Produto *</Label>
@@ -72,7 +93,7 @@ export default function Sales() {
                 <div><Label>Preço de Venda *</Label><Input type="number" min={0} step={0.01} value={salePrice} onChange={e => setSalePrice(e.target.value)} /></div>
               </div>
               <div><Label>Data *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
-              <Button onClick={save}>Registrar</Button>
+              <Button onClick={save}>{editingSale ? "Guardar" : "Registrar"}</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -89,7 +110,7 @@ export default function Sales() {
                 <TableHead>Total</TableHead>
                 <TableHead>Lucro</TableHead>
                 <TableHead>Data</TableHead>
-                <TableHead className="w-16"></TableHead>
+                <TableHead className="w-24"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -102,11 +123,16 @@ export default function Sales() {
                   <TableCell>{fmt(s.salePrice)}</TableCell>
                   <TableCell>{fmt(s.salePrice * s.quantity)}</TableCell>
                   <TableCell className={s.profit >= 0 ? "text-success font-medium" : "text-destructive font-medium"}>{fmt(s.profit)}</TableCell>
-                  <TableCell>{new Date(s.date).toLocaleDateString("pt-BR")}</TableCell>
+                  <TableCell>{new Date(s.date).toLocaleDateString("pt-PT")}</TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => { deleteSale(s.id); toast.success("Venda removida"); }}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(s)}>
+                        <Pencil className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => { deleteSale(s.id); toast.success("Venda removida"); }}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
