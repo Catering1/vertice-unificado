@@ -1,7 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, ShoppingCart, TrendingUp, Settings, Menu, X } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, TrendingUp, Settings, Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
@@ -13,6 +15,7 @@ const navItems = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
+  const { signOut, user } = useAuth();
 
   return (
     <div className="flex min-h-screen w-full">
@@ -30,7 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       >
         <div className="flex items-center gap-2 px-6 py-5">
           <TrendingUp className="h-7 w-7 text-sidebar-primary" />
-          <span className="text-lg font-bold text-sidebar-primary">GestãoPro</span>
+          <span className="text-lg font-bold text-sidebar-primary">Vending Machine</span>
         </div>
 
         <nav className="flex-1 space-y-1 px-3 py-2">
@@ -55,8 +58,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="border-t border-sidebar-border px-6 py-4 text-xs text-sidebar-foreground/50">
-          © 2026 GestãoPro
+        <div className="border-t border-sidebar-border px-4 py-3 space-y-2">
+          <p className="text-xs text-sidebar-foreground/50 truncate">{user?.email}</p>
+          <Button variant="ghost" size="sm" className="w-full justify-start text-sidebar-foreground/70" onClick={signOut}>
+            <LogOut className="mr-2 h-4 w-4" />Sair
+          </Button>
         </div>
       </aside>
 

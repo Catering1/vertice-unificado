@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 export default function Purchases() {
-  const { purchases, products, categories, addPurchase, updatePurchase, deletePurchase, getProduct, addProduct } = useStore();
+  const { purchases, sales, products, categories, addPurchase, updatePurchase, deletePurchase, getProduct, addProduct } = useStore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
 
@@ -27,6 +27,7 @@ export default function Purchases() {
   const [searchDate, setSearchDate] = useState("");
   const [catFilter, setCatFilter] = useState("all");
   const [supplierFilter, setSupplierFilter] = useState("");
+  const [stockFilter, setStockFilter] = useState("all"); // all, active, sold
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,7 +52,7 @@ export default function Purchases() {
     setDialogOpen(true);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!productName.trim() || !quantity || !price || !date) {
       toast.error("Preencha todos os campos");
       return;
@@ -64,25 +65,38 @@ export default function Purchases() {
     if (existingProd) {
       productId = existingProd.id;
     } else {
-      productId = addProduct({ name: productName.trim(), category: productCategory, purchasePrice: priceParsed, supplier: productSupplier });
+      productId = await addProduct({ name: productName.trim(), category: productCategory, purchasePrice: priceParsed, supplier: productSupplier });
     }
 
     if (editingPurchase) {
-      updatePurchase({ id: editingPurchase.id, productId, quantity: qtyParsed, price: priceParsed, date });
+      await updatePurchase({ id: editingPurchase.id, productId, quantity: qtyParsed, price: priceParsed, date });
       toast.success("Compra atualizada");
     } else {
-      addPurchase({ productId, quantity: qtyParsed, price: priceParsed, date });
+      await addPurchase({ productId, quantity: qtyParsed, price: priceParsed, date });
       toast.success("Compra registrada");
     }
     setDialogOpen(false);
     setEditingPurchase(null);
   };
 
+  // Calculate stock per product
+  const productStock = useMemo(() => {
+    const purchased = new Map<string, number>();
+    const sold = new Map<string, number>();
+    purchases.forEach(p => purchased.set(p.productId, (purchased.get(p.productId) ?? 0) + p.quantity));
+    sales.forEach(s => sold.set(s.productId, (sold.get(s.productId) ?? 0) + s.quantity));
+    const stock = new Map<string, number>();
+    purchased.forEach((qty, id) => stock.set(id, Math.max(0, qty - (sold.get(id) ?? 0))));
+    return stock;
+  }, [purchases, sales]);
+
   const filtered = purchases.filter(p => {
     const prod = getProduct(p.productId);
     if (catFilter !== "all" && prod?.category !== catFilter) return false;
     if (supplierFilter && prod?.supplier !== supplierFilter) return false;
     if (searchDate && !p.date.includes(searchDate)) return false;
+    if (stockFilter === "active" && (productStock.get(p.productId) ?? 0) <= 0) return false;
+    if (stockFilter === "sold" && (productStock.get(p.productId) ?? 0) > 0) return false;
     return true;
   });
 
@@ -92,14 +106,14 @@ export default function Purchases() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
         let count = 0;
-        rows.forEach(row => {
+        for (const row of rows) {
           const name = String(row["Produto"] || row["Nome"] || row["produto"] || row["nome"] || "").trim();
           const qty = Number(row["Quantidade"] || row["quantidade"] || row["Qtd"] || row["qtd"] || 1);
           const priceVal = Number(row["Preço"] || row["preco"] || row["Preço Unitário"] || row["precio"] || 0);
@@ -107,18 +121,18 @@ export default function Purchases() {
           const category = String(row["Categoria"] || row["categoria"] || "Outros");
           const supplier = String(row["Fornecedor"] || row["fornecedor"] || "");
 
-          if (!name) return;
+          if (!name) continue;
 
           let prod = products.find(p => p.name.toLowerCase() === name.toLowerCase());
           let prodId: string;
           if (prod) {
             prodId = prod.id;
           } else {
-            prodId = addProduct({ name, category, purchasePrice: priceVal, supplier });
+            prodId = await addProduct({ name, category, purchasePrice: priceVal, supplier });
           }
-          addPurchase({ productId: prodId, quantity: qty, price: priceVal, date: dateVal });
+          await addPurchase({ productId: prodId, quantity: qty, price: priceVal, date: dateVal });
           count++;
-        });
+        }
         toast.success(`${count} registos importados`);
       } catch {
         toast.error("Erro ao ler o ficheiro");
@@ -144,6 +158,14 @@ export default function Purchases() {
           <SelectContent>
             <SelectItem value="__all__">Todos</SelectItem>
             {suppliers.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={stockFilter} onValueChange={setStockFilter}>
+          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Estado" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="active">Ativos</SelectItem>
+            <SelectItem value="sold">Vendidos</SelectItem>
           </SelectContent>
         </Select>
 
@@ -221,7 +243,7 @@ export default function Purchases() {
                       <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
                         <Pencil className="h-4 w-4 text-muted-foreground" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => { deletePurchase(p.id); toast.success("Compra removida"); }}>
+                      <Button variant="ghost" size="icon" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
