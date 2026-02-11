@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useStore } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,13 +7,18 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Search } from "lucide-react";
+import { Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 export default function Purchases() {
-  const { purchases, products, categories, addPurchase, deletePurchase, getProduct } = useStore();
+  const { purchases, products, categories, addPurchase, deletePurchase, getProduct, addProduct } = useStore();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [productId, setProductId] = useState("");
+
+  // New purchase form - now with product name instead of select
+  const [productName, setProductName] = useState("");
+  const [productCategory, setProductCategory] = useState("Outros");
+  const [productSupplier, setProductSupplier] = useState("");
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
@@ -22,14 +27,31 @@ export default function Purchases() {
   const [catFilter, setCatFilter] = useState("all");
   const [supplierFilter, setSupplierFilter] = useState("");
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const suppliers = useMemo(() => [...new Set(products.map(p => p.supplier).filter(Boolean))], [products]);
 
   const save = () => {
-    if (!productId || !quantity || !price || !date) { toast.error("Preencha todos os campos"); return; }
-    addPurchase({ productId, quantity: Number(quantity), price: Number(price), date });
+    if (!productName.trim() || !quantity || !price || !date) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+    const priceParsed = Number(price);
+    const qtyParsed = Number(quantity);
+
+    // Find existing product or create new one
+    let existingProd = products.find(p => p.name.toLowerCase() === productName.trim().toLowerCase());
+    let productId: string;
+    if (existingProd) {
+      productId = existingProd.id;
+    } else {
+      productId = addProduct({ name: productName.trim(), category: productCategory, purchasePrice: priceParsed, supplier: productSupplier });
+    }
+
+    addPurchase({ productId, quantity: qtyParsed, price: priceParsed, date });
     toast.success("Compra registrada");
     setDialogOpen(false);
-    setProductId(""); setQuantity(""); setPrice("");
+    setProductName(""); setQuantity(""); setPrice(""); setProductSupplier(""); setProductCategory("Outros");
   };
 
   const filtered = purchases.filter(p => {
@@ -40,7 +62,47 @@ export default function Purchases() {
     return true;
   });
 
-  const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const fmt = (v: number) => v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
+
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
+        let count = 0;
+        rows.forEach(row => {
+          const name = String(row["Produto"] || row["Nome"] || row["produto"] || row["nome"] || "").trim();
+          const qty = Number(row["Quantidade"] || row["quantidade"] || row["Qtd"] || row["qtd"] || 1);
+          const priceVal = Number(row["Preço"] || row["preco"] || row["Preço Unitário"] || row["precio"] || 0);
+          const dateVal = String(row["Data"] || row["data"] || new Date().toISOString().slice(0, 10));
+          const category = String(row["Categoria"] || row["categoria"] || "Outros");
+          const supplier = String(row["Fornecedor"] || row["fornecedor"] || "");
+
+          if (!name) return;
+
+          let prod = products.find(p => p.name.toLowerCase() === name.toLowerCase());
+          let prodId: string;
+          if (prod) {
+            prodId = prod.id;
+          } else {
+            prodId = addProduct({ name, category, purchasePrice: priceVal, supplier });
+          }
+          addPurchase({ productId: prodId, quantity: qty, price: priceVal, date: dateVal });
+          count++;
+        });
+        toast.success(`${count} registos importados`);
+      } catch {
+        toast.error("Erro ao ler o ficheiro");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+  };
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -63,6 +125,11 @@ export default function Purchases() {
 
         <div className="flex-1" />
 
+        <input type="file" ref={fileInputRef} accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportExcel} />
+        <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+          <Upload className="mr-2 h-4 w-4" />Importar Excel
+        </Button>
+
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button><Plus className="mr-2 h-4 w-4" />Nova Compra</Button>
@@ -71,13 +138,26 @@ export default function Purchases() {
             <DialogHeader><DialogTitle>Registrar Compra</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-2">
               <div>
-                <Label>Produto *</Label>
-                <Select value={productId} onValueChange={(v) => { setProductId(v); const p = products.find(x => x.id === v); if (p) setPrice(String(p.purchasePrice)); }}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Label>Nome do Produto *</Label>
+                <Input placeholder="Ex: iPhone 15, Camiseta..." value={productName} onChange={e => setProductName(e.target.value)} list="product-suggestions" />
+                <datalist id="product-suggestions">
+                  {products.map(p => <option key={p.id} value={p.name} />)}
+                </datalist>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Categoria</Label>
+                  <Select value={productCategory} onValueChange={setProductCategory}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Fornecedor</Label>
+                  <Input placeholder="Fornecedor" value={productSupplier} onChange={e => setProductSupplier(e.target.value)} />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Quantidade *</Label><Input type="number" min={1} value={quantity} onChange={e => setQuantity(e.target.value)} /></div>
@@ -112,7 +192,7 @@ export default function Purchases() {
                   <TableCell>{p.quantity}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{fmt(p.price * p.quantity)}</TableCell>
-                  <TableCell>{new Date(p.date).toLocaleDateString("pt-BR")}</TableCell>
+                  <TableCell>{new Date(p.date).toLocaleDateString("pt-PT")}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" onClick={() => { deletePurchase(p.id); toast.success("Compra removida"); }}>
                       <Trash2 className="h-4 w-4 text-destructive" />
