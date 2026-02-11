@@ -24,9 +24,9 @@ export default function SettingsPage() {
   const [editingCat, setEditingCat] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  const addCat = () => {
+  const addCat = async () => {
     if (!newCat.trim()) return;
-    addCategory(newCat.trim());
+    await addCategory(newCat.trim());
     setNewCat("");
     toast.success("Categoria adicionada");
   };
@@ -36,10 +36,10 @@ export default function SettingsPage() {
     setEditValue(cat);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editingCat || !editValue.trim()) return;
     if (editValue.trim() !== editingCat) {
-      updateCategory(editingCat, editValue.trim());
+      await updateCategory(editingCat, editValue.trim());
       toast.success("Categoria renomeada");
     }
     setEditingCat(null);
@@ -117,7 +117,7 @@ export default function SettingsPage() {
                         <Button variant="ghost" size="icon" onClick={() => startEdit(c)}>
                           <Pencil className="h-4 w-4 text-muted-foreground" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => { deleteCategory(c); toast.success("Categoria removida"); }}>
+                        <Button variant="ghost" size="icon" onClick={async () => { await deleteCategory(c); toast.success("Categoria removida"); }}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>

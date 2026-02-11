@@ -38,13 +38,13 @@ export default function Sales() {
     setDialogOpen(true);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!productId || !quantity || !salePrice || !date) { toast.error("Preencha todos os campos"); return; }
     if (editingSale) {
-      updateSale({ id: editingSale.id, productId, quantity: Number(quantity), salePrice: Number(salePrice), date });
+      await updateSale({ id: editingSale.id, productId, quantity: Number(quantity), salePrice: Number(salePrice), date });
       toast.success("Venda atualizada");
     } else {
-      const sale = addSale({ productId, quantity: Number(quantity), salePrice: Number(salePrice), date });
+      const sale = await addSale({ productId, quantity: Number(quantity), salePrice: Number(salePrice), date });
       toast.success(`Venda registrada — Lucro: ${sale.profit.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}`);
     }
     setDialogOpen(false);
@@ -129,7 +129,7 @@ export default function Sales() {
                       <Button variant="ghost" size="icon" onClick={() => openEdit(s)}>
                         <Pencil className="h-4 w-4 text-muted-foreground" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => { deleteSale(s.id); toast.success("Venda removida"); }}>
+                      <Button variant="ghost" size="icon" onClick={async () => { await deleteSale(s.id); toast.success("Venda removida"); }}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
