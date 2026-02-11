@@ -147,21 +147,27 @@ export default function Purchases() {
       <div className="flex flex-wrap items-center gap-3">
         <Input type="month" value={searchDate} onChange={e => setSearchDate(e.target.value)} className="w-[180px]" />
         <Select value={catFilter} onValueChange={setCatFilter}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
+          <SelectTrigger className="w-[200px]">
+            <span className="truncate">{catFilter === "all" ? "Categoria: Todas" : `Categoria: ${catFilter}`}</span>
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
             {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={supplierFilter || "__all__"} onValueChange={v => setSupplierFilter(v === "__all__" ? "" : v)}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Fornecedor" /></SelectTrigger>
+          <SelectTrigger className="w-[210px]">
+            <span className="truncate">{supplierFilter ? `Fornecedor: ${supplierFilter}` : "Fornecedor: Todos"}</span>
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">Todos</SelectItem>
             {suppliers.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={stockFilter} onValueChange={setStockFilter}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Estado" /></SelectTrigger>
+          <SelectTrigger className="w-[180px]">
+            <span className="truncate">{stockFilter === "all" ? "Estado: Todos" : stockFilter === "active" ? "Estado: Ativos" : "Estado: Vendidos"}</span>
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="active">Ativos</SelectItem>
