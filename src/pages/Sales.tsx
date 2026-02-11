@@ -24,7 +24,7 @@ export default function Sales() {
   const save = () => {
     if (!productId || !quantity || !salePrice || !date) { toast.error("Preencha todos os campos"); return; }
     const sale = addSale({ productId, quantity: Number(quantity), salePrice: Number(salePrice), date });
-    toast.success(`Venda registrada — Lucro: ${sale.profit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`);
+    toast.success(`Venda registrada — Lucro: ${sale.profit.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}`);
     setDialogOpen(false);
     setProductId(""); setQuantity(""); setSalePrice("");
   };
@@ -35,7 +35,7 @@ export default function Sales() {
     return true;
   });
 
-  const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const fmt = (v: number) => v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 
   return (
     <div className="space-y-4 animate-fade-in">

@@ -1,11 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, ShoppingCart, TrendingUp, Settings, Menu, X } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, TrendingUp, Settings, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
-  { label: "Produtos", path: "/produtos", icon: Package },
   { label: "Compras", path: "/compras", icon: ShoppingCart },
   { label: "Vendas", path: "/vendas", icon: TrendingUp },
   { label: "Configurações", path: "/configuracoes", icon: Settings },
@@ -25,7 +24,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed z-50 flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground transition-transform md:static md:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar text-sidebar-foreground transition-transform md:static md:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >

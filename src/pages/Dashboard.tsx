@@ -42,7 +42,7 @@ export default function Dashboard() {
       .map(([month, profit]) => ({ month, profit }));
   }, [sales]);
 
-  const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const fmt = (v: number) => v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 
   const kpis = [
     { label: "Total Compras", value: fmt(totalPurchases), icon: ShoppingCart, color: "text-chart-1" },

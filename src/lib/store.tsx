@@ -19,7 +19,7 @@ interface StoreContextType {
   purchases: Purchase[];
   sales: Sale[];
   categories: string[];
-  addProduct: (p: Omit<Product, "id">) => void;
+  addProduct: (p: Omit<Product, "id">) => string;
   updateProduct: (p: Product) => void;
   deleteProduct: (id: string) => void;
   addPurchase: (p: Omit<Purchase, "id">) => void;
@@ -33,7 +33,7 @@ interface StoreContextType {
 
 const StoreContext = createContext<StoreContextType | null>(null);
 
-const DEFAULT_CATEGORIES = ["Eletrônicos", "Roupas", "Alimentos", "Casa", "Outros"];
+const DEFAULT_CATEGORIES = ["Eletrónica", "Roupas", "Alimentos", "Casa", "Outros"];
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>(() => load("products", []));
@@ -48,7 +48,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const getProduct = useCallback((id: string) => products.find(p => p.id === id), [products]);
 
-  const addProduct = (p: Omit<Product, "id">) => setProducts(prev => [...prev, { ...p, id: generateId() }]);
+  const addProduct = (p: Omit<Product, "id">) => { const id = generateId(); setProducts(prev => [...prev, { ...p, id }]); return id; };
   const updateProduct = (p: Product) => setProducts(prev => prev.map(x => x.id === p.id ? p : x));
   const deleteProduct = (id: string) => {
     setProducts(prev => prev.filter(x => x.id !== id));
