@@ -3,9 +3,8 @@ import { useStore } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Download } from "lucide-react";
+import { Plus, Trash2, Download, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 function downloadCSV(filename: string, headers: string[], rows: string[][]) {
@@ -20,14 +19,30 @@ function downloadCSV(filename: string, headers: string[], rows: string[][]) {
 }
 
 export default function SettingsPage() {
-  const { categories, addCategory, deleteCategory, products, purchases, sales, getProduct } = useStore();
+  const { categories, addCategory, updateCategory, deleteCategory, products, purchases, sales, getProduct } = useStore();
   const [newCat, setNewCat] = useState("");
+  const [editingCat, setEditingCat] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const addCat = () => {
     if (!newCat.trim()) return;
     addCategory(newCat.trim());
     setNewCat("");
     toast.success("Categoria adicionada");
+  };
+
+  const startEdit = (cat: string) => {
+    setEditingCat(cat);
+    setEditValue(cat);
+  };
+
+  const saveEdit = () => {
+    if (!editingCat || !editValue.trim()) return;
+    if (editValue.trim() !== editingCat) {
+      updateCategory(editingCat, editValue.trim());
+      toast.success("Categoria renomeada");
+    }
+    setEditingCat(null);
   };
 
   const exportProducts = () => {
@@ -74,11 +89,39 @@ export default function SettingsPage() {
             <TableBody>
               {categories.map(c => (
                 <TableRow key={c}>
-                  <TableCell>{c}</TableCell>
-                  <TableCell className="w-16">
-                    <Button variant="ghost" size="icon" onClick={() => { deleteCategory(c); toast.success("Categoria removida"); }}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                  <TableCell>
+                    {editingCat === c ? (
+                      <Input
+                        value={editValue}
+                        onChange={e => setEditValue(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") setEditingCat(null); }}
+                        autoFocus
+                        className="h-8"
+                      />
+                    ) : (
+                      c
+                    )}
+                  </TableCell>
+                  <TableCell className="w-24 text-right">
+                    {editingCat === c ? (
+                      <div className="flex gap-1 justify-end">
+                        <Button variant="ghost" size="icon" onClick={saveEdit}>
+                          <Check className="h-4 w-4 text-success" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setEditingCat(null)}>
+                          <X className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-1 justify-end">
+                        <Button variant="ghost" size="icon" onClick={() => startEdit(c)}>
+                          <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { deleteCategory(c); toast.success("Categoria removida"); }}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

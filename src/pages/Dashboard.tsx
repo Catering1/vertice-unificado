@@ -1,7 +1,7 @@
 import { useStore } from "@/lib/store";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ShoppingCart, TrendingUp, Package } from "lucide-react";
+import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend,
@@ -18,6 +18,23 @@ export default function Dashboard() {
   const totalPurchases = useMemo(() => purchases.reduce((s, p) => s + p.price * p.quantity, 0), [purchases]);
   const totalSales = useMemo(() => sales.reduce((s, v) => s + v.salePrice * v.quantity, 0), [sales]);
   const totalProfit = useMemo(() => sales.reduce((s, v) => s + v.profit, 0), [sales]);
+
+  // Stock value: for each product, stock = purchased qty - sold qty, value = stock * purchase price
+  const stockValue = useMemo(() => {
+    const purchasedQty = new Map<string, number>();
+    const soldQty = new Map<string, number>();
+    purchases.forEach(p => purchasedQty.set(p.productId, (purchasedQty.get(p.productId) ?? 0) + p.quantity));
+    sales.forEach(s => soldQty.set(s.productId, (soldQty.get(s.productId) ?? 0) + s.quantity));
+
+    let total = 0;
+    purchasedQty.forEach((qty, productId) => {
+      const sold = soldQty.get(productId) ?? 0;
+      const inStock = Math.max(0, qty - sold);
+      const product = getProduct(productId);
+      total += inStock * (product?.purchasePrice ?? 0);
+    });
+    return total;
+  }, [purchases, sales, getProduct]);
 
   const topProducts = useMemo(() => {
     const map = new Map<string, number>();
@@ -48,13 +65,14 @@ export default function Dashboard() {
     { label: "Total Compras", value: fmt(totalPurchases), icon: ShoppingCart, color: "text-chart-1" },
     { label: "Total Vendas", value: fmt(totalSales), icon: DollarSign, color: "text-chart-2" },
     { label: "Lucro Total", value: fmt(totalProfit), icon: TrendingUp, color: totalProfit >= 0 ? "text-success" : "text-destructive" },
-    { label: "Produtos", value: products.length, icon: Package, color: "text-chart-3" },
+    { label: "Valor em Stock", value: fmt(stockValue), icon: Warehouse, color: "text-chart-3" },
+    { label: "Produtos", value: products.length, icon: Package, color: "text-chart-4" },
   ];
 
   return (
     <div className="space-y-6 animate-fade-in">
       {/* KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {kpis.map(({ label, value, icon: Icon, color }) => (
           <Card key={label}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">

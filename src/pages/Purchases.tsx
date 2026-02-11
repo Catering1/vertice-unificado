@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from "react";
 import { useStore } from "@/lib/store";
+import { Purchase } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,15 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Upload } from "lucide-react";
+import { Plus, Trash2, Upload, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 export default function Purchases() {
-  const { purchases, products, categories, addPurchase, deletePurchase, getProduct, addProduct } = useStore();
+  const { purchases, products, categories, addPurchase, updatePurchase, deletePurchase, getProduct, addProduct } = useStore();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
 
-  // New purchase form - now with product name instead of select
   const [productName, setProductName] = useState("");
   const [productCategory, setProductCategory] = useState("Outros");
   const [productSupplier, setProductSupplier] = useState("");
@@ -31,6 +32,25 @@ export default function Purchases() {
 
   const suppliers = useMemo(() => [...new Set(products.map(p => p.supplier).filter(Boolean))], [products]);
 
+  const openNew = () => {
+    setEditingPurchase(null);
+    setProductName(""); setProductCategory("Outros"); setProductSupplier("");
+    setQuantity(""); setPrice(""); setDate(new Date().toISOString().slice(0, 10));
+    setDialogOpen(true);
+  };
+
+  const openEdit = (p: Purchase) => {
+    const prod = getProduct(p.productId);
+    setEditingPurchase(p);
+    setProductName(prod?.name ?? "");
+    setProductCategory(prod?.category ?? "Outros");
+    setProductSupplier(prod?.supplier ?? "");
+    setQuantity(String(p.quantity));
+    setPrice(String(p.price));
+    setDate(p.date);
+    setDialogOpen(true);
+  };
+
   const save = () => {
     if (!productName.trim() || !quantity || !price || !date) {
       toast.error("Preencha todos os campos");
@@ -39,7 +59,6 @@ export default function Purchases() {
     const priceParsed = Number(price);
     const qtyParsed = Number(quantity);
 
-    // Find existing product or create new one
     let existingProd = products.find(p => p.name.toLowerCase() === productName.trim().toLowerCase());
     let productId: string;
     if (existingProd) {
@@ -48,10 +67,15 @@ export default function Purchases() {
       productId = addProduct({ name: productName.trim(), category: productCategory, purchasePrice: priceParsed, supplier: productSupplier });
     }
 
-    addPurchase({ productId, quantity: qtyParsed, price: priceParsed, date });
-    toast.success("Compra registrada");
+    if (editingPurchase) {
+      updatePurchase({ id: editingPurchase.id, productId, quantity: qtyParsed, price: priceParsed, date });
+      toast.success("Compra atualizada");
+    } else {
+      addPurchase({ productId, quantity: qtyParsed, price: priceParsed, date });
+      toast.success("Compra registrada");
+    }
     setDialogOpen(false);
-    setProductName(""); setQuantity(""); setPrice(""); setProductSupplier(""); setProductCategory("Outros");
+    setEditingPurchase(null);
   };
 
   const filtered = purchases.filter(p => {
@@ -130,12 +154,11 @@ export default function Purchases() {
           <Upload className="mr-2 h-4 w-4" />Importar Excel
         </Button>
 
+        <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" />Nova Compra</Button>
+
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Nova Compra</Button>
-          </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Registrar Compra</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editingPurchase ? "Editar Compra" : "Registrar Compra"}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-2">
               <div>
                 <Label>Nome do Produto *</Label>
@@ -164,7 +187,7 @@ export default function Purchases() {
                 <div><Label>Preço Unitário *</Label><Input type="number" min={0} step={0.01} value={price} onChange={e => setPrice(e.target.value)} /></div>
               </div>
               <div><Label>Data *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
-              <Button onClick={save}>Registrar</Button>
+              <Button onClick={save}>{editingPurchase ? "Guardar" : "Registrar"}</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -180,7 +203,7 @@ export default function Purchases() {
                 <TableHead>Preço Unit.</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Data</TableHead>
-                <TableHead className="w-16"></TableHead>
+                <TableHead className="w-24"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -194,9 +217,14 @@ export default function Purchases() {
                   <TableCell>{fmt(p.price * p.quantity)}</TableCell>
                   <TableCell>{new Date(p.date).toLocaleDateString("pt-PT")}</TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => { deletePurchase(p.id); toast.success("Compra removida"); }}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
+                        <Pencil className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => { deletePurchase(p.id); toast.success("Compra removida"); }}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
