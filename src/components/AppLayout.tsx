@@ -1,9 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, ShoppingCart, TrendingUp, Settings, Menu, X, LogOut } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, TrendingUp, Settings, Menu, X, LogOut, UserCircle } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
@@ -75,6 +76,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <h1 className="text-lg font-semibold">
             {navItems.find(n => n.path === pathname)?.label ?? ""}
           </h1>
+          <div className="flex-1" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <UserCircle className="h-6 w-6 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">{user?.email}</div>
+              <DropdownMenuItem onClick={signOut} className="cursor-pointer">
+                <LogOut className="mr-2 h-4 w-4" />Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6">
           {children}

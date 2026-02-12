@@ -88,8 +88,7 @@ export default function Sales() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Quantidade *</Label><Input type="number" min={1} value={quantity} onChange={e => setQuantity(e.target.value)} /></div>
+              <div>
                 <div><Label>Preço de Venda *</Label><Input type="number" min={0} step={0.01} value={salePrice} onChange={e => setSalePrice(e.target.value)} /></div>
               </div>
               <div><Label>Data *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
@@ -105,9 +104,7 @@ export default function Sales() {
             <TableHeader>
               <TableRow>
                 <TableHead>Produto</TableHead>
-                <TableHead>Qtd</TableHead>
                 <TableHead>Preço Venda</TableHead>
-                <TableHead>Total</TableHead>
                 <TableHead>Lucro</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="w-24"></TableHead>
@@ -115,13 +112,11 @@ export default function Sales() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma venda encontrada</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhuma venda encontrada</TableCell></TableRow>
               ) : filtered.map(s => (
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">{getProduct(s.productId)?.name ?? "—"}</TableCell>
-                  <TableCell>{s.quantity}</TableCell>
                   <TableCell>{fmt(s.salePrice)}</TableCell>
-                  <TableCell>{fmt(s.salePrice * s.quantity)}</TableCell>
                   <TableCell className="text-emerald-500 font-semibold">{fmt(s.profit)}</TableCell>
                   <TableCell>{new Date(s.date).toLocaleDateString("pt-PT")}</TableCell>
                   <TableCell>
