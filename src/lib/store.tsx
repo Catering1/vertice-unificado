@@ -2,6 +2,28 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Product, Purchase, Sale } from "@/types";
+import { z } from "zod";
+
+const ProductSchema = z.object({
+  name: z.string().min(1).max(200).trim(),
+  category: z.string().min(1).max(100),
+  purchasePrice: z.number().min(0).max(1000000),
+  supplier: z.string().max(200).trim(),
+});
+
+const PurchaseSchema = z.object({
+  productId: z.string().uuid(),
+  quantity: z.number().int().min(1).max(100000),
+  price: z.number().min(0).max(1000000),
+  date: z.string(),
+});
+
+const SaleSchema = z.object({
+  productId: z.string().uuid(),
+  quantity: z.number().int().min(1).max(100000),
+  salePrice: z.number().min(0).max(1000000),
+  date: z.string(),
+});
 
 interface StoreContextType {
   products: Product[];
@@ -79,8 +101,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const getProduct = useCallback((id: string) => products.find(p => p.id === id), [products]);
 
   const addProduct = async (p: Omit<Product, "id">): Promise<string> => {
+    const validated = ProductSchema.parse(p);
     const { data, error } = await supabase.from("products").insert({
-      user_id: user!.id, name: p.name, category: p.category, purchase_price: p.purchasePrice, supplier: p.supplier,
+      user_id: user!.id, name: validated.name, category: validated.category, purchase_price: validated.purchasePrice, supplier: validated.supplier,
     } as any).select().single();
     if (error) throw error;
     const newProd: Product = { id: data.id, name: data.name, category: data.category, purchasePrice: Number(data.purchase_price), supplier: data.supplier };
@@ -103,8 +126,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addPurchase = async (p: Omit<Purchase, "id">) => {
+    const validated = PurchaseSchema.parse(p);
     const { data, error } = await supabase.from("purchases").insert({
-      user_id: user!.id, product_id: p.productId, quantity: p.quantity, price: p.price, date: p.date,
+      user_id: user!.id, product_id: validated.productId, quantity: validated.quantity, price: validated.price, date: validated.date,
     } as any).select().single();
     if (error) throw error;
     setPurchases(prev => [...prev, { id: data.id, productId: data.product_id, quantity: data.quantity, price: Number(data.price), date: data.date }]);
@@ -123,11 +147,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addSale = async (s: Omit<Sale, "id" | "profit">): Promise<Sale> => {
-    const product = getProduct(s.productId);
+    const validated = SaleSchema.parse(s);
+    const product = getProduct(validated.productId);
     const costPerUnit = product?.purchasePrice ?? 0;
-    const profit = (s.salePrice - costPerUnit) * s.quantity;
+    const profit = (validated.salePrice - costPerUnit) * validated.quantity;
     const { data, error } = await supabase.from("sales").insert({
-      user_id: user!.id, product_id: s.productId, quantity: s.quantity, sale_price: s.salePrice, profit, date: s.date,
+      user_id: user!.id, product_id: validated.productId, quantity: validated.quantity, sale_price: validated.salePrice, profit, date: validated.date,
     } as any).select().single();
     if (error) throw error;
     const sale: Sale = { id: data.id, productId: data.product_id, quantity: data.quantity, salePrice: Number(data.sale_price), profit: Number(data.profit), date: data.date };
