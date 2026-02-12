@@ -196,13 +196,6 @@ export default function Purchases() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>Fornecedor</Label>
-                  <Input placeholder="Fornecedor" value={productSupplier} onChange={e => setProductSupplier(e.target.value)} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Quantidade *</Label><Input type="number" min={1} value={quantity} onChange={e => setQuantity(e.target.value)} /></div>
                 <div><Label>Preço Unitário *</Label><Input type="number" min={0} step={0.01} value={price} onChange={e => setPrice(e.target.value)} /></div>
               </div>
               <div><Label>Data *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
