@@ -122,7 +122,7 @@ export default function Sales() {
                   <TableCell>{s.quantity}</TableCell>
                   <TableCell>{fmt(s.salePrice)}</TableCell>
                   <TableCell>{fmt(s.salePrice * s.quantity)}</TableCell>
-                  <TableCell className={s.profit >= 0 ? "text-success font-medium" : "text-destructive font-medium"}>{fmt(s.profit)}</TableCell>
+                  <TableCell className="text-emerald-500 font-semibold">{fmt(s.profit)}</TableCell>
                   <TableCell>{new Date(s.date).toLocaleDateString("pt-PT")}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">

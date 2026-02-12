@@ -155,15 +155,6 @@ export default function Purchases() {
             {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={supplierFilter || "__all__"} onValueChange={v => setSupplierFilter(v === "__all__" ? "" : v)}>
-          <SelectTrigger className="w-[210px]">
-            <span className="truncate">{supplierFilter ? `Fornecedor: ${supplierFilter}` : "Fornecedor: Todos"}</span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">Todos</SelectItem>
-            {suppliers.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-          </SelectContent>
-        </Select>
         <Select value={stockFilter} onValueChange={setStockFilter}>
           <SelectTrigger className="w-[180px]">
             <span className="truncate">{stockFilter === "all" ? "Estado: Todos" : stockFilter === "active" ? "Estado: Ativos" : "Estado: Vendidos"}</span>
@@ -227,7 +218,7 @@ export default function Purchases() {
             <TableHeader>
               <TableRow>
                 <TableHead>Produto</TableHead>
-                <TableHead>Quantidade</TableHead>
+                
                 <TableHead>Preço Unit.</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Data</TableHead>
@@ -240,7 +231,7 @@ export default function Purchases() {
               ) : filtered.map(p => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}</TableCell>
-                  <TableCell>{p.quantity}</TableCell>
+                  
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{fmt(p.price * p.quantity)}</TableCell>
                   <TableCell>{new Date(p.date).toLocaleDateString("pt-PT")}</TableCell>

@@ -48,6 +48,18 @@ export default function Dashboard() {
       .map(([name, qty]) => ({ name, qty }));
   }, [sales, getProduct]);
 
+  const profitByProduct = useMemo(() => {
+    const map = new Map<string, number>();
+    sales.forEach(s => {
+      const name = getProduct(s.productId)?.name ?? "Desconhecido";
+      map.set(name, (map.get(name) ?? 0) + s.profit);
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name, profit]) => ({ name, profit }));
+  }, [sales, getProduct]);
+
   const profitOverTime = useMemo(() => {
     const map = new Map<string, number>();
     sales.forEach(s => {
@@ -64,7 +76,7 @@ export default function Dashboard() {
   const kpis = [
     { label: "Total Compras", value: fmt(totalPurchases), icon: ShoppingCart, color: "text-chart-1" },
     { label: "Total Vendas", value: fmt(totalSales), icon: DollarSign, color: "text-chart-2" },
-    { label: "Lucro Total", value: fmt(totalProfit), icon: TrendingUp, color: totalProfit >= 0 ? "text-success" : "text-destructive" },
+    { label: "Lucro Total", value: fmt(totalProfit), icon: TrendingUp, color: "text-emerald-500" },
     { label: "Valor em Stock", value: fmt(stockValue), icon: Warehouse, color: "text-chart-3" },
     { label: "Produtos", value: products.length, icon: Package, color: "text-chart-4" },
   ];
@@ -140,6 +152,30 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Profit by product */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Lucro por Produto</CardTitle>
+        </CardHeader>
+        <CardContent className="h-72">
+          {profitByProduct.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+              Adicione vendas para ver o gráfico
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={profitByProduct} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,13%,91%)" />
+                <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v: number) => fmt(v)} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={120} />
+                <Tooltip formatter={(v: number) => fmt(v)} />
+                <Bar dataKey="profit" name="Lucro" radius={[0, 4, 4, 0]} fill="hsl(152,60%,42%)" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Category breakdown pie */}
       {sales.length > 0 && (
