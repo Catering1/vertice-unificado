@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,25 @@ export default function AuthPage() {
     e.preventDefault();
     if (!email || !password) { toast.error("Preencha todos os campos"); return; }
     setLoading(true);
+
+    if (!isLogin) {
+      // Check if email is authorized before signup
+      try {
+        const { data } = await supabase.functions.invoke("check-allowed-email", {
+          body: { email },
+        });
+        if (!data?.allowed) {
+          setLoading(false);
+          toast.error("Este email não está autorizado a registar-se. Contacte o administrador.");
+          return;
+        }
+      } catch {
+        setLoading(false);
+        toast.error("Erro ao verificar autorização. Tente novamente.");
+        return;
+      }
+    }
+
     const { error } = isLogin
       ? await signIn(email, password)
       : await signUp(email, password);
