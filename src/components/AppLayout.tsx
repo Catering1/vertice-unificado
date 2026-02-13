@@ -32,9 +32,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex items-center gap-2 px-6 py-5">
-          <TrendingUp className="h-7 w-7 text-sidebar-primary" />
-          <span className="text-lg font-bold text-sidebar-primary">Vending Machine</span>
+        <div className="flex items-center justify-between px-6 py-5">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-7 w-7 text-sidebar-primary" />
+            <span className="text-lg font-bold text-sidebar-primary">Vending Machine</span>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50">
+                <UserCircle className="h-6 w-6" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">{user?.email}</div>
+              <DropdownMenuItem onClick={signOut} className="cursor-pointer">
+                <LogOut className="mr-2 h-4 w-4" />Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <nav className="flex-1 space-y-1 px-3 py-2">
@@ -67,19 +82,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <button onClick={() => setOpen(!open)} className="md:hidden text-foreground">
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <UserCircle className="h-6 w-6 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">{user?.email}</div>
-              <DropdownMenuItem onClick={signOut} className="cursor-pointer">
-                <LogOut className="mr-2 h-4 w-4" />Sair
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
           <h1 className="text-lg font-semibold">
             {navItems.find(n => n.path === pathname)?.label ?? ""}
           </h1>
