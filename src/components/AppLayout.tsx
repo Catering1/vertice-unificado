@@ -67,23 +67,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <button onClick={() => setOpen(!open)} className="md:hidden text-foreground">
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
-          <h1 className="text-lg font-semibold">
-            {navItems.find(n => n.path === pathname)?.label ?? ""}
-          </h1>
-          <div className="flex-1" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">
                 <UserCircle className="h-6 w-6 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="start" className="w-48">
               <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">{user?.email}</div>
               <DropdownMenuItem onClick={signOut} className="cursor-pointer">
                 <LogOut className="mr-2 h-4 w-4" />Sair
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <h1 className="text-lg font-semibold">
+            {navItems.find(n => n.path === pathname)?.label ?? ""}
+          </h1>
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6">
           {children}
