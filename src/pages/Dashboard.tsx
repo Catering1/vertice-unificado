@@ -92,7 +92,7 @@ export default function Dashboard() {
               <Icon className={`h-5 w-5 ${color}`} />
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{value}</p>
+              <p className={`text-2xl font-bold ${label === "Lucro Total" ? "text-emerald-500" : ""}`}>{value}</p>
             </CardContent>
           </Card>
         ))}
