@@ -9,7 +9,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
-  { label: "Produtos", path: "/produtos", icon: Package },
   { label: "Compras", path: "/compras", icon: ShoppingCart },
   { label: "Vendas", path: "/vendas", icon: TrendingUp },
   { label: "Configurações", path: "/configuracoes", icon: Settings },
