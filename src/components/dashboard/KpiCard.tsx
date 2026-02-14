@@ -8,9 +8,10 @@ interface KpiCardProps {
   icon: LucideIcon;
   iconBg: string;
   iconColor: string;
+  valueClassName?: string;
 }
 
-export default function KpiCard({ label, value, icon: Icon, iconBg, iconColor }: KpiCardProps) {
+export default function KpiCard({ label, value, icon: Icon, iconBg, iconColor, valueClassName }: KpiCardProps) {
   return (
     <Card className="shadow-md hover:shadow-lg transition-shadow duration-200">
       <CardContent className="flex items-start gap-4 p-5">
@@ -19,7 +20,7 @@ export default function KpiCard({ label, value, icon: Icon, iconBg, iconColor }:
         </div>
         <div className="min-w-0 flex-1 text-center">
           <p className="text-xs font-medium text-muted-foreground">{label}</p>
-          <p className="mt-1 text-xl font-bold tracking-tight">{value}</p>
+          <p className={cn("mt-1 text-xl font-bold tracking-tight", valueClassName)}>{value}</p>
         </div>
       </CardContent>
     </Card>

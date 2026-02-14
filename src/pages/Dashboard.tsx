@@ -72,7 +72,7 @@ export default function Dashboard() {
   const kpis = [
     { label: "Total Compras", value: fmt(totalPurchases), icon: ShoppingCart, iconBg: "bg-chart-1/15", iconColor: "text-chart-1" },
     { label: "Total Vendas", value: fmt(totalSales), icon: DollarSign, iconBg: "bg-chart-2/15", iconColor: "text-chart-2" },
-    { label: "Lucro Total", value: fmt(totalProfit), icon: TrendingUp, iconBg: "bg-success/15", iconColor: "text-success" },
+    { label: "Lucro Total", value: fmt(totalProfit), icon: TrendingUp, iconBg: "bg-success/15", iconColor: "text-success", valueClassName: "text-emerald-500" },
     { label: "Valor em Stock", value: fmt(stockValue), icon: Warehouse, iconBg: "bg-chart-3/15", iconColor: "text-chart-3" },
     { label: "Produtos", value: String(products.length), icon: Package, iconBg: "bg-chart-4/15", iconColor: "text-chart-4" },
   ];
