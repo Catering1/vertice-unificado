@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Upload, Pencil } from "lucide-react";
+import { Plus, Trash2, Upload, Pencil, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+
+type SortField = "product" | "price" | "total" | "date";
+type SortDir = "asc" | "desc";
 
 export default function Purchases() {
   const { purchases, sales, products, categories, addPurchase, updatePurchase, deletePurchase, getProduct, addProduct } = useStore();
@@ -20,23 +23,22 @@ export default function Purchases() {
   const [productName, setProductName] = useState("");
   const [productCategory, setProductCategory] = useState("Outros");
   const [productSupplier, setProductSupplier] = useState("");
-  const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
 
   const [searchDate, setSearchDate] = useState("");
   const [catFilter, setCatFilter] = useState("all");
-  const [supplierFilter, setSupplierFilter] = useState("");
-  const [stockFilter, setStockFilter] = useState("all"); // all, active, sold
+  const [stockFilter, setStockFilter] = useState("all");
+
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const suppliers = useMemo(() => [...new Set(products.map(p => p.supplier).filter(Boolean))], [products]);
 
   const openNew = () => {
     setEditingPurchase(null);
     setProductName(""); setProductCategory("Outros"); setProductSupplier("");
-    setQuantity(""); setPrice(""); setDate(new Date().toISOString().slice(0, 10));
+    setPrice(""); setDate(new Date().toISOString().slice(0, 10));
     setDialogOpen(true);
   };
 
@@ -46,19 +48,17 @@ export default function Purchases() {
     setProductName(prod?.name ?? "");
     setProductCategory(prod?.category ?? "Outros");
     setProductSupplier(prod?.supplier ?? "");
-    setQuantity(String(p.quantity));
     setPrice(String(p.price));
     setDate(p.date);
     setDialogOpen(true);
   };
 
   const save = async () => {
-    if (!productName.trim() || !quantity || !price || !date) {
+    if (!productName.trim() || !price || !date) {
       toast.error("Preencha todos os campos");
       return;
     }
     const priceParsed = Number(price);
-    const qtyParsed = Number(quantity);
 
     let existingProd = products.find(p => p.name.toLowerCase() === productName.trim().toLowerCase());
     let productId: string;
@@ -69,17 +69,16 @@ export default function Purchases() {
     }
 
     if (editingPurchase) {
-      await updatePurchase({ id: editingPurchase.id, productId, quantity: qtyParsed, price: priceParsed, date });
+      await updatePurchase({ id: editingPurchase.id, productId, quantity: 1, price: priceParsed, date });
       toast.success("Compra atualizada");
     } else {
-      await addPurchase({ productId, quantity: qtyParsed, price: priceParsed, date });
+      await addPurchase({ productId, quantity: 1, price: priceParsed, date });
       toast.success("Compra registrada");
     }
     setDialogOpen(false);
     setEditingPurchase(null);
   };
 
-  // Calculate stock per product
   const productStock = useMemo(() => {
     const purchased = new Map<string, number>();
     const sold = new Map<string, number>();
@@ -90,15 +89,45 @@ export default function Purchases() {
     return stock;
   }, [purchases, sales]);
 
-  const filtered = purchases.filter(p => {
-    const prod = getProduct(p.productId);
-    if (catFilter !== "all" && prod?.category !== catFilter) return false;
-    if (supplierFilter && prod?.supplier !== supplierFilter) return false;
-    if (searchDate && !p.date.includes(searchDate)) return false;
-    if (stockFilter === "active" && (productStock.get(p.productId) ?? 0) <= 0) return false;
-    if (stockFilter === "sold" && (productStock.get(p.productId) ?? 0) > 0) return false;
-    return true;
-  });
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="ml-1 h-3.5 w-3.5 text-muted-foreground/50" />;
+    return sortDir === "asc" ? <ArrowUp className="ml-1 h-3.5 w-3.5" /> : <ArrowDown className="ml-1 h-3.5 w-3.5" />;
+  };
+
+  const filtered = useMemo(() => {
+    let result = purchases.filter(p => {
+      const prod = getProduct(p.productId);
+      if (catFilter !== "all" && prod?.category !== catFilter) return false;
+      if (searchDate && !p.date.includes(searchDate)) return false;
+      if (stockFilter === "active" && (productStock.get(p.productId) ?? 0) <= 0) return false;
+      if (stockFilter === "sold" && (productStock.get(p.productId) ?? 0) > 0) return false;
+      return true;
+    });
+
+    if (sortField) {
+      result = [...result].sort((a, b) => {
+        let cmp = 0;
+        switch (sortField) {
+          case "product": cmp = (getProduct(a.productId)?.name ?? "").localeCompare(getProduct(b.productId)?.name ?? ""); break;
+          case "price": cmp = a.price - b.price; break;
+          case "total": cmp = (a.price * a.quantity) - (b.price * b.quantity); break;
+          case "date": cmp = a.date.localeCompare(b.date); break;
+        }
+        return sortDir === "asc" ? cmp : -cmp;
+      });
+    }
+
+    return result;
+  }, [purchases, catFilter, searchDate, stockFilter, productStock, sortField, sortDir, getProduct]);
 
   const fmt = (v: number) => v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 
@@ -145,16 +174,8 @@ export default function Purchases() {
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-wrap items-center gap-3">
+        {/* Filter order: Data, Estado, Categoria */}
         <Input type="month" value={searchDate} onChange={e => setSearchDate(e.target.value)} className="w-[180px]" />
-        <Select value={catFilter} onValueChange={setCatFilter}>
-          <SelectTrigger className="w-[200px]">
-            <span className="truncate">{catFilter === "all" ? "Categoria: Todas" : `Categoria: ${catFilter}`}</span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas</SelectItem>
-            {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
         <Select value={stockFilter} onValueChange={setStockFilter}>
           <SelectTrigger className="w-[180px]">
             <span className="truncate">{stockFilter === "all" ? "Estado: Todos" : stockFilter === "active" ? "Estado: Ativos" : "Estado: Vendidos"}</span>
@@ -163,6 +184,15 @@ export default function Purchases() {
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="active">Ativos</SelectItem>
             <SelectItem value="sold">Vendidos</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={catFilter} onValueChange={setCatFilter}>
+          <SelectTrigger className="w-[200px]">
+            <span className="truncate">{catFilter === "all" ? "Categoria: Todas" : `Categoria: ${catFilter}`}</span>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
 
@@ -210,21 +240,27 @@ export default function Purchases() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Produto</TableHead>
-                
-                <TableHead>Preço Unit.</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Data</TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("product")}>
+                  <div className="flex items-center">Produto <SortIcon field="product" /></div>
+                </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("price")}>
+                  <div className="flex items-center">Preço Unit. <SortIcon field="price" /></div>
+                </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("total")}>
+                  <div className="flex items-center">Total <SortIcon field="total" /></div>
+                </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("date")}>
+                  <div className="flex items-center">Data <SortIcon field="date" /></div>
+                </TableHead>
                 <TableHead className="w-24"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : filtered.map(p => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}</TableCell>
-                  
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{fmt(p.price * p.quantity)}</TableCell>
                   <TableCell>{new Date(p.date).toLocaleDateString("pt-PT")}</TableCell>

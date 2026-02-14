@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { Sale } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,11 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 
+type SortField = "product" | "salePrice" | "profit" | "date";
+type SortDir = "asc" | "desc";
+
 export default function Sales() {
-  const { sales, products, addSale, updateSale, deleteSale, getProduct } = useStore();
+  const { sales, products, categories, addSale, updateSale, deleteSale, getProduct } = useStore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [productId, setProductId] = useState("");
@@ -21,7 +24,10 @@ export default function Sales() {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
 
   const [searchDate, setSearchDate] = useState("");
-  const [productFilter, setProductFilter] = useState("all");
+  const [catFilter, setCatFilter] = useState("all");
+
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const openNew = () => {
     setEditingSale(null);
@@ -51,23 +57,58 @@ export default function Sales() {
     setEditingSale(null);
   };
 
-  const filtered = sales.filter(s => {
-    if (productFilter !== "all" && s.productId !== productFilter) return false;
-    if (searchDate && !s.date.includes(searchDate)) return false;
-    return true;
-  });
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="ml-1 h-3.5 w-3.5 text-muted-foreground/50" />;
+    return sortDir === "asc" ? <ArrowUp className="ml-1 h-3.5 w-3.5" /> : <ArrowDown className="ml-1 h-3.5 w-3.5" />;
+  };
+
+  const filtered = useMemo(() => {
+    let result = sales.filter(s => {
+      const prod = getProduct(s.productId);
+      if (catFilter !== "all" && prod?.category !== catFilter) return false;
+      if (searchDate && !s.date.includes(searchDate)) return false;
+      return true;
+    });
+
+    if (sortField) {
+      result = [...result].sort((a, b) => {
+        let cmp = 0;
+        switch (sortField) {
+          case "product": cmp = (getProduct(a.productId)?.name ?? "").localeCompare(getProduct(b.productId)?.name ?? ""); break;
+          case "salePrice": cmp = a.salePrice - b.salePrice; break;
+          case "profit": cmp = a.profit - b.profit; break;
+          case "date": cmp = a.date.localeCompare(b.date); break;
+        }
+        return sortDir === "asc" ? cmp : -cmp;
+      });
+    }
+
+    return result;
+  }, [sales, catFilter, searchDate, sortField, sortDir, getProduct]);
 
   const fmt = (v: number) => v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-wrap items-center gap-3">
+        {/* Filters: Data, Categoria */}
         <Input type="month" value={searchDate} onChange={e => setSearchDate(e.target.value)} className="w-[180px]" />
-        <Select value={productFilter} onValueChange={setProductFilter}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Produto" /></SelectTrigger>
+        <Select value={catFilter} onValueChange={setCatFilter}>
+          <SelectTrigger className="w-[200px]">
+            <span className="truncate">{catFilter === "all" ? "Categoria: Todas" : `Categoria: ${catFilter}`}</span>
+          </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            <SelectItem value="all">Todas</SelectItem>
+            {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
 
@@ -103,10 +144,18 @@ export default function Sales() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Produto</TableHead>
-                <TableHead>Preço Venda</TableHead>
-                <TableHead>Lucro</TableHead>
-                <TableHead>Data</TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("product")}>
+                  <div className="flex items-center">Produto <SortIcon field="product" /></div>
+                </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("salePrice")}>
+                  <div className="flex items-center">Preço Venda <SortIcon field="salePrice" /></div>
+                </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("profit")}>
+                  <div className="flex items-center">Lucro <SortIcon field="profit" /></div>
+                </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("date")}>
+                  <div className="flex items-center">Data <SortIcon field="date" /></div>
+                </TableHead>
                 <TableHead className="w-24"></TableHead>
               </TableRow>
             </TableHeader>
