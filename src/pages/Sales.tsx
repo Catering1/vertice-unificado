@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useStore } from "@/lib/store";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import { Sale } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,42 +16,52 @@ type SortField = "product" | "salePrice" | "profit" | "date";
 type SortDir = "asc" | "desc";
 
 export default function Sales() {
-  const { sales, products, categories, addSale, updateSale, deleteSale, getProduct } = useStore();
+  const { sales, purchases, products, categories, addSale, updateSale, deleteSale, getProduct } = useStore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [productId, setProductId] = useState("");
-  const [quantity, setQuantity] = useState("");
   const [salePrice, setSalePrice] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
 
-  const [searchDate, setSearchDate] = useState("");
-  const [catFilter, setCatFilter] = useState("all");
+  const [searchDate, setSearchDate] = usePersistedState("sales-searchDate", "");
+  const [catFilter, setCatFilter] = usePersistedState("sales-catFilter", "all");
 
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortField, setSortField] = usePersistedState<SortField | null>("sales-sortField", null);
+  const [sortDir, setSortDir] = usePersistedState<SortDir>("sales-sortDir", "asc");
+
+  // Products that have stock (purchased but not yet sold)
+  const availableProducts = useMemo(() => {
+    const purchased = new Map<string, number>();
+    const sold = new Map<string, number>();
+    purchases.forEach(p => purchased.set(p.productId, (purchased.get(p.productId) ?? 0) + p.quantity));
+    sales.forEach(s => sold.set(s.productId, (sold.get(s.productId) ?? 0) + s.quantity));
+    return products.filter(p => {
+      const stock = (purchased.get(p.id) ?? 0) - (sold.get(p.id) ?? 0);
+      return stock > 0;
+    });
+  }, [products, purchases, sales]);
 
   const openNew = () => {
     setEditingSale(null);
-    setProductId(""); setQuantity(""); setSalePrice(""); setDate(new Date().toISOString().slice(0, 10));
+    setProductId(""); setSalePrice(""); setDate(new Date().toISOString().slice(0, 10));
     setDialogOpen(true);
   };
 
   const openEdit = (s: Sale) => {
     setEditingSale(s);
     setProductId(s.productId);
-    setQuantity(String(s.quantity));
     setSalePrice(String(s.salePrice));
     setDate(s.date);
     setDialogOpen(true);
   };
 
   const save = async () => {
-    if (!productId || !quantity || !salePrice || !date) { toast.error("Preencha todos os campos"); return; }
+    if (!productId || !salePrice || !date) { toast.error("Preencha todos os campos"); return; }
     if (editingSale) {
-      await updateSale({ id: editingSale.id, productId, quantity: Number(quantity), salePrice: Number(salePrice), date });
+      await updateSale({ id: editingSale.id, productId, quantity: 1, salePrice: Number(salePrice), date });
       toast.success("Venda atualizada");
     } else {
-      const sale = await addSale({ productId, quantity: Number(quantity), salePrice: Number(salePrice), date });
+      const sale = await addSale({ productId, quantity: 1, salePrice: Number(salePrice), date });
       toast.success(`Venda registrada — Lucro: ${sale.profit.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}`);
     }
     setDialogOpen(false);
@@ -100,8 +111,7 @@ export default function Sales() {
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-wrap items-center gap-3">
-        {/* Filters: Data, Categoria */}
-        <Input type="month" value={searchDate} onChange={e => setSearchDate(e.target.value)} className="w-[180px]" />
+        <Input type="month" value={searchDate} onChange={e => setSearchDate(e.target.value)} className="w-[160px] text-sm" />
         <Select value={catFilter} onValueChange={setCatFilter}>
           <SelectTrigger className="w-[200px]">
             <span className="truncate">{catFilter === "all" ? "Categoria: Todas" : `Categoria: ${catFilter}`}</span>
@@ -125,12 +135,13 @@ export default function Sales() {
                 <Select value={productId} onValueChange={setProductId}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
-                    {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                    {(editingSale ? products : availableProducts).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <div><Label>Preço de Venda *</Label><Input type="number" min={0} step={0.01} value={salePrice} onChange={e => setSalePrice(e.target.value)} /></div>
+                <Label>Preço de Venda *</Label>
+                <Input type="number" min={0} step={0.01} value={salePrice} onChange={e => setSalePrice(e.target.value)} />
               </div>
               <div><Label>Data *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
               <Button onClick={save}>{editingSale ? "Guardar" : "Registrar"}</Button>

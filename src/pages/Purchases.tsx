@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from "react";
 import { useStore } from "@/lib/store";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import { Purchase } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,12 +27,12 @@ export default function Purchases() {
   const [price, setPrice] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
 
-  const [searchDate, setSearchDate] = useState("");
-  const [catFilter, setCatFilter] = useState("all");
-  const [stockFilter, setStockFilter] = useState("all");
+  const [searchDate, setSearchDate] = usePersistedState("purchases-searchDate", "");
+  const [catFilter, setCatFilter] = usePersistedState("purchases-catFilter", "all");
+  const [stockFilter, setStockFilter] = usePersistedState("purchases-stockFilter", "all");
 
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortField, setSortField] = usePersistedState<SortField | null>("purchases-sortField", null);
+  const [sortDir, setSortDir] = usePersistedState<SortDir>("purchases-sortDir", "asc");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -175,7 +176,7 @@ export default function Purchases() {
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-wrap items-center gap-3">
         {/* Filter order: Data, Estado, Categoria */}
-        <Input type="month" value={searchDate} onChange={e => setSearchDate(e.target.value)} className="w-[180px]" />
+        <Input type="month" value={searchDate} onChange={e => setSearchDate(e.target.value)} className="w-[160px] text-sm" />
         <Select value={stockFilter} onValueChange={setStockFilter}>
           <SelectTrigger className="w-[180px]">
             <span className="truncate">{stockFilter === "all" ? "Estado: Todos" : stockFilter === "active" ? "Estado: Ativos" : "Estado: Vendidos"}</span>
