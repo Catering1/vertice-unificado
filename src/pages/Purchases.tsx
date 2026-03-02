@@ -60,7 +60,7 @@ function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: str
 }
 
 export default function Purchases() {
-  const { purchases, sales, products, categories, addPurchase, updatePurchase, deletePurchase, getProduct, addProduct } = useStore();
+  const { purchases, sales, products, categories, addPurchase, updatePurchase, deletePurchase, getProduct, addProduct, updateProduct } = useStore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
 
@@ -108,6 +108,10 @@ export default function Purchases() {
     let productId: string;
     if (existingProd) {
       productId = existingProd.id;
+      // Sync product purchasePrice if it changed
+      if (existingProd.purchasePrice !== priceParsed) {
+        await updateProduct({ ...existingProd, purchasePrice: priceParsed });
+      }
     } else {
       productId = await addProduct({ name: productName.trim(), category: productCategory, purchasePrice: priceParsed, supplier: productSupplier });
     }
