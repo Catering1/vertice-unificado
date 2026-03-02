@@ -186,27 +186,32 @@ export default function Purchases() {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
         let count = 0;
+        let skipped = 0;
         for (const row of rows) {
           const name = String(row["Produto"] || row["Nome"] || row["produto"] || row["nome"] || "").trim();
           const qty = Number(row["Quantidade"] || row["quantidade"] || row["Qtd"] || row["qtd"] || 1);
           const priceVal = Number(row["Preço"] || row["preco"] || row["Preço Unitário"] || row["precio"] || 0);
           const dateVal = String(row["Data"] || row["data"] || new Date().toISOString().slice(0, 10));
-          const category = String(row["Categoria"] || row["categoria"] || "Outros");
-          const supplier = String(row["Fornecedor"] || row["fornecedor"] || "");
+          const category = String(row["Categoria"] || row["categoria"] || "Outros").slice(0, 100);
+          const supplier = String(row["Fornecedor"] || row["fornecedor"] || "").slice(0, 200);
 
-          if (!name) continue;
+          // Validate all fields
+          if (!name || name.length > 200) { skipped++; continue; }
+          if (isNaN(qty) || qty < 1 || qty > 100000 || !Number.isInteger(qty)) { skipped++; continue; }
+          if (isNaN(priceVal) || priceVal < 0 || priceVal > 1000000) { skipped++; continue; }
+          if (!/^\d{4}-\d{2}-\d{2}/.test(dateVal)) { skipped++; continue; }
 
           let prod = products.find(p => p.name.toLowerCase() === name.toLowerCase());
           let prodId: string;
           if (prod) {
             prodId = prod.id;
           } else {
-            prodId = await addProduct({ name, category, purchasePrice: priceVal, supplier });
+            prodId = await addProduct({ name: name.slice(0, 200), category, purchasePrice: priceVal, supplier });
           }
           await addPurchase({ productId: prodId, quantity: qty, price: priceVal, date: dateVal });
           count++;
         }
-        toast.success(`${count} registos importados`);
+        toast.success(`${count} registos importados${skipped > 0 ? ` (${skipped} ignorados por dados inválidos)` : ""}`);
       } catch {
         toast.error("Erro ao ler o ficheiro");
       }

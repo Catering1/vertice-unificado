@@ -43,7 +43,10 @@ export default function AuthPage() {
       : await signUp(email, password);
     setLoading(false);
     if (error) {
-      toast.error(error.message);
+      const genericMessage = isLogin
+        ? "Email ou password inválidos. Por favor, tente novamente."
+        : "Não foi possível criar a conta. Verifique os dados e tente novamente.";
+      toast.error(genericMessage);
     } else if (!isLogin) {
       toast.success("Conta criada! Verifique o seu email para confirmar.");
     }
