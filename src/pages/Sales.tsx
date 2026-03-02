@@ -9,11 +9,54 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Pencil, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, Trash2, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-type SortField = "product" | "salePrice" | "profit" | "date";
+type SortField = "product" | "salePrice" | "profit" | "margin" | "date";
 type SortDir = "asc" | "desc";
+
+const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const now = new Date();
+  const [viewYear, setViewYear] = useState(value ? parseInt(value.slice(0, 4)) : now.getFullYear());
+  const selectedMonth = value ? parseInt(value.slice(5, 7)) - 1 : -1;
+  const selectedYear = value ? parseInt(value.slice(0, 4)) : -1;
+
+  return (
+    <div className="p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewYear(y => y - 1)}>
+          <ArrowDown className="h-3.5 w-3.5 rotate-90" />
+        </Button>
+        <span className="text-sm font-medium">{viewYear}</span>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewYear(y => y + 1)}>
+          <ArrowUp className="h-3.5 w-3.5 rotate-90" />
+        </Button>
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        {MONTHS.map((m, i) => (
+          <Button
+            key={m}
+            variant={selectedYear === viewYear && selectedMonth === i ? "default" : "ghost"}
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => onChange(`${viewYear}-${String(i + 1).padStart(2, "0")}`)}
+          >
+            {m}
+          </Button>
+        ))}
+      </div>
+      {value && (
+        <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => onChange("")}>
+          Limpar
+        </Button>
+      )}
+    </div>
+  );
+}
 
 export default function Sales() {
   const { sales, purchases, products, categories, addSale, updateSale, deleteSale, getProduct } = useStore();
@@ -29,7 +72,7 @@ export default function Sales() {
   const [sortField, setSortField] = usePersistedState<SortField | null>("sales-sortField", null);
   const [sortDir, setSortDir] = usePersistedState<SortDir>("sales-sortDir", "asc");
 
-  // Products that have stock (purchased but not yet sold)
+  // Products that have stock
   const availableProducts = useMemo(() => {
     const purchased = new Map<string, number>();
     const sold = new Map<string, number>();
@@ -40,6 +83,19 @@ export default function Sales() {
       return stock > 0;
     });
   }, [products, purchases, sales]);
+
+  // Preview margin/profit
+  const preview = useMemo(() => {
+    if (!productId || !salePrice) return null;
+    const product = getProduct(productId);
+    if (!product) return null;
+    const sp = Number(salePrice);
+    if (isNaN(sp) || sp <= 0) return null;
+    const cost = product.purchasePrice;
+    const profit = sp - cost;
+    const margin = (profit / sp) * 100;
+    return { cost, profit, margin };
+  }, [productId, salePrice, getProduct]);
 
   const openNew = () => {
     setEditingSale(null);
@@ -62,7 +118,7 @@ export default function Sales() {
       toast.success("Venda atualizada");
     } else {
       const sale = await addSale({ productId, quantity: 1, salePrice: Number(salePrice), date });
-      toast.success(`Venda registrada — Lucro: ${sale.profit.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}`);
+      toast.success(`Venda registada — Lucro: ${sale.profit.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}`);
     }
     setDialogOpen(false);
     setEditingSale(null);
@@ -97,6 +153,12 @@ export default function Sales() {
           case "product": cmp = (getProduct(a.productId)?.name ?? "").localeCompare(getProduct(b.productId)?.name ?? ""); break;
           case "salePrice": cmp = a.salePrice - b.salePrice; break;
           case "profit": cmp = a.profit - b.profit; break;
+          case "margin": {
+            const mA = a.salePrice > 0 ? a.profit / a.salePrice : 0;
+            const mB = b.salePrice > 0 ? b.profit / b.salePrice : 0;
+            cmp = mA - mB;
+            break;
+          }
           case "date": cmp = a.date.localeCompare(b.date); break;
         }
         return sortDir === "asc" ? cmp : -cmp;
@@ -107,11 +169,23 @@ export default function Sales() {
   }, [sales, catFilter, searchDate, sortField, sortDir, getProduct]);
 
   const fmt = (v: number) => v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
+  const displayDate = searchDate ? `${MONTHS[parseInt(searchDate.slice(5, 7)) - 1]} ${searchDate.slice(0, 4)}` : "";
 
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-wrap items-center gap-3">
-        <Input type="month" value={searchDate} onChange={e => setSearchDate(e.target.value)} className="w-[160px] text-sm" />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn("w-[180px] justify-start text-left font-normal", !searchDate && "text-muted-foreground")}>
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {searchDate ? displayDate : "Filtrar por mês"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+            <MonthYearPicker value={searchDate} onChange={setSearchDate} />
+          </PopoverContent>
+        </Popover>
+
         <Select value={catFilter} onValueChange={setCatFilter}>
           <SelectTrigger className="w-[200px]">
             <span className="truncate">{catFilter === "all" ? "Categoria: Todas" : `Categoria: ${catFilter}`}</span>
@@ -128,7 +202,7 @@ export default function Sales() {
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
-            <DialogHeader><DialogTitle>{editingSale ? "Editar Venda" : "Registrar Venda"}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editingSale ? "Editar Venda" : "Registar Venda"}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-2">
               <div>
                 <Label>Produto *</Label>
@@ -143,8 +217,29 @@ export default function Sales() {
                 <Label>Preço de Venda *</Label>
                 <Input type="number" min={0} step={0.01} value={salePrice} onChange={e => setSalePrice(e.target.value)} />
               </div>
+
+              {preview && (
+                <div className="rounded-lg border bg-muted/50 p-3 space-y-1.5">
+                  <p className="text-xs font-medium text-muted-foreground">Pré-visualização</p>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Custo</p>
+                      <p className="text-sm font-semibold">{fmt(preview.cost)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Lucro</p>
+                      <p className={cn("text-sm font-semibold", preview.profit >= 0 ? "text-success" : "text-destructive")}>{fmt(preview.profit)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">Margem</p>
+                      <p className={cn("text-sm font-semibold", preview.margin >= 0 ? "text-success" : "text-destructive")}>{preview.margin.toFixed(1)}%</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div><Label>Data *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
-              <Button onClick={save}>{editingSale ? "Guardar" : "Registrar"}</Button>
+              <Button onClick={save}>{editingSale ? "Guardar" : "Registar"}</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -164,6 +259,9 @@ export default function Sales() {
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("profit")}>
                   <div className="flex items-center">Lucro <SortIcon field="profit" /></div>
                 </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("margin")}>
+                  <div className="flex items-center">Margem <SortIcon field="margin" /></div>
+                </TableHead>
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("date")}>
                   <div className="flex items-center">Data <SortIcon field="date" /></div>
                 </TableHead>
@@ -172,25 +270,29 @@ export default function Sales() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhuma venda encontrada</TableCell></TableRow>
-              ) : filtered.map(s => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">{getProduct(s.productId)?.name ?? "—"}</TableCell>
-                  <TableCell>{fmt(s.salePrice)}</TableCell>
-                  <TableCell className="text-emerald-500 font-semibold">{fmt(s.profit)}</TableCell>
-                  <TableCell>{new Date(s.date).toLocaleDateString("pt-PT")}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(s)}>
-                        <Pencil className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={async () => { await deleteSale(s.id); toast.success("Venda removida"); }}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhuma venda encontrada</TableCell></TableRow>
+              ) : filtered.map(s => {
+                const margin = s.salePrice > 0 ? (s.profit / s.salePrice) * 100 : 0;
+                return (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium">{getProduct(s.productId)?.name ?? "—"}</TableCell>
+                    <TableCell>{fmt(s.salePrice)}</TableCell>
+                    <TableCell className="text-success font-semibold">{fmt(s.profit)}</TableCell>
+                    <TableCell className={cn("font-semibold", margin >= 0 ? "text-success" : "text-destructive")}>{margin.toFixed(1)}%</TableCell>
+                    <TableCell>{new Date(s.date).toLocaleDateString("pt-PT")}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(s)}>
+                          <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={async () => { await deleteSale(s.id); toast.success("Venda removida"); }}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
