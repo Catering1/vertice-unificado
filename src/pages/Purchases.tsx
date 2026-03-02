@@ -9,12 +9,55 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Upload, Pencil, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, Trash2, Upload, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
 
 type SortField = "product" | "price" | "total" | "date";
 type SortDir = "asc" | "desc";
+
+const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const now = new Date();
+  const [viewYear, setViewYear] = useState(value ? parseInt(value.slice(0, 4)) : now.getFullYear());
+  const selectedMonth = value ? parseInt(value.slice(5, 7)) - 1 : -1;
+  const selectedYear = value ? parseInt(value.slice(0, 4)) : -1;
+
+  return (
+    <div className="p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewYear(y => y - 1)}>
+          <ArrowDown className="h-3.5 w-3.5 rotate-90" />
+        </Button>
+        <span className="text-sm font-medium">{viewYear}</span>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewYear(y => y + 1)}>
+          <ArrowUp className="h-3.5 w-3.5 rotate-90" />
+        </Button>
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        {MONTHS.map((m, i) => (
+          <Button
+            key={m}
+            variant={selectedYear === viewYear && selectedMonth === i ? "default" : "ghost"}
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => onChange(`${viewYear}-${String(i + 1).padStart(2, "0")}`)}
+          >
+            {m}
+          </Button>
+        ))}
+      </div>
+      {value && (
+        <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => onChange("")}>
+          Limpar
+        </Button>
+      )}
+    </div>
+  );
+}
 
 export default function Purchases() {
   const { purchases, sales, products, categories, addPurchase, updatePurchase, deletePurchase, getProduct, addProduct } = useStore();
@@ -74,7 +117,7 @@ export default function Purchases() {
       toast.success("Compra atualizada");
     } else {
       await addPurchase({ productId, quantity: 1, price: priceParsed, date });
-      toast.success("Compra registrada");
+      toast.success("Compra registada");
     }
     setDialogOpen(false);
     setEditingPurchase(null);
@@ -172,11 +215,24 @@ export default function Purchases() {
     e.target.value = "";
   };
 
+  const displayDate = searchDate ? `${MONTHS[parseInt(searchDate.slice(5, 7)) - 1]} ${searchDate.slice(0, 4)}` : "";
+
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-wrap items-center gap-3">
         {/* Filter order: Data, Estado, Categoria */}
-        <Input type="month" value={searchDate} onChange={e => setSearchDate(e.target.value)} className="w-[160px] text-sm" />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn("w-[180px] justify-start text-left font-normal", !searchDate && "text-muted-foreground")}>
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {searchDate ? displayDate : "Filtrar por mês"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+            <MonthYearPicker value={searchDate} onChange={setSearchDate} />
+          </PopoverContent>
+        </Popover>
+
         <Select value={stockFilter} onValueChange={setStockFilter}>
           <SelectTrigger className="w-[180px]">
             <span className="truncate">{stockFilter === "all" ? "Estado: Todos" : stockFilter === "active" ? "Estado: Ativos" : "Estado: Vendidos"}</span>
@@ -208,7 +264,7 @@ export default function Purchases() {
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
-            <DialogHeader><DialogTitle>{editingPurchase ? "Editar Compra" : "Registrar Compra"}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editingPurchase ? "Editar Compra" : "Registar Compra"}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-2">
               <div>
                 <Label>Nome do Produto *</Label>
@@ -230,7 +286,7 @@ export default function Purchases() {
                 <div><Label>Preço Unitário *</Label><Input type="number" min={0} step={0.01} value={price} onChange={e => setPrice(e.target.value)} /></div>
               </div>
               <div><Label>Data *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
-              <Button onClick={save}>{editingPurchase ? "Guardar" : "Registrar"}</Button>
+              <Button onClick={save}>{editingPurchase ? "Guardar" : "Registar"}</Button>
             </div>
           </DialogContent>
         </Dialog>
