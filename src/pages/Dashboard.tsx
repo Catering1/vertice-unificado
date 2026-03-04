@@ -1,6 +1,6 @@
 import { useStore } from "@/lib/store";
 import { useMemo } from "react";
-import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, BarChart3, Clock } from "lucide-react";
+import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, BarChart3, Clock, Calculator } from "lucide-react";
 import KpiCard from "@/components/dashboard/KpiCard";
 import ProfitOverTimeChart from "@/components/dashboard/ProfitOverTimeChart";
 import TopProductsChart from "@/components/dashboard/TopProductsChart";
@@ -28,6 +28,8 @@ export default function Dashboard() {
     });
     return total;
   }, [purchases, sales, getProduct]);
+
+  const avgProfitPerSale = useMemo(() => sales.length > 0 ? totalProfit / sales.length : 0, [totalProfit, sales]);
 
   // Margem média (%) = Lucro / Total Vendas
   const avgMargin = useMemo(() => totalSales > 0 ? (totalProfit / totalSales) * 100 : 0, [totalProfit, totalSales]);
@@ -123,6 +125,7 @@ export default function Dashboard() {
     { label: "Margem Média", value: `${avgMargin.toFixed(1)}%`, icon: Percent, iconBg: "bg-chart-2/15", iconColor: "text-chart-2" },
     { label: "ROI Total", value: `${roiTotal.toFixed(1)}%`, icon: BarChart3, iconBg: "bg-chart-1/15", iconColor: "text-chart-1" },
     { label: "ROI Realizado", value: `${roiRealized.toFixed(1)}%`, icon: TrendingUp, iconBg: "bg-success/15", iconColor: "text-success", valueClassName: "text-success" },
+    { label: "Lucro Médio/Venda", value: fmt(avgProfitPerSale), icon: Calculator, iconBg: "bg-chart-4/15", iconColor: "text-chart-4" },
     { label: "Tempo Médio Venda", value: `${avgVelocity.toFixed(0)} dias`, icon: Clock, iconBg: "bg-chart-5/15", iconColor: "text-chart-5" },
   ];
 
