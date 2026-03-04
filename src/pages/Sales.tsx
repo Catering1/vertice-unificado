@@ -116,18 +116,26 @@ export default function Sales() {
   const save = async () => {
     if (!productId || !salePrice || !date) { toast.error("Preencha todos os campos"); return; }
 
-    // Sync product purchasePrice if overridden
-    const overridePrice = purchasePriceOverride ? Number(purchasePriceOverride) : null;
+    const parsedSalePrice = Number(salePrice);
+    if (isNaN(parsedSalePrice) || parsedSalePrice < 0) { toast.error("Preço de venda inválido"); return; }
+
+    const overrideRaw = purchasePriceOverride.trim();
+    const overridePrice = overrideRaw === "" ? null : Number(overrideRaw);
+    if (overridePrice !== null && (isNaN(overridePrice) || overridePrice < 0)) { toast.error("Preço de compra inválido"); return; }
+
     const product = getProduct(productId);
+    const effectivePurchasePrice = overridePrice ?? (product?.purchasePrice ?? 0);
+
+    // Sync product purchasePrice if overridden
     if (overridePrice != null && product && product.purchasePrice !== overridePrice) {
       await updateProduct({ ...product, purchasePrice: overridePrice });
     }
 
     if (editingSale) {
-      await updateSale({ id: editingSale.id, productId, quantity: 1, salePrice: Number(salePrice), date });
+      await updateSale({ id: editingSale.id, productId, quantity: 1, salePrice: parsedSalePrice, date, purchasePrice: effectivePurchasePrice });
       toast.success("Venda atualizada");
     } else {
-      const sale = await addSale({ productId, quantity: 1, salePrice: Number(salePrice), date });
+      const sale = await addSale({ productId, quantity: 1, salePrice: parsedSalePrice, date, purchasePrice: effectivePurchasePrice });
       toast.success(`Venda registada — Lucro: ${sale.profit.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}`);
     }
     setDialogOpen(false);

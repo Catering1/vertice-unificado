@@ -37,8 +37,8 @@ interface StoreContextType {
   addPurchase: (p: Omit<Purchase, "id">) => Promise<void>;
   updatePurchase: (p: Purchase) => Promise<void>;
   deletePurchase: (id: string) => Promise<void>;
-  addSale: (s: Omit<Sale, "id" | "profit">) => Promise<Sale>;
-  updateSale: (s: Omit<Sale, "profit">) => Promise<void>;
+  addSale: (s: Omit<Sale, "id" | "profit"> & { purchasePrice?: number }) => Promise<Sale>;
+  updateSale: (s: Omit<Sale, "profit"> & { purchasePrice?: number }) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
   addCategory: (c: string) => Promise<void>;
   updateCategory: (oldName: string, newName: string) => Promise<void>;
@@ -146,10 +146,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setPurchases(prev => prev.filter(x => x.id !== id));
   };
 
-  const addSale = async (s: Omit<Sale, "id" | "profit">): Promise<Sale> => {
-    const validated = SaleSchema.parse(s);
+  const addSale = async (s: Omit<Sale, "id" | "profit"> & { purchasePrice?: number }): Promise<Sale> => {
+    const { purchasePrice, ...saleInput } = s;
+    const validated = SaleSchema.parse(saleInput);
     const product = getProduct(validated.productId);
-    const costPerUnit = product?.purchasePrice ?? 0;
+    const costPerUnit = typeof purchasePrice === "number" && !Number.isNaN(purchasePrice)
+      ? purchasePrice
+      : (product?.purchasePrice ?? 0);
     const profit = (validated.salePrice - costPerUnit) * validated.quantity;
     const { data, error } = await supabase.from("sales").insert({
       user_id: user!.id, product_id: validated.productId, quantity: validated.quantity, sale_price: validated.salePrice, profit, date: validated.date,
@@ -160,14 +163,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return sale;
   };
 
-  const updateSale = async (s: Omit<Sale, "profit">) => {
-    const product = getProduct(s.productId);
-    const costPerUnit = product?.purchasePrice ?? 0;
-    const profit = (s.salePrice - costPerUnit) * s.quantity;
+  const updateSale = async (s: Omit<Sale, "profit"> & { purchasePrice?: number }) => {
+    const { purchasePrice, ...saleInput } = s;
+    const product = getProduct(saleInput.productId);
+    const costPerUnit = typeof purchasePrice === "number" && !Number.isNaN(purchasePrice)
+      ? purchasePrice
+      : (product?.purchasePrice ?? 0);
+    const profit = (saleInput.salePrice - costPerUnit) * saleInput.quantity;
     await supabase.from("sales").update({
-      product_id: s.productId, quantity: s.quantity, sale_price: s.salePrice, profit, date: s.date,
-    } as any).eq("id", s.id);
-    setSales(prev => prev.map(x => x.id === s.id ? { ...s, profit } : x));
+      product_id: saleInput.productId, quantity: saleInput.quantity, sale_price: saleInput.salePrice, profit, date: saleInput.date,
+    } as any).eq("id", saleInput.id);
+    setSales(prev => prev.map(x => x.id === saleInput.id ? { ...saleInput, profit } : x));
   };
 
   const deleteSale = async (id: string) => {
