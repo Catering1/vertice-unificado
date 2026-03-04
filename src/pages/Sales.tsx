@@ -59,11 +59,12 @@ function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: str
 }
 
 export default function Sales() {
-  const { sales, purchases, products, categories, addSale, updateSale, deleteSale, getProduct } = useStore();
+  const { sales, purchases, products, categories, addSale, updateSale, deleteSale, getProduct, updateProduct } = useStore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [productId, setProductId] = useState("");
   const [salePrice, setSalePrice] = useState("");
+  const [purchasePriceOverride, setPurchasePriceOverride] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
 
   const [searchDate, setSearchDate] = usePersistedState("sales-searchDate", "");
@@ -87,19 +88,18 @@ export default function Sales() {
   // Preview margin/profit
   const preview = useMemo(() => {
     if (!productId || !salePrice) return null;
-    const product = getProduct(productId);
-    if (!product) return null;
     const sp = Number(salePrice);
     if (isNaN(sp) || sp <= 0) return null;
-    const cost = product.purchasePrice;
+    const cost = purchasePriceOverride ? Number(purchasePriceOverride) : (getProduct(productId)?.purchasePrice ?? 0);
+    if (isNaN(cost)) return null;
     const profit = sp - cost;
-    const margin = (profit / sp) * 100;
+    const margin = sp > 0 ? (profit / sp) * 100 : 0;
     return { cost, profit, margin };
-  }, [productId, salePrice, getProduct]);
+  }, [productId, salePrice, purchasePriceOverride, getProduct]);
 
   const openNew = () => {
     setEditingSale(null);
-    setProductId(""); setSalePrice(""); setDate(new Date().toISOString().slice(0, 10));
+    setProductId(""); setSalePrice(""); setPurchasePriceOverride(""); setDate(new Date().toISOString().slice(0, 10));
     setDialogOpen(true);
   };
 
@@ -107,12 +107,22 @@ export default function Sales() {
     setEditingSale(s);
     setProductId(s.productId);
     setSalePrice(String(s.salePrice));
+    const prod = getProduct(s.productId);
+    setPurchasePriceOverride(prod ? String(prod.purchasePrice) : "");
     setDate(s.date);
     setDialogOpen(true);
   };
 
   const save = async () => {
     if (!productId || !salePrice || !date) { toast.error("Preencha todos os campos"); return; }
+
+    // Sync product purchasePrice if overridden
+    const overridePrice = purchasePriceOverride ? Number(purchasePriceOverride) : null;
+    const product = getProduct(productId);
+    if (overridePrice != null && product && product.purchasePrice !== overridePrice) {
+      await updateProduct({ ...product, purchasePrice: overridePrice });
+    }
+
     if (editingSale) {
       await updateSale({ id: editingSale.id, productId, quantity: 1, salePrice: Number(salePrice), date });
       toast.success("Venda atualizada");
@@ -206,12 +216,20 @@ export default function Sales() {
             <div className="grid gap-4 py-2">
               <div>
                 <Label>Produto *</Label>
-                <Select value={productId} onValueChange={setProductId}>
+                <Select value={productId} onValueChange={(v) => {
+                  setProductId(v);
+                  const prod = getProduct(v);
+                  if (prod) setPurchasePriceOverride(String(prod.purchasePrice));
+                }}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
                     {(editingSale ? products : availableProducts).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label>Preço de Compra *</Label>
+                <Input type="number" min={0} step={0.01} value={purchasePriceOverride} onChange={e => setPurchasePriceOverride(e.target.value)} />
               </div>
               <div>
                 <Label>Preço de Venda *</Label>
