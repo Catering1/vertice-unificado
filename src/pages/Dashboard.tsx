@@ -1,11 +1,12 @@
 import { useStore } from "@/lib/store";
 import { useMemo } from "react";
-import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, BarChart3, Clock, Calculator } from "lucide-react";
+import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, BarChart3, Clock, Calculator, RefreshCw } from "lucide-react";
 import KpiCard from "@/components/dashboard/KpiCard";
 import ProfitOverTimeChart from "@/components/dashboard/ProfitOverTimeChart";
 import TopProductsChart from "@/components/dashboard/TopProductsChart";
 import ProfitByProductChart from "@/components/dashboard/ProfitByProductChart";
 import PurchasesVsSalesChart from "@/components/dashboard/PurchasesVsSalesChart";
+import AnalyzeDialog from "@/components/dashboard/AnalyzeDialog";
 
 export default function Dashboard() {
   const { purchases, sales, products, getProduct } = useStore();
@@ -30,14 +31,9 @@ export default function Dashboard() {
   }, [purchases, sales, getProduct]);
 
   const avgProfitPerSale = useMemo(() => sales.length > 0 ? totalProfit / sales.length : 0, [totalProfit, sales]);
-
-  // Margem média (%) = Lucro / Total Vendas
   const avgMargin = useMemo(() => totalSales > 0 ? (totalProfit / totalSales) * 100 : 0, [totalProfit, totalSales]);
-
-  // ROI Total (%) = (Lucro Total / Custo Total Compras) × 100
   const roiTotal = useMemo(() => totalPurchases > 0 ? (totalProfit / totalPurchases) * 100 : 0, [totalProfit, totalPurchases]);
 
-  // ROI Realizado (%) = (Lucro vendas / Custo compras vendidas) × 100
   const roiRealized = useMemo(() => {
     const soldProductIds = new Set(sales.map(s => s.productId));
     const costOfSold = purchases
@@ -46,13 +42,11 @@ export default function Dashboard() {
     return costOfSold > 0 ? (totalProfit / costOfSold) * 100 : 0;
   }, [sales, purchases, totalProfit]);
 
-  // Tempo médio até vender (dias)
   const avgVelocity = useMemo(() => {
     if (sales.length === 0) return 0;
     let totalDays = 0;
     let count = 0;
     sales.forEach(s => {
-      // Find the earliest purchase for this product
       const productPurchases = purchases
         .filter(p => p.productId === s.productId)
         .sort((a, b) => a.date.localeCompare(b.date));
@@ -60,14 +54,21 @@ export default function Dashboard() {
         const purchaseDate = new Date(productPurchases[0].date);
         const saleDate = new Date(s.date);
         const diff = (saleDate.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24);
-        if (diff >= 0) {
-          totalDays += diff;
-          count++;
-        }
+        if (diff >= 0) { totalDays += diff; count++; }
       }
     });
     return count > 0 ? totalDays / count : 0;
   }, [sales, purchases]);
+
+  // Stock Turnover = COGS / Stock Value
+  const { stockTurnover, cogs } = useMemo(() => {
+    const soldProductIds = new Set(sales.map(s => s.productId));
+    const cogsVal = purchases
+      .filter(p => soldProductIds.has(p.productId))
+      .reduce((sum, p) => sum + p.price * p.quantity, 0);
+    const turnover = stockValue > 0 ? cogsVal / stockValue : 0;
+    return { stockTurnover: turnover, cogs: cogsVal };
+  }, [sales, purchases, stockValue]);
 
   const topProducts = useMemo(() => {
     const map = new Map<string, number>();
@@ -96,7 +97,6 @@ export default function Dashboard() {
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([month, profit]) => ({ month, profit }));
   }, [sales]);
 
-  // Volume compras vs vendas por período
   const purchasesVsSales = useMemo(() => {
     const map = new Map<string, { compras: number; vendas: number }>();
     purchases.forEach(p => {
@@ -127,10 +127,32 @@ export default function Dashboard() {
     { label: "ROI Realizado", value: `${roiRealized.toFixed(1)}%`, icon: TrendingUp, iconBg: "bg-success/15", iconColor: "text-success", valueClassName: "text-success" },
     { label: "Lucro Médio/Venda", value: fmt(avgProfitPerSale), icon: Calculator, iconBg: "bg-chart-4/15", iconColor: "text-chart-4" },
     { label: "Tempo Médio Venda", value: `${avgVelocity.toFixed(0)} dias`, icon: Clock, iconBg: "bg-chart-5/15", iconColor: "text-chart-5" },
+    { label: "Stock Turnover", value: stockTurnover.toFixed(2), icon: RefreshCw, iconBg: "bg-chart-3/15", iconColor: "text-chart-3" },
   ];
+
+  const analyzeData = {
+    totalPurchases: totalPurchases.toFixed(2),
+    totalSales: totalSales.toFixed(2),
+    totalProfit: totalProfit.toFixed(2),
+    avgMargin: avgMargin.toFixed(1),
+    roiTotal: roiTotal.toFixed(1),
+    roiRealized: roiRealized.toFixed(1),
+    stockTurnover: stockTurnover.toFixed(2),
+    stockValue: stockValue.toFixed(2),
+    avgVelocity: avgVelocity.toFixed(0),
+    avgProfitPerSale: avgProfitPerSale.toFixed(2),
+    productCount: products.length,
+    topProducts: topProducts.map(p => `${p.name} (${p.qty})`).join(", "),
+  };
 
   return (
     <div className="space-y-8 animate-fade-in">
+      {/* Header with Analyze button */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold sm:text-2xl">Dashboard</h1>
+        <AnalyzeDialog dashboardData={analyzeData} />
+      </div>
+
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-5">
         {kpis.map((kpi) => (
