@@ -276,9 +276,9 @@ export default function Purchases() {
         <div className="hidden sm:block sm:flex-1" />
 
         <div className="flex gap-2">
-          <input type="file" ref={fileInputRef} accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportExcel} />
+          <input type="file" ref={fileInputRef} accept=".csv" className="hidden" onChange={handleImportExcel} />
           <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="mr-2 h-4 w-4" />Importar
+            <Upload className="mr-2 h-4 w-4" />Importar CSV
           </Button>
           <Button className="flex-1 sm:flex-none" onClick={openNew}><Plus className="mr-2 h-4 w-4" />Nova Compra</Button>
         </div>
