@@ -179,16 +179,27 @@ export default function Purchases() {
 
   const fmt = (v: number) => v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 
+  const parseCSV = (text: string): Record<string, string>[] => {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return [];
+    const sep = lines[0].includes(";") ? ";" : ",";
+    const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g, ""));
+    return lines.slice(1).map(line => {
+      const vals = line.split(sep).map(v => v.trim().replace(/^"|"$/g, ""));
+      const obj: Record<string, string> = {};
+      headers.forEach((h, i) => { obj[h] = vals[i] ?? ""; });
+      return obj;
+    });
+  };
+
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
+        const text = evt.target?.result as string;
+        const rows = parseCSV(text);
         let count = 0;
         let skipped = 0;
         for (const row of rows) {
@@ -199,7 +210,6 @@ export default function Purchases() {
           const category = String(row["Categoria"] || row["categoria"] || "Outros").slice(0, 100);
           const supplier = String(row["Fornecedor"] || row["fornecedor"] || "").slice(0, 200);
 
-          // Validate all fields
           if (!name || name.length > 200) { skipped++; continue; }
           if (isNaN(qty) || qty < 1 || qty > 100000 || !Number.isInteger(qty)) { skipped++; continue; }
           if (isNaN(priceVal) || priceVal < 0 || priceVal > 1000000) { skipped++; continue; }
@@ -220,7 +230,7 @@ export default function Purchases() {
         toast.error("Erro ao ler o ficheiro");
       }
     };
-    reader.readAsArrayBuffer(file);
+    reader.readAsText(file);
     e.target.value = "";
   };
 
