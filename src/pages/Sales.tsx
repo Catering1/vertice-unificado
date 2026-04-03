@@ -273,8 +273,49 @@ export default function Sales() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
+      {/* Mobile: card list; Desktop: table */}
+      <div className="block sm:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">Nenhuma venda encontrada</p>
+        ) : filtered.map(s => {
+          const margin = s.salePrice > 0 ? (s.profit / s.salePrice) * 100 : 0;
+          return (
+            <Card key={s.id}>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium truncate">{getProduct(s.productId)?.name ?? "—"}</span>
+                  <div className="flex gap-1 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(s)}>
+                      <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={async () => { await deleteSale(s.id); toast.success("Venda removida"); }}>
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Preço Venda</p>
+                    <p className="font-semibold">{fmt(s.salePrice)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Lucro</p>
+                    <p className="font-semibold text-success">{fmt(s.profit)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Margem</p>
+                    <p className={cn("font-semibold", margin >= 0 ? "text-success" : "text-destructive")}>{margin.toFixed(1)}%</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">{new Date(s.date).toLocaleDateString("pt-PT")}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <Card className="hidden sm:block">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
