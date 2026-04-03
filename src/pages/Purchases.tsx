@@ -228,48 +228,50 @@ export default function Purchases() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Filter order: Data, Estado, Categoria */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className={cn("w-[180px] justify-start text-left font-normal", !searchDate && "text-muted-foreground")}>
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {searchDate ? displayDate : "Filtrar por mês"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-            <MonthYearPicker value={searchDate} onChange={setSearchDate} />
-          </PopoverContent>
-        </Popover>
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex flex-wrap items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("flex-1 sm:flex-none sm:w-[180px] justify-start text-left font-normal", !searchDate && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {searchDate ? displayDate : "Filtrar por mês"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+              <MonthYearPicker value={searchDate} onChange={setSearchDate} />
+            </PopoverContent>
+          </Popover>
 
-        <Select value={stockFilter} onValueChange={setStockFilter}>
-          <SelectTrigger className="w-[180px]">
-            <span className="truncate">{stockFilter === "all" ? "Estado: Todos" : stockFilter === "active" ? "Estado: Ativos" : "Estado: Vendidos"}</span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="active">Ativos</SelectItem>
-            <SelectItem value="sold">Vendidos</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={catFilter} onValueChange={setCatFilter}>
-          <SelectTrigger className="w-[200px]">
-            <span className="truncate">{catFilter === "all" ? "Categoria: Todas" : `Categoria: ${catFilter}`}</span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas</SelectItem>
-            {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
+          <Select value={stockFilter} onValueChange={setStockFilter}>
+            <SelectTrigger className="flex-1 sm:flex-none sm:w-[180px]">
+              <span className="truncate">{stockFilter === "all" ? "Estado: Todos" : stockFilter === "active" ? "Estado: Ativos" : "Estado: Vendidos"}</span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="active">Ativos</SelectItem>
+              <SelectItem value="sold">Vendidos</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={catFilter} onValueChange={setCatFilter}>
+            <SelectTrigger className="w-full sm:flex-none sm:w-[200px]">
+              <span className="truncate">{catFilter === "all" ? "Categoria: Todas" : `Categoria: ${catFilter}`}</span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
 
-        <div className="flex-1" />
+        <div className="hidden sm:block sm:flex-1" />
 
-        <input type="file" ref={fileInputRef} accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportExcel} />
-        <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-          <Upload className="mr-2 h-4 w-4" />Importar Excel
-        </Button>
-
-        <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" />Nova Compra</Button>
+        <div className="flex gap-2">
+          <input type="file" ref={fileInputRef} accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportExcel} />
+          <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" />Importar
+          </Button>
+          <Button className="flex-1 sm:flex-none" onClick={openNew}><Plus className="mr-2 h-4 w-4" />Nova Compra</Button>
+        </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
@@ -301,8 +303,42 @@ export default function Purchases() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
+      {/* Mobile: card list; Desktop: table */}
+      <div className="block sm:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</p>
+        ) : filtered.map(p => (
+          <Card key={p.id}>
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-medium truncate">{getProduct(p.productId)?.name ?? "—"}</span>
+                <div className="flex gap-1 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}>
+                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }}>
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Preço Unit.</p>
+                  <p className="font-semibold">{fmt(p.price)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground">Total</p>
+                  <p className="font-semibold">{fmt(p.price * p.quantity)}</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">{new Date(p.date).toLocaleDateString("pt-PT")}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="hidden sm:block">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
