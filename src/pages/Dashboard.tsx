@@ -137,7 +137,6 @@ export default function Dashboard() {
     totalSales: totalSales.toFixed(2),
     totalProfit: totalProfit.toFixed(2),
     avgMargin: avgMargin.toFixed(1),
-    roiTotal: roiTotal.toFixed(1),
     roiRealized: roiRealized.toFixed(1),
     stockTurnover: stockTurnover.toFixed(2),
     stockValue: stockValue.toFixed(2),
