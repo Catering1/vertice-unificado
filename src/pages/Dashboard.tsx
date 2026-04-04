@@ -125,7 +125,7 @@ export default function Dashboard() {
     { label: "Valor em Stock", value: fmt(stockValue), icon: Warehouse, iconBg: "bg-chart-3/15", iconColor: "text-chart-3" },
     { label: "Produtos", value: String(products.length), icon: Package, iconBg: "bg-chart-4/15", iconColor: "text-chart-4" },
     { label: "Margem Média", value: `${avgMargin.toFixed(1)}%`, icon: Percent, iconBg: "bg-chart-2/15", iconColor: "text-chart-2" },
-    { label: "ROI Total", value: `${roiTotal.toFixed(1)}%`, icon: BarChart3, iconBg: "bg-chart-1/15", iconColor: "text-chart-1" },
+    { label: "Produtos em Stock", value: String(productsInStock), icon: Package, iconBg: "bg-chart-1/15", iconColor: "text-chart-1" },
     { label: "ROI Realizado", value: `${roiRealized.toFixed(1)}%`, icon: TrendingUp, iconBg: "bg-success/15", iconColor: "text-success", valueClassName: "text-success" },
     { label: "Lucro Médio/Venda", value: fmt(avgProfitPerSale), icon: Calculator, iconBg: "bg-chart-4/15", iconColor: "text-chart-4" },
     { label: "Tempo Médio Venda", value: `${avgVelocity.toFixed(0)} dias`, icon: Clock, iconBg: "bg-chart-5/15", iconColor: "text-chart-5" },
