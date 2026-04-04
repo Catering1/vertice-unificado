@@ -1,6 +1,6 @@
 import { useStore } from "@/lib/store";
 import { useMemo } from "react";
-import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, BarChart3, Clock, Calculator, RefreshCw } from "lucide-react";
+import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, Clock, Calculator, RefreshCw } from "lucide-react";
 import KpiCard from "@/components/dashboard/KpiCard";
 import ProfitOverTimeChart from "@/components/dashboard/ProfitOverTimeChart";
 import TopProductsChart from "@/components/dashboard/TopProductsChart";
