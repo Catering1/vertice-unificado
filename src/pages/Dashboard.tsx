@@ -34,7 +34,7 @@ export default function Dashboard() {
 
   const avgProfitPerSale = useMemo(() => sales.length > 0 ? totalProfit / sales.length : 0, [totalProfit, sales]);
   const avgMargin = useMemo(() => totalSales > 0 ? (totalProfit / totalSales) * 100 : 0, [totalProfit, totalSales]);
-  const roiTotal = useMemo(() => totalPurchases > 0 ? (totalProfit / totalPurchases) * 100 : 0, [totalProfit, totalPurchases]);
+  
 
   const roiRealized = useMemo(() => {
     const soldProductIds = new Set(sales.map(s => s.productId));
