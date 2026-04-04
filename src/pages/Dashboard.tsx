@@ -15,19 +15,21 @@ export default function Dashboard() {
   const totalSales = useMemo(() => sales.reduce((s, v) => s + v.salePrice * v.quantity, 0), [sales]);
   const totalProfit = useMemo(() => sales.reduce((s, v) => s + v.profit, 0), [sales]);
 
-  const stockValue = useMemo(() => {
+  const { stockValue, productsInStock } = useMemo(() => {
     const purchasedQty = new Map<string, number>();
     const soldQty = new Map<string, number>();
     purchases.forEach(p => purchasedQty.set(p.productId, (purchasedQty.get(p.productId) ?? 0) + p.quantity));
     sales.forEach(s => soldQty.set(s.productId, (soldQty.get(s.productId) ?? 0) + s.quantity));
     let total = 0;
+    let inStockCount = 0;
     purchasedQty.forEach((qty, productId) => {
       const sold = soldQty.get(productId) ?? 0;
       const inStock = Math.max(0, qty - sold);
+      if (inStock > 0) inStockCount++;
       const product = getProduct(productId);
       total += inStock * (product?.purchasePrice ?? 0);
     });
-    return total;
+    return { stockValue: total, productsInStock: inStockCount };
   }, [purchases, sales, getProduct]);
 
   const avgProfitPerSale = useMemo(() => sales.length > 0 ? totalProfit / sales.length : 0, [totalProfit, sales]);
