@@ -1,6 +1,6 @@
 import { useStore } from "@/lib/store";
 import { useMemo } from "react";
-import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, BarChart3, Clock, Calculator, RefreshCw } from "lucide-react";
+import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, Clock, Calculator, RefreshCw } from "lucide-react";
 import KpiCard from "@/components/dashboard/KpiCard";
 import ProfitOverTimeChart from "@/components/dashboard/ProfitOverTimeChart";
 import TopProductsChart from "@/components/dashboard/TopProductsChart";
@@ -15,24 +15,26 @@ export default function Dashboard() {
   const totalSales = useMemo(() => sales.reduce((s, v) => s + v.salePrice * v.quantity, 0), [sales]);
   const totalProfit = useMemo(() => sales.reduce((s, v) => s + v.profit, 0), [sales]);
 
-  const stockValue = useMemo(() => {
+  const { stockValue, productsInStock } = useMemo(() => {
     const purchasedQty = new Map<string, number>();
     const soldQty = new Map<string, number>();
     purchases.forEach(p => purchasedQty.set(p.productId, (purchasedQty.get(p.productId) ?? 0) + p.quantity));
     sales.forEach(s => soldQty.set(s.productId, (soldQty.get(s.productId) ?? 0) + s.quantity));
     let total = 0;
+    let inStockCount = 0;
     purchasedQty.forEach((qty, productId) => {
       const sold = soldQty.get(productId) ?? 0;
       const inStock = Math.max(0, qty - sold);
+      if (inStock > 0) inStockCount++;
       const product = getProduct(productId);
       total += inStock * (product?.purchasePrice ?? 0);
     });
-    return total;
+    return { stockValue: total, productsInStock: inStockCount };
   }, [purchases, sales, getProduct]);
 
   const avgProfitPerSale = useMemo(() => sales.length > 0 ? totalProfit / sales.length : 0, [totalProfit, sales]);
   const avgMargin = useMemo(() => totalSales > 0 ? (totalProfit / totalSales) * 100 : 0, [totalProfit, totalSales]);
-  const roiTotal = useMemo(() => totalPurchases > 0 ? (totalProfit / totalPurchases) * 100 : 0, [totalProfit, totalPurchases]);
+  
 
   const roiRealized = useMemo(() => {
     const soldProductIds = new Set(sales.map(s => s.productId));
@@ -123,7 +125,7 @@ export default function Dashboard() {
     { label: "Valor em Stock", value: fmt(stockValue), icon: Warehouse, iconBg: "bg-chart-3/15", iconColor: "text-chart-3" },
     { label: "Produtos", value: String(products.length), icon: Package, iconBg: "bg-chart-4/15", iconColor: "text-chart-4" },
     { label: "Margem Média", value: `${avgMargin.toFixed(1)}%`, icon: Percent, iconBg: "bg-chart-2/15", iconColor: "text-chart-2" },
-    { label: "ROI Total", value: `${roiTotal.toFixed(1)}%`, icon: BarChart3, iconBg: "bg-chart-1/15", iconColor: "text-chart-1" },
+    { label: "Produtos em Stock", value: String(productsInStock), icon: Package, iconBg: "bg-chart-1/15", iconColor: "text-chart-1" },
     { label: "ROI Realizado", value: `${roiRealized.toFixed(1)}%`, icon: TrendingUp, iconBg: "bg-success/15", iconColor: "text-success", valueClassName: "text-success" },
     { label: "Lucro Médio/Venda", value: fmt(avgProfitPerSale), icon: Calculator, iconBg: "bg-chart-4/15", iconColor: "text-chart-4" },
     { label: "Tempo Médio Venda", value: `${avgVelocity.toFixed(0)} dias`, icon: Clock, iconBg: "bg-chart-5/15", iconColor: "text-chart-5" },
@@ -135,7 +137,6 @@ export default function Dashboard() {
     totalSales: totalSales.toFixed(2),
     totalProfit: totalProfit.toFixed(2),
     avgMargin: avgMargin.toFixed(1),
-    roiTotal: roiTotal.toFixed(1),
     roiRealized: roiRealized.toFixed(1),
     stockTurnover: stockTurnover.toFixed(2),
     stockValue: stockValue.toFixed(2),

@@ -11,7 +11,7 @@ interface DashboardData {
   totalSales: string;
   totalProfit: string;
   avgMargin: string;
-  roiTotal: string;
+  
   roiRealized: string;
   stockTurnover: string;
   stockValue: string;
