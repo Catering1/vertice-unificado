@@ -96,8 +96,24 @@ export default function Dashboard() {
       const month = s.date.slice(0, 7);
       map.set(month, (map.get(month) ?? 0) + s.profit);
     });
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([month, profit]) => ({ month, profit }));
-  }, [sales]);
+    // Include all months from purchases too, so months without profit still show
+    const allMonths = new Set<string>(map.keys());
+    purchases.forEach(p => allMonths.add(p.date.slice(0, 7)));
+    if (allMonths.size === 0) return [];
+    const sorted = Array.from(allMonths).sort();
+    // Fill gaps between first and last month
+    const [startY, startM] = sorted[0].split("-").map(Number);
+    const [endY, endM] = sorted[sorted.length - 1].split("-").map(Number);
+    const result: { month: string; profit: number }[] = [];
+    let y = startY, m = startM;
+    while (y < endY || (y === endY && m <= endM)) {
+      const key = `${y}-${String(m).padStart(2, "0")}`;
+      result.push({ month: key, profit: map.get(key) ?? 0 });
+      m++;
+      if (m > 12) { m = 1; y++; }
+    }
+    return result;
+  }, [sales, purchases]);
 
   const purchasesVsSales = useMemo(() => {
     const map = new Map<string, { compras: number; vendas: number }>();
