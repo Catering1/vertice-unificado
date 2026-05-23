@@ -167,7 +167,6 @@ export default function Purchases() {
         switch (sortField) {
           case "product": cmp = (getProduct(a.productId)?.name ?? "").localeCompare(getProduct(b.productId)?.name ?? ""); break;
           case "price": cmp = a.price - b.price; break;
-          case "total": cmp = (a.price * a.quantity) - (b.price * b.quantity); break;
           case "date": cmp = a.date.localeCompare(b.date); break;
         }
         return sortDir === "asc" ? cmp : -cmp;
