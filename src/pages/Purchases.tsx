@@ -303,7 +303,7 @@ export default function Purchases() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div><Label>Preço Unitário *</Label><Input type="number" min={0} step={0.01} value={price} onChange={e => setPrice(e.target.value)} /></div>
+                <div><Label>Preço *</Label><Input type="number" min={0} step={0.01} value={price} onChange={e => setPrice(e.target.value)} /></div>
               </div>
               <div><Label>Data *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
               <Button onClick={save}>{editingPurchase ? "Guardar" : "Registar"}</Button>
