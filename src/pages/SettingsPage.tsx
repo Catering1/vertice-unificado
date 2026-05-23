@@ -136,7 +136,7 @@ export default function SettingsPage() {
       <Card>
         <CardHeader><CardTitle className="text-base">Exportar Dados (CSV)</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={exportProducts}><Download className="mr-2 h-4 w-4" />Produtos</Button>
+          <Button variant="outline" onClick={exportDashboard}><Download className="mr-2 h-4 w-4" />Dashboard Completo</Button>
           <Button variant="outline" onClick={exportPurchases}><Download className="mr-2 h-4 w-4" />Compras</Button>
           <Button variant="outline" onClick={exportSales}><Download className="mr-2 h-4 w-4" />Vendas</Button>
         </CardContent>
