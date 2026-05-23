@@ -349,10 +349,7 @@ export default function Purchases() {
                   <div className="flex items-center">Produto <SortIcon field="product" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("price")}>
-                  <div className="flex items-center">Preço Unit. <SortIcon field="price" /></div>
-                </TableHead>
-                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("total")}>
-                  <div className="flex items-center">Total <SortIcon field="total" /></div>
+                  <div className="flex items-center">Preço <SortIcon field="price" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("date")}>
                   <div className="flex items-center">Data <SortIcon field="date" /></div>
@@ -362,12 +359,11 @@ export default function Purchases() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : filtered.map(p => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
-                  <TableCell>{fmt(p.price * p.quantity)}</TableCell>
                   <TableCell>{new Date(p.date).toLocaleDateString("pt-PT")}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
