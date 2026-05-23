@@ -46,12 +46,13 @@ export default function SettingsPage() {
     setEditingCat(null);
   };
 
-  const exportProducts = () => {
-    downloadCSV("produtos.csv",
-      ["Nome", "Categoria", "Preço Compra", "Fornecedor"],
-      products.map(p => [p.name, p.category, String(p.purchasePrice), p.supplier])
-    );
-    toast.success("Produtos exportados");
+  const exportDashboard = async () => {
+    try {
+      await exportDashboardXlsx(purchases, sales, products, getProduct);
+      toast.success("Dashboard exportado");
+    } catch (e) {
+      toast.error("Erro ao exportar dashboard");
+    }
   };
 
   const exportPurchases = () => {
