@@ -330,15 +330,9 @@ export default function Purchases() {
                   </Button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Preço Unit.</p>
-                  <p className="font-semibold">{fmt(p.price)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Total</p>
-                  <p className="font-semibold">{fmt(p.price * p.quantity)}</p>
-                </div>
+              <div className="text-sm">
+                <p className="text-[10px] text-muted-foreground">Preço</p>
+                <p className="font-semibold">{fmt(p.price)}</p>
               </div>
               <p className="text-xs text-muted-foreground">{new Date(p.date).toLocaleDateString("pt-PT")}</p>
             </CardContent>
