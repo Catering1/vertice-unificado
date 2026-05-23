@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 
-type SortField = "product" | "price" | "total" | "date";
+type SortField = "product" | "price" | "date";
 type SortDir = "asc" | "desc";
 
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
@@ -167,7 +167,6 @@ export default function Purchases() {
         switch (sortField) {
           case "product": cmp = (getProduct(a.productId)?.name ?? "").localeCompare(getProduct(b.productId)?.name ?? ""); break;
           case "price": cmp = a.price - b.price; break;
-          case "total": cmp = (a.price * a.quantity) - (b.price * b.quantity); break;
           case "date": cmp = a.date.localeCompare(b.date); break;
         }
         return sortDir === "asc" ? cmp : -cmp;
@@ -304,7 +303,7 @@ export default function Purchases() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div><Label>Preço Unitário *</Label><Input type="number" min={0} step={0.01} value={price} onChange={e => setPrice(e.target.value)} /></div>
+                <div><Label>Preço *</Label><Input type="number" min={0} step={0.01} value={price} onChange={e => setPrice(e.target.value)} /></div>
               </div>
               <div><Label>Data *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
               <Button onClick={save}>{editingPurchase ? "Guardar" : "Registar"}</Button>
@@ -331,15 +330,9 @@ export default function Purchases() {
                   </Button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Preço Unit.</p>
-                  <p className="font-semibold">{fmt(p.price)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Total</p>
-                  <p className="font-semibold">{fmt(p.price * p.quantity)}</p>
-                </div>
+              <div className="text-sm">
+                <p className="text-[10px] text-muted-foreground">Preço</p>
+                <p className="font-semibold">{fmt(p.price)}</p>
               </div>
               <p className="text-xs text-muted-foreground">{new Date(p.date).toLocaleDateString("pt-PT")}</p>
             </CardContent>
@@ -356,10 +349,7 @@ export default function Purchases() {
                   <div className="flex items-center">Produto <SortIcon field="product" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("price")}>
-                  <div className="flex items-center">Preço Unit. <SortIcon field="price" /></div>
-                </TableHead>
-                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("total")}>
-                  <div className="flex items-center">Total <SortIcon field="total" /></div>
+                  <div className="flex items-center">Preço <SortIcon field="price" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("date")}>
                   <div className="flex items-center">Data <SortIcon field="date" /></div>
@@ -369,12 +359,11 @@ export default function Purchases() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : filtered.map(p => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
-                  <TableCell>{fmt(p.price * p.quantity)}</TableCell>
                   <TableCell>{new Date(p.date).toLocaleDateString("pt-PT")}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
