@@ -178,9 +178,7 @@ export async function exportDashboardXlsx(
   const wsC = wb.addWorksheet("Compras");
   wsC.columns = [
     { header: "Produto", key: "produto", width: 28 },
-    { header: "Quantidade", key: "qty", width: 12 },
-    { header: "Preço", key: "price", width: 12 },
-    { header: "Total", key: "total", width: 14 },
+    { header: "Preço", key: "price", width: 14 },
     { header: "Data", key: "date", width: 14 },
   ];
   wsC.getRow(1).font = { bold: true };
@@ -190,13 +188,10 @@ export async function exportDashboardXlsx(
     .forEach(p => {
       const row = wsC.addRow({
         produto: getProduct(p.productId)?.name ?? "",
-        qty: p.quantity,
         price: p.price,
-        total: p.price * p.quantity,
         date: p.date,
       });
       row.getCell("price").numFmt = EUR;
-      row.getCell("total").numFmt = EUR;
     });
 
   // ===== Vendas sheet =====
