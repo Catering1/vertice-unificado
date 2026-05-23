@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Download, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import { exportDashboardXlsx } from "@/lib/exportDashboard";
 
 function downloadCSV(filename: string, headers: string[], rows: string[][]) {
   const csv = [headers.join(";"), ...rows.map(r => r.join(";"))].join("\n");
