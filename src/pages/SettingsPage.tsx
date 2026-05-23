@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Download, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import { exportDashboardXlsx } from "@/lib/exportDashboard";
 
 function downloadCSV(filename: string, headers: string[], rows: string[][]) {
   const csv = [headers.join(";"), ...rows.map(r => r.join(";"))].join("\n");
@@ -45,12 +46,13 @@ export default function SettingsPage() {
     setEditingCat(null);
   };
 
-  const exportProducts = () => {
-    downloadCSV("produtos.csv",
-      ["Nome", "Categoria", "Preço Compra", "Fornecedor"],
-      products.map(p => [p.name, p.category, String(p.purchasePrice), p.supplier])
-    );
-    toast.success("Produtos exportados");
+  const exportDashboard = async () => {
+    try {
+      await exportDashboardXlsx(purchases, sales, products, getProduct);
+      toast.success("Dashboard exportado");
+    } catch (e) {
+      toast.error("Erro ao exportar dashboard");
+    }
   };
 
   const exportPurchases = () => {
@@ -134,7 +136,7 @@ export default function SettingsPage() {
       <Card>
         <CardHeader><CardTitle className="text-base">Exportar Dados (CSV)</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={exportProducts}><Download className="mr-2 h-4 w-4" />Produtos</Button>
+          <Button variant="outline" onClick={exportDashboard}><Download className="mr-2 h-4 w-4" />Dashboard Completo</Button>
           <Button variant="outline" onClick={exportPurchases}><Download className="mr-2 h-4 w-4" />Compras</Button>
           <Button variant="outline" onClick={exportSales}><Download className="mr-2 h-4 w-4" />Vendas</Button>
         </CardContent>
