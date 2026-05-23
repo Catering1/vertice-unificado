@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 
-type SortField = "product" | "price" | "total" | "date";
+type SortField = "product" | "price" | "date";
 type SortDir = "asc" | "desc";
 
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
