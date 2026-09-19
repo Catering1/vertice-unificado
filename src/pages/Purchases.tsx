@@ -67,6 +67,11 @@ export default function Purchases() {
   const [productName, setProductName] = useState("");
   const [productCategory, setProductCategory] = useState("Outros");
   const [productSupplier, setProductSupplier] = useState("");
+  const [retailPrice, setRetailPrice] = useState("");
+  const [condition, setCondition] = useState("Verificado");
+  const [warrantyMonths, setWarrantyMonths] = useState("0");
+  const [description, setDescription] = useState("");
+  const [specifications, setSpecifications] = useState("");
   const [price, setPrice] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
 
@@ -81,7 +86,7 @@ export default function Purchases() {
 
   const openNew = () => {
     setEditingPurchase(null);
-    setProductName(""); setProductCategory("Outros"); setProductSupplier("");
+    setProductName(""); setProductCategory("Outros"); setProductSupplier(""); setRetailPrice(""); setCondition("Verificado"); setWarrantyMonths("0"); setDescription(""); setSpecifications("");
     setPrice(""); setDate(new Date().toISOString().slice(0, 10));
     setDialogOpen(true);
   };
@@ -92,6 +97,11 @@ export default function Purchases() {
     setProductName(prod?.name ?? "");
     setProductCategory(prod?.category ?? "Outros");
     setProductSupplier(prod?.supplier ?? "");
+    setRetailPrice(String(prod?.retailPrice ?? ""));
+    setCondition(prod?.condition ?? "Verificado");
+    setWarrantyMonths(String(prod?.warrantyMonths ?? 0));
+    setDescription(prod?.description ?? "");
+    setSpecifications(prod?.specifications ?? "");
     setPrice(String(p.price));
     setDate(p.date);
     setDialogOpen(true);
@@ -103,6 +113,12 @@ export default function Purchases() {
       return;
     }
     const priceParsed = Number(price);
+    const retailPriceParsed = retailPrice ? Number(retailPrice) : 0;
+    const warrantyMonthsParsed = Number(warrantyMonths || 0);
+    if (Number.isNaN(retailPriceParsed) || Number.isNaN(warrantyMonthsParsed) || warrantyMonthsParsed < 0) {
+      toast.error("Verifique o preço de venda e a garantia");
+      return;
+    }
 
     let existingProd = products.find(p => p.name.toLowerCase() === productName.trim().toLowerCase());
     let productId: string;
@@ -110,10 +126,10 @@ export default function Purchases() {
       productId = existingProd.id;
       // Sync product purchasePrice if it changed
       if (existingProd.purchasePrice !== priceParsed) {
-        await updateProduct({ ...existingProd, purchasePrice: priceParsed });
+        await updateProduct({ ...existingProd, purchasePrice: priceParsed, retailPrice: retailPriceParsed, condition, warrantyMonths: warrantyMonthsParsed, description, specifications });
       }
     } else {
-      productId = await addProduct({ name: productName.trim(), category: productCategory, purchasePrice: priceParsed, supplier: productSupplier });
+      productId = await addProduct({ name: productName.trim(), category: productCategory, purchasePrice: priceParsed, supplier: productSupplier, retailPrice: retailPriceParsed, condition, warrantyMonths: warrantyMonthsParsed, description, specifications, photoUrls: [] });
     }
 
     if (editingPurchase) {
@@ -219,7 +235,7 @@ export default function Purchases() {
           if (prod) {
             prodId = prod.id;
           } else {
-            prodId = await addProduct({ name: name.slice(0, 200), category, purchasePrice: priceVal, supplier });
+            prodId = await addProduct({ name: name.slice(0, 200), category, purchasePrice: priceVal, supplier, retailPrice: 0, condition: "Verificado", warrantyMonths: 0, description: "", specifications: "", photoUrls: [] });
           }
           await addPurchase({ productId: prodId, quantity: qty, price: priceVal, date: dateVal });
           count++;
@@ -305,6 +321,17 @@ export default function Purchases() {
                 </div>
                 <div><Label>Preço *</Label><Input type="number" min={0} step={0.01} value={price} onChange={e => setPrice(e.target.value)} /></div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Preço de venda</Label><Input type="number" min={0} step={0.01} placeholder="Ex: 449" value={retailPrice} onChange={e => setRetailPrice(e.target.value)} /></div>
+                <div><Label>Garantia (meses)</Label><Input type="number" min={0} max={120} value={warrantyMonths} onChange={e => setWarrantyMonths(e.target.value)} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Estado</Label><Input placeholder="Ex: Como novo" value={condition} onChange={e => setCondition(e.target.value)} /></div>
+                <div><Label>Fornecedor</Label><Input placeholder="Opcional" value={productSupplier} onChange={e => setProductSupplier(e.target.value)} /></div>
+              </div>
+              <div><Label>Descrição para a página do produto</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado estético, funcionamento, acessórios incluídos e qualquer defeito a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
+              <div><Label>Especificações</Label><textarea value={specifications} onChange={e => setSpecifications(e.target.value)} maxLength={3000} rows={3} placeholder="Ex: 256 GB · 12 GB RAM · bateria 92% · caixa e carregador incluídos" className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
+              <p className="text-xs leading-5 text-muted-foreground">As fotos são adicionadas na ficha do produto depois de receberes e testares o equipamento.</p>
               <div><Label>Data *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
               <Button onClick={save}>{editingPurchase ? "Guardar" : "Registar"}</Button>
             </div>

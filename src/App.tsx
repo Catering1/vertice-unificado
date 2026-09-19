@@ -13,6 +13,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import Storefront from "./pages/Storefront";
+import ProductPage from "./pages/ProductPage";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
         <BrowserRouter basename={import.meta.env.BASE_URL}>
           <Routes>
             <Route path="/" element={<Storefront />} />
+            <Route path="/produto/:id" element={<ProductPage />} />
             <Route path="/admin/login" element={<AuthRoute />} />
             <Route path="/admin/*" element={<ProtectedRoutes />} />
             <Route path="*" element={<NotFound />} />

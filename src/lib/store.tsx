@@ -9,6 +9,12 @@ const ProductSchema = z.object({
   category: z.string().min(1).max(100),
   purchasePrice: z.number().min(0).max(1000000),
   supplier: z.string().max(200).trim(),
+  retailPrice: z.number().min(0).max(1000000),
+  condition: z.string().min(1).max(100).trim(),
+  warrantyMonths: z.number().int().min(0).max(120),
+  description: z.string().max(5000).trim(),
+  specifications: z.string().max(3000).trim(),
+  photoUrls: z.array(z.string().url()).max(12),
 });
 
 const PurchaseSchema = z.object({
@@ -76,6 +82,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       setProducts((prodRes.data ?? []).map(r => ({
         id: r.id, name: r.name, category: r.category, purchasePrice: Number(r.purchase_price), supplier: r.supplier,
+        retailPrice: Number((r as any).retail_price ?? 0), condition: (r as any).condition ?? "Verificado",
+        warrantyMonths: Number((r as any).warranty_months ?? 0), description: (r as any).description ?? "",
+        specifications: (r as any).specifications ?? "", photoUrls: (r as any).photo_urls ?? [],
       })));
       setPurchases((purchRes.data ?? []).map(r => ({
         id: r.id, productId: r.product_id, quantity: r.quantity, price: Number(r.price), date: r.date,
@@ -104,9 +113,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const validated = ProductSchema.parse(p);
     const { data, error } = await supabase.from("products").insert({
       user_id: user!.id, name: validated.name, category: validated.category, purchase_price: validated.purchasePrice, supplier: validated.supplier,
+      retail_price: validated.retailPrice, condition: validated.condition, warranty_months: validated.warrantyMonths,
+      description: validated.description, specifications: validated.specifications, photo_urls: validated.photoUrls,
     } as any).select().single();
     if (error) throw error;
-    const newProd: Product = { id: data.id, name: data.name, category: data.category, purchasePrice: Number(data.purchase_price), supplier: data.supplier };
+    const row = data as any;
+    const newProd: Product = { id: row.id, name: row.name, category: row.category, purchasePrice: Number(row.purchase_price), supplier: row.supplier, retailPrice: Number(row.retail_price ?? 0), condition: row.condition ?? "Verificado", warrantyMonths: Number(row.warranty_months ?? 0), description: row.description ?? "", specifications: row.specifications ?? "", photoUrls: row.photo_urls ?? [] };
     setProducts(prev => [...prev, newProd]);
     return data.id;
   };
@@ -114,6 +126,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const updateProduct = async (p: Product) => {
     await supabase.from("products").update({
       name: p.name, category: p.category, purchase_price: p.purchasePrice, supplier: p.supplier,
+      retail_price: p.retailPrice, condition: p.condition, warranty_months: p.warrantyMonths,
+      description: p.description, specifications: p.specifications, photo_urls: p.photoUrls,
     } as any).eq("id", p.id);
     setProducts(prev => prev.map(x => x.id === p.id ? p : x));
   };

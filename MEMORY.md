@@ -2,6 +2,11 @@
 
 Atualizado em 19 de setembro de 2026.
 
+## Regra de continuidade
+
+- Sempre que forem discutidas ou implementadas alterações importantes — funcionamento do negócio, arquitetura, dados, integrações, publicação ou decisões de produto — atualizar este ficheiro automaticamente.
+- Uma alteração funcional só é considerada concluída depois de estar aplicada no serviço necessário (por exemplo, base de dados), validada e publicada no site público quando for relevante.
+
 ## Objetivo
 
 Este é o terceiro repositório independente que unifica a loja pública e o dashboard do negócio. Os repositórios `verticemachine` e `tech-exchange-portugal` devem manter-se separados e não devem ser alterados para desenvolver esta versão.
@@ -37,3 +42,5 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - O formulário de contacto apresenta uma confirmação visual, mas ainda não envia email, WhatsApp ou pedido para a base de dados.
 - Os preços atuais surgem como “Sob consulta” quando o preço de venda é zero.
 - Criar no dashboard um fluxo de “pronto para anúncio” com fotos, estado, preço, descrição curta e links de publicação.
+- A evolução em curso introduz páginas individuais de produto, preço de venda, estado, garantia, descrição, especificações e lista de URLs de fotografias por produto.
+- As fotografias reais devem ficar no Supabase Storage, com um bucket próprio e regras que permitam ao administrador carregar imagens e ao público apenas lê-las. A publicação automática em canais externos deverá usar estas fotografias como fonte única.

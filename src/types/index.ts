@@ -4,6 +4,12 @@ export interface Product {
   category: string;
   purchasePrice: number;
   supplier: string;
+  retailPrice: number;
+  condition: string;
+  warrantyMonths: number;
+  description: string;
+  specifications: string;
+  photoUrls: string[];
 }
 
 export interface Purchase {
