@@ -17,6 +17,7 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - Site público: `https://catering1.github.io/vertice-unificado/`
 - Administração: `https://catering1.github.io/vertice-unificado/admin/login`
 - Supabase: projeto `mjtqdeesfapqfmxkhaby`
+- O projeto Lovable atual (`My Trade Tracker`, ID `37e34560-c141-4c02-8861-1289f7c17fc3`) continua ligado a `Catering1/verticemachine`. A interface Lovable não disponibilizou a troca desse repositório por `Catering1/vertice-unificado`; não forçar código para o repositório original sem uma instrução explícita para o alterar.
 
 ## Dados e stock
 
