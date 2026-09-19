@@ -7,7 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Trash2, Download, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { exportDashboardXlsx } from "@/lib/exportDashboard";
-import { StoreListingsPanel } from "@/components/StoreListingsPanel";
 
 function downloadCSV(filename: string, headers: string[], rows: string[][]) {
   const csv = [headers.join(";"), ...rows.map(r => r.join(";"))].join("\n");
@@ -80,7 +79,6 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl">
-      <StoreListingsPanel />
       {/* Categories */}
       <Card>
         <CardHeader><CardTitle className="text-base">Categorias</CardTitle></CardHeader>

@@ -223,7 +223,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_public_store_products: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          title: string
+          category: string
+          condition: string
+          warranty_months: number
+          retail_price: number
+          image_url: string | null
+          description: string | null
+          stock_quantity: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

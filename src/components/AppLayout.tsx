@@ -87,7 +87,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="px-5 pb-5">
           <div className="flex items-center gap-2 text-[11px] text-sidebar-foreground/30">
             <TrendingUp className="h-4 w-4" />
-            <span className="font-semibold">Vending Machine</span>
+            <span className="font-semibold">Vértice · Gestão</span>
           </div>
         </div>
       </aside>
