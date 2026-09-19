@@ -42,5 +42,5 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - O formulário de contacto apresenta uma confirmação visual, mas ainda não envia email, WhatsApp ou pedido para a base de dados.
 - Os preços atuais surgem como “Sob consulta” quando o preço de venda é zero.
 - Criar no dashboard um fluxo de “pronto para anúncio” com fotos, estado, preço, descrição curta e links de publicação.
-- A evolução em curso introduz páginas individuais de produto, preço de venda, estado, garantia, descrição, especificações e lista de URLs de fotografias por produto.
+- As páginas individuais de produto e os campos de preço de venda, estado, garantia, descrição, especificações e URLs de fotografias já estão aplicados no frontend e no Supabase. Os produtos existentes mantêm valores predefinidos até serem enriquecidos no dashboard.
 - As fotografias reais devem ficar no Supabase Storage, com um bucket próprio e regras que permitam ao administrador carregar imagens e ao público apenas lê-las. A publicação automática em canais externos deverá usar estas fotografias como fonte única.
