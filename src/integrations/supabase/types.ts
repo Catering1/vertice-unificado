@@ -162,6 +162,62 @@ export type Database = {
           },
         ]
       }
+      store_listings: {
+        Row: {
+          category: string
+          condition: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          product_id: string | null
+          published: boolean
+          retail_price: number
+          title: string
+          updated_at: string
+          user_id: string
+          warranty_months: number
+        }
+        Insert: {
+          category?: string
+          condition?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          product_id?: string | null
+          published?: boolean
+          retail_price: number
+          title: string
+          updated_at?: string
+          user_id: string
+          warranty_months?: number
+        }
+        Update: {
+          category?: string
+          condition?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          product_id?: string | null
+          published?: boolean
+          retail_price?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+          warranty_months?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_listings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

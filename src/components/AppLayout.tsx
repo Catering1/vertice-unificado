@@ -8,10 +8,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
-  { label: "Dashboard", path: "/", icon: LayoutDashboard },
-  { label: "Compras", path: "/compras", icon: ShoppingCart },
-  { label: "Vendas", path: "/vendas", icon: TrendingUp },
-  { label: "Configurações", path: "/configuracoes", icon: Settings },
+  { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
+  { label: "Compras", path: "/admin/compras", icon: ShoppingCart },
+  { label: "Vendas", path: "/admin/vendas", icon: TrendingUp },
+  { label: "Configurações", path: "/admin/configuracoes", icon: Settings },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

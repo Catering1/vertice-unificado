@@ -12,6 +12,7 @@ import Sales from "@/pages/Sales";
 import SettingsPage from "@/pages/SettingsPage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "./pages/NotFound";
+import Storefront from "./pages/Storefront";
 
 const queryClient = new QueryClient();
 
@@ -23,10 +24,10 @@ function ProtectedRoutes() {
     <StoreProvider>
       <AppLayout>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/compras" element={<Purchases />} />
-          <Route path="/vendas" element={<Sales />} />
-          <Route path="/configuracoes" element={<SettingsPage />} />
+          <Route index element={<Dashboard />} />
+          <Route path="compras" element={<Purchases />} />
+          <Route path="vendas" element={<Sales />} />
+          <Route path="configuracoes" element={<SettingsPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AppLayout>
@@ -37,7 +38,7 @@ function ProtectedRoutes() {
 function AuthRoute() {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/admin" replace />;
   return <AuthPage />;
 }
 
@@ -49,8 +50,10 @@ const App = () => (
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<AuthRoute />} />
-            <Route path="/*" element={<ProtectedRoutes />} />
+            <Route path="/" element={<Storefront />} />
+            <Route path="/admin/login" element={<AuthRoute />} />
+            <Route path="/admin/*" element={<ProtectedRoutes />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
