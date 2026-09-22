@@ -39,6 +39,7 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - Produtos ainda sem fotografia real são identificados no site com a indicação visível `Imagem ilustrativa`.
 - A ligação entre o nome público do produto e a imagem local está em `src/pages/Storefront.tsx` (`productImages`). Ao criar novos produtos, acrescentar a fotografia e a chave normalizada ao mapa.
 - A identidade visual usa azul-marinho, fundos claros, cartões limpos e tipografia forte.
+- A galeria de stock deve ser a primeira secção visível do site público. O objetivo principal da home é mostrar rapidamente os produtos disponíveis; secções institucionais ou de venda/troca devem aparecer depois.
 
 ## Publicação
 
