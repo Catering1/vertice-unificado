@@ -49,6 +49,7 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - Excluir anúncios manifestamente anómalos, suspeitos ou que não sejam comparáveis em capacidade, estado, garantia e acessórios. Registar no produto o custo total, preço recomendado, preço publicado e preço mínimo de negociação.
 - Nunca incluir num anúncio público informações internas de compra, abastecimento ou operação: plataforma ou fornecedor de origem, custo de aquisição, estado da encomenda, transporte, devolução, centro de verificação, mensagens privadas ou outros processos internos.
 - A descrição pública deve limitar-se às características do produto, estado confirmado, acessórios incluídos, garantia, preço e condições de entrega. Informação ainda não confirmada não deve ser publicada como facto.
+- O OLX conserva apenas um anúncio inacabado de cada vez nesta conta; não existe uma área de vários rascunhos. Preparar os anúncios em fila e só substituir o rascunho atual depois de este ser publicado ou descartado com confirmação do utilizador.
 - Os anúncios podem ser preparados automaticamente com as fotografias e dados guardados no Vértice, mas a publicação final num canal externo deve ser confirmada pelo utilizador.
 
 ## Limitações conhecidas e próximos passos
