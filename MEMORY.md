@@ -33,6 +33,9 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 
 - As imagens de apresentação estão em `src/assets/products/` e são ilustrativas. Quando existirem fotografias reais, estas devem substituir as imagens correspondentes.
 - As imagens ilustrativas ou geradas por IA destinam-se apenas à montra do site enquanto não existirem fotografias reais. Nunca usar imagens geradas por IA em anúncios externos (OLX, Vinted ou outros canais); nesses canais, publicar apenas fotografias reais do artigo ou deixar o anúncio sem fotografia até elas existirem.
+- As fotografias reais confirmadas ficam em `src/assets/products/real/`. Em 22 de setembro de 2026 foram adicionadas fotografias reais do Z Flip8, Z Fold8 Ultra, Z Fold7, S25 Ultra e Surface Laptop Go 3. Capturas de pagamentos, devoluções, faturas e etiquetas com IMEI ou números de série foram excluídas.
+- A apresentação comercial complementar está centralizada em `src/lib/catalog.ts`. O stock e a elegibilidade continuam a vir do Supabase; os dados do dashboard têm prioridade quando estiverem preenchidos, e o catálogo local completa preço, descrição, especificações e fotografias enquanto esses campos estiverem vazios.
+- Produtos ainda sem fotografia real são identificados no site com a indicação visível `Imagem ilustrativa`.
 - A ligação entre o nome público do produto e a imagem local está em `src/pages/Storefront.tsx` (`productImages`). Ao criar novos produtos, acrescentar a fotografia e a chave normalizada ao mapa.
 - A identidade visual usa azul-marinho, fundos claros, cartões limpos e tipografia forte.
 
