@@ -19,7 +19,7 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - Supabase: projeto `mjtqdeesfapqfmxkhaby`
 - O projeto Lovable atual (`My Trade Tracker`, ID `37e34560-c141-4c02-8861-1289f7c17fc3`) continua ligado a `Catering1/verticemachine`. A interface Lovable não disponibilizou a troca desse repositório por `Catering1/vertice-unificado`; não forçar código para o repositório original sem uma instrução explícita para o alterar.
 - Projeto Lovable independente: `Vértice Unificado` (ID `b7bb56f3-4641-4faf-90c9-ef28268d9299`), criado na conta `bbonito003@gmail.com`.
-- O Lovable criou e sincroniza bidirecionalmente o repositório próprio `https://github.com/Catering1/v-rtice-unificado`. Este recebeu o código do repositório canónico `Catering1/vertice-unificado`; os dois repositórios originais não foram alterados.
+- O Lovable criou anteriormente o repositório separado `https://github.com/Catering1/v-rtice-unificado`. Deve ser tratado apenas como uma cópia histórica: não aplicar lá novas alterações nem o usar para publicação.
 - Publicação Lovable: `https://unified-vertex-core.lovable.app/`.
 
 ## Dados e stock
@@ -44,7 +44,7 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - A aplicação é Vite/React. Para publicar no GitHub Pages, compilar com `VITE_BASE_PATH=/vertice-unificado/`.
 - Copiar `dist/index.html` para `dist/404.html` antes de publicar, para que rotas como `/admin/login` funcionem no GitHub Pages.
 - A página pública é publicada na branch `gh-pages`; o código fonte fica na branch `main`.
-- As alterações no repositório canónico `Catering1/vertice-unificado` não são automaticamente espelhadas no repositório criado pelo Lovable. Até ser definida uma fonte única, aplicar a mesma alteração a ambos ou decidir explicitamente qual passa a ser o repositório canónico antes de editar.
+- `Catering1/vertice-unificado` é a única fonte canónica. Todas as alterações de código, memória e publicação deste projeto devem ser feitas apenas nesse repositório. Não sincronizar `Catering1/v-rtice-unificado` e não alterar os repositórios originais `verticemachine` ou `tech-exchange-portugal`.
 
 ## Preços e anúncios externos
 
