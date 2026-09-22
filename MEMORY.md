@@ -47,6 +47,8 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - Antes de publicar cada produto, pesquisar anúncios atuais do mesmo equipamento. Dar prioridade aos comparáveis do OLX no distrito de Lisboa e confirmar a faixa de mercado em lojas de usados ou recondicionados, como a CeX ou equivalentes.
 - O preço mínimo aceitável deve ser calculado por `custo total de aquisição + despesas do canal, envio e outras despesas da venda + 75 €`. Os 75 € são lucro mínimo líquido previsto, não apenas diferença entre compra e preço anunciado.
 - Excluir anúncios manifestamente anómalos, suspeitos ou que não sejam comparáveis em capacidade, estado, garantia e acessórios. Registar no produto o custo total, preço recomendado, preço publicado e preço mínimo de negociação.
+- Nunca incluir num anúncio público informações internas de compra, abastecimento ou operação: plataforma ou fornecedor de origem, custo de aquisição, estado da encomenda, transporte, devolução, centro de verificação, mensagens privadas ou outros processos internos.
+- A descrição pública deve limitar-se às características do produto, estado confirmado, acessórios incluídos, garantia, preço e condições de entrega. Informação ainda não confirmada não deve ser publicada como facto.
 - Os anúncios podem ser preparados automaticamente com as fotografias e dados guardados no Vértice, mas a publicação final num canal externo deve ser confirmada pelo utilizador.
 
 ## Limitações conhecidas e próximos passos
