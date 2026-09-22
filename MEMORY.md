@@ -1,6 +1,6 @@
 # Memória do projeto Vértice Unificado
 
-Atualizado em 20 de setembro de 2026.
+Atualizado em 22 de setembro de 2026.
 
 ## Regra de continuidade
 
@@ -41,6 +41,13 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - Copiar `dist/index.html` para `dist/404.html` antes de publicar, para que rotas como `/admin/login` funcionem no GitHub Pages.
 - A página pública é publicada na branch `gh-pages`; o código fonte fica na branch `main`.
 - As alterações no repositório canónico `Catering1/vertice-unificado` não são automaticamente espelhadas no repositório criado pelo Lovable. Até ser definida uma fonte única, aplicar a mesma alteração a ambos ou decidir explicitamente qual passa a ser o repositório canónico antes de editar.
+
+## Preços e anúncios externos
+
+- Antes de publicar cada produto, pesquisar anúncios atuais do mesmo equipamento. Dar prioridade aos comparáveis do OLX no distrito de Lisboa e confirmar a faixa de mercado em lojas de usados ou recondicionados, como a CeX ou equivalentes.
+- O preço mínimo aceitável deve ser calculado por `custo total de aquisição + despesas do canal, envio e outras despesas da venda + 75 €`. Os 75 € são lucro mínimo líquido previsto, não apenas diferença entre compra e preço anunciado.
+- Excluir anúncios manifestamente anómalos, suspeitos ou que não sejam comparáveis em capacidade, estado, garantia e acessórios. Registar no produto o custo total, preço recomendado, preço publicado e preço mínimo de negociação.
+- Os anúncios podem ser preparados automaticamente com as fotografias e dados guardados no Vértice, mas a publicação final num canal externo deve ser confirmada pelo utilizador.
 
 ## Limitações conhecidas e próximos passos
 
