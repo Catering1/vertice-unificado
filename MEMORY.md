@@ -44,6 +44,7 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 
 ## Preços e anúncios externos
 
+- O dashboard é a única fonte de elegibilidade para anúncios externos: publicar apenas produtos registados como compras e atualmente ativos/em venda no dashboard. O histórico da Vinted serve apenas para confirmar dados, custo e fotografias do produto correspondente; nunca anunciar outras compras da Vinted que não estejam ativas no dashboard (por exemplo, livros, roupa ou artigos pessoais).
 - Antes de publicar cada produto, pesquisar anúncios atuais do mesmo equipamento. Dar prioridade aos comparáveis do OLX no distrito de Lisboa e confirmar a faixa de mercado em lojas de usados ou recondicionados, como a CeX ou equivalentes.
 - O preço mínimo aceitável deve ser calculado por `custo total de aquisição + despesas do canal, envio e outras despesas da venda + 75 €`. Os 75 € são lucro mínimo líquido previsto, não apenas diferença entre compra e preço anunciado.
 - Excluir anúncios manifestamente anómalos, suspeitos ou que não sejam comparáveis em capacidade, estado, garantia e acessórios. Registar no produto o custo total, preço recomendado, preço publicado e preço mínimo de negociação.
