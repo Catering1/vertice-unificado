@@ -32,6 +32,7 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 ## Imagens e design
 
 - As imagens de apresentação estão em `src/assets/products/` e são ilustrativas. Quando existirem fotografias reais, estas devem substituir as imagens correspondentes.
+- As imagens ilustrativas ou geradas por IA destinam-se apenas à montra do site enquanto não existirem fotografias reais. Nunca usar imagens geradas por IA em anúncios externos (OLX, Vinted ou outros canais); nesses canais, publicar apenas fotografias reais do artigo ou deixar o anúncio sem fotografia até elas existirem.
 - A ligação entre o nome público do produto e a imagem local está em `src/pages/Storefront.tsx` (`productImages`). Ao criar novos produtos, acrescentar a fotografia e a chave normalizada ao mapa.
 - A identidade visual usa azul-marinho, fundos claros, cartões limpos e tipografia forte.
 
