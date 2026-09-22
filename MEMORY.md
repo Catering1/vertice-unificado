@@ -54,6 +54,14 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - O OLX conserva apenas um anúncio inacabado de cada vez nesta conta; não existe uma área de vários rascunhos. Preparar os anúncios em fila e só substituir o rascunho atual depois de este ser publicado ou descartado com confirmação do utilizador.
 - Os anúncios podem ser preparados automaticamente com as fotografias e dados guardados no Vértice, mas a publicação final num canal externo deve ser confirmada pelo utilizador.
 
+## Estado da campanha OLX em 22 de setembro de 2026
+
+- O anúncio `Samsung Galaxy Z Fold7 256GB Azul - SIM bloqueado` foi criado com quatro fotografias reais, preço de 849 € e ID OLX `673788064`. O OLX exige pagamento para ativar a categoria Samsung; o anúncio ficou em `Por pagar` e nenhum pagamento foi realizado.
+- O anúncio `Samsung Galaxy S25 Ultra 256GB Titanium Black`, ID OLX `673782413`, também permanece em `Por pagar`. Não efetuar pagamentos sem uma instrução explícita do utilizador.
+- O anúncio `Logitech Brio 4K Ultra HD Webcam`, ID OLX `673787302`, foi corrigido para remover a imagem gerada por IA e encontra-se pendente de moderação, sem fotografia.
+- Não preparar o segundo S25 Ultra enquanto a compra correspondente continuar com devolução iniciada na Vinted.
+- Não publicar o Surface Laptop Studio até existirem correspondência confirmada da compra, custo total, especificações e fotografias reais do equipamento.
+
 ## Limitações conhecidas e próximos passos
 
 - O formulário de contacto apresenta uma confirmação visual, mas ainda não envia email, WhatsApp ou pedido para a base de dados.
