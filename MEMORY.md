@@ -1,6 +1,6 @@
 # Memória do projeto Vértice Unificado
 
-Atualizado em 22 de setembro de 2026.
+Atualizado em 27 de setembro de 2026.
 
 ## Regra de continuidade
 
@@ -28,6 +28,9 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - A função só expõe campos seguros para visitantes e calcula o stock como compras menos vendas.
 - Um produto com stock zero deixa de aparecer na loja pública. Registar uma venda no dashboard é, por isso, a ação que esgota a listagem.
 - A migração de referência está em `supabase/migrations/20260919000000_public_inventory_rpc.sql`.
+- O dashboard suporta visões por categoria e uma visão agregada. O histórico dos livros é importado da folha `Livros` nas Configurações com referências estáveis por linha, para permitir repetir uma importação interrompida sem duplicar registos.
+- Livros em leitura ficam marcados como uso pessoal, fora do stock disponível. Todos os livros importados ficam ocultos da montra pública. Custos e datas desconhecidos ficam vazios; o dashboard apresenta o lucro conhecido como parcial e sinaliza esses registos para revisão.
+- A migração `supabase/migrations/20260926231640_books_categories_and_source_data.sql` foi aplicada no Cloud do projeto Lovable. Ela acrescenta os campos de origem e uso pessoal, permite datas e custos em falta, cria despesas privadas e restringe a função pública ao stock comercial visível.
 
 ## Imagens e design
 
