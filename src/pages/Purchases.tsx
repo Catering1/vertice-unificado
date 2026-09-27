@@ -1,3 +1,4 @@
+import { money, displayDate as formatDate } from "@/lib/dashboardMetrics";
 import { useState, useMemo, useRef } from "react";
 import { useStore } from "@/lib/store";
 import { usePersistedState } from "@/hooks/usePersistedState";
@@ -62,12 +63,16 @@ function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: str
 export default function Purchases() {
   const { purchases, sales, products, categories, addPurchase, updatePurchase, deletePurchase, getProduct, addProduct, updateProduct } = useStore();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [issueFilter, setIssueFilter] = useState("all");
   const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
 
   const [productName, setProductName] = useState("");
   const [productCategory, setProductCategory] = useState("Outros");
   const [productSupplier, setProductSupplier] = useState("");
   const [retailPrice, setRetailPrice] = useState("");
+  const [inventoryUse, setInventoryUse] = useState<"business" | "personal">("business");
   const [condition, setCondition] = useState("Verificado");
   const [warrantyMonths, setWarrantyMonths] = useState("0");
   const [description, setDescription] = useState("");
@@ -86,6 +91,7 @@ export default function Purchases() {
 
   const openNew = () => {
     setEditingPurchase(null);
+    setInventoryUse("business");
     setProductName(""); setProductCategory("Outros"); setProductSupplier(""); setRetailPrice(""); setCondition("Verificado"); setWarrantyMonths("0"); setDescription(""); setSpecifications("");
     setPrice(""); setDate(new Date().toISOString().slice(0, 10));
     setDialogOpen(true);
@@ -102,17 +108,19 @@ export default function Purchases() {
     setWarrantyMonths(String(prod?.warrantyMonths ?? 0));
     setDescription(prod?.description ?? "");
     setSpecifications(prod?.specifications ?? "");
-    setPrice(String(p.price));
+    setInventoryUse(prod?.inventoryUse ?? "business");
+    setPrice(p.price == null ? "" : String(p.price));
     setDate(p.date);
     setDialogOpen(true);
   };
 
   const save = async () => {
-    if (!productName.trim() || !price || !date) {
+    if (!productName.trim() || ((!price || !date) && !editingPurchase)) {
       toast.error("Preencha todos os campos");
       return;
     }
-    const priceParsed = Number(price);
+    const priceParsed = price === "" ? null : Number(price);
+    if (priceParsed != null && (!Number.isFinite(priceParsed) || priceParsed < 0)) { toast.error("Preço inválido"); return; }
     const retailPriceParsed = retailPrice ? Number(retailPrice) : 0;
     const warrantyMonthsParsed = Number(warrantyMonths || 0);
     if (Number.isNaN(retailPriceParsed) || Number.isNaN(warrantyMonthsParsed) || warrantyMonthsParsed < 0) {
@@ -120,20 +128,17 @@ export default function Purchases() {
       return;
     }
 
-    let existingProd = products.find(p => p.name.toLowerCase() === productName.trim().toLowerCase());
+    const existingProd = editingPurchase ? getProduct(editingPurchase.productId) : products.find(p => !p.sourceRef && p.category === productCategory && p.name.toLowerCase() === productName.trim().toLowerCase());
     let productId: string;
     if (existingProd) {
       productId = existingProd.id;
-      // Sync product purchasePrice if it changed
-      if (existingProd.purchasePrice !== priceParsed) {
-        await updateProduct({ ...existingProd, purchasePrice: priceParsed, retailPrice: retailPriceParsed, condition, warrantyMonths: warrantyMonthsParsed, description, specifications });
-      }
+      await updateProduct({...existingProd,name:productName.trim(),category:productCategory,supplier:productSupplier,purchasePrice:priceParsed,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,inventoryUse});
     } else {
-      productId = await addProduct({ name: productName.trim(), category: productCategory, purchasePrice: priceParsed, supplier: productSupplier, retailPrice: retailPriceParsed, condition, warrantyMonths: warrantyMonthsParsed, description, specifications, photoUrls: [] });
+      productId = await addProduct({name:productName.trim(),category:productCategory,purchasePrice:priceParsed,supplier:productSupplier,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,photoUrls:[],inventoryUse,storeVisible:productCategory !== "Livros" && inventoryUse !== "personal"});
     }
 
     if (editingPurchase) {
-      await updatePurchase({ id: editingPurchase.id, productId, quantity: 1, price: priceParsed, date });
+      await updatePurchase({ id: editingPurchase.id, productId, quantity: editingPurchase.quantity, price: priceParsed, date });
       toast.success("Compra atualizada");
     } else {
       await addPurchase({ productId, quantity: 1, price: priceParsed, date });
@@ -170,8 +175,13 @@ export default function Purchases() {
   const filtered = useMemo(() => {
     let result = purchases.filter(p => {
       const prod = getProduct(p.productId);
+      if (search && !prod?.name.toLocaleLowerCase("pt-PT").includes(search.toLocaleLowerCase("pt-PT"))) return false;
+      if (issueFilter === "undated" && p.date) return false;
+      if (issueFilter === "cost" && p.price != null) return false;
       if (catFilter !== "all" && prod?.category !== catFilter) return false;
       if (searchDate && !p.date.includes(searchDate)) return false;
+      if (stockFilter === "reading" && prod?.inventoryUse !== "personal") return false;
+      if ((stockFilter === "active" || stockFilter === "sold") && prod?.inventoryUse === "personal") return false;
       if (stockFilter === "active" && (productStock.get(p.productId) ?? 0) <= 0) return false;
       if (stockFilter === "sold" && (productStock.get(p.productId) ?? 0) > 0) return false;
       return true;
@@ -190,9 +200,12 @@ export default function Purchases() {
     }
 
     return result;
-  }, [purchases, catFilter, searchDate, stockFilter, productStock, sortField, sortDir, getProduct]);
+  }, [purchases, search, issueFilter, catFilter, searchDate, stockFilter, productStock, sortField, sortDir, getProduct]);
 
-  const fmt = (v: number) => v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
+  const pages = Math.max(1, Math.ceil(filtered.length / 50));
+  const currentPage = Math.min(page, pages);
+  const visible = filtered.slice((currentPage-1)*50,currentPage*50);
+  const fmt = money;
 
   const parseCSV = (text: string): Record<string, string>[] => {
     const lines = text.split(/\r?\n/).filter(l => l.trim());
@@ -230,7 +243,7 @@ export default function Purchases() {
           if (isNaN(priceVal) || priceVal < 0 || priceVal > 1000000) { skipped++; continue; }
           if (!/^\d{4}-\d{2}-\d{2}/.test(dateVal)) { skipped++; continue; }
 
-          let prod = products.find(p => p.name.toLowerCase() === name.toLowerCase());
+          const prod = products.find(p => p.name.toLowerCase() === name.toLowerCase());
           let prodId: string;
           if (prod) {
             prodId = prod.id;
@@ -269,12 +282,13 @@ export default function Purchases() {
 
           <Select value={stockFilter} onValueChange={setStockFilter}>
             <SelectTrigger className="flex-1 sm:flex-none sm:w-[180px]">
-              <span className="truncate">{stockFilter === "all" ? "Estado: Todos" : stockFilter === "active" ? "Estado: Ativos" : "Estado: Vendidos"}</span>
+              <span className="truncate">{stockFilter === "all" ? "Estado: Todos" : stockFilter === "active" ? "Estado: Ativos" : stockFilter === "reading" ? "Estado: Leitura" : "Estado: Vendidos"}</span>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="active">Ativos</SelectItem>
               <SelectItem value="sold">Vendidos</SelectItem>
+              <SelectItem value="reading">Leitura / uso pessoal</SelectItem>
             </SelectContent>
           </Select>
           <Select value={catFilter} onValueChange={setCatFilter}>
@@ -332,18 +346,25 @@ export default function Purchases() {
               <div><Label>Descrição para a página do produto</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado estético, funcionamento, acessórios incluídos e qualquer defeito a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
               <div><Label>Especificações</Label><textarea value={specifications} onChange={e => setSpecifications(e.target.value)} maxLength={3000} rows={3} placeholder="Ex: 256 GB · 12 GB RAM · bateria 92% · caixa e carregador incluídos" className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
               <p className="text-xs leading-5 text-muted-foreground">As fotos são adicionadas na ficha do produto depois de receberes e testares o equipamento.</p>
-              <div><Label>Data *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+              <div><Label>Utilização</Label><Select value={inventoryUse} onValueChange={v=>setInventoryUse(v as "business" | "personal")}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="business">Disponível para negócio</SelectItem><SelectItem value="personal">Leitura / uso pessoal</SelectItem></SelectContent></Select></div>
+              <div><Label>Data</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
               <Button onClick={save}>{editingPurchase ? "Guardar" : "Registar"}</Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3">
+        <Input className="sm:max-w-xs" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
+        <Select value={issueFilter} onValueChange={v=>{setIssueFilter(v);setPage(1);}}><SelectTrigger className="w-full sm:w-56" aria-label="Dados a confirmar"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos os registos</SelectItem><SelectItem value="undated">Sem data</SelectItem><SelectItem value="cost">Custo por confirmar</SelectItem></SelectContent></Select>
+        <p className="text-sm text-muted-foreground">{filtered.length} registos</p>
+      </div>
+      <div className="flex items-center justify-end gap-3 text-sm"><Button variant="outline" size="sm" disabled={currentPage===1} onClick={()=>setPage(currentPage-1)}>Anterior</Button><span>Página {currentPage} de {pages}</span><Button variant="outline" size="sm" disabled={currentPage===pages} onClick={()=>setPage(currentPage+1)}>Seguinte</Button></div>
       {/* Mobile: card list; Desktop: table */}
       <div className="block sm:hidden space-y-3">
         {filtered.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</p>
-        ) : filtered.map(p => (
+        ) : visible.map(p => (
           <Card key={p.id}>
             <CardContent className="p-4 space-y-2">
               <div className="flex items-center justify-between">
@@ -361,7 +382,7 @@ export default function Purchases() {
                 <p className="text-[10px] text-muted-foreground">Preço</p>
                 <p className="font-semibold">{fmt(p.price)}</p>
               </div>
-              <p className="text-xs text-muted-foreground">{new Date(p.date).toLocaleDateString("pt-PT")}</p>
+              <p className="text-xs text-muted-foreground">{formatDate(p.date)}</p>
             </CardContent>
           </Card>
         ))}
@@ -387,11 +408,11 @@ export default function Purchases() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
-              ) : filtered.map(p => (
+              ) : visible.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}</TableCell>
+                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {getProduct(p.productId)?.inventoryUse === "personal" ? "Leitura" : (productStock.get(p.productId) ?? 0) > 0 ? "Ativo" : "Vendido"}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p></TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
-                  <TableCell>{new Date(p.date).toLocaleDateString("pt-PT")}</TableCell>
+                  <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>

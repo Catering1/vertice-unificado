@@ -1,3 +1,5 @@
+import BookImport from "@/components/BookImport";
+import { money, displayDate } from "@/lib/dashboardMetrics";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +11,7 @@ import { toast } from "sonner";
 import { exportDashboardXlsx } from "@/lib/exportDashboard";
 
 function downloadCSV(filename: string, headers: string[], rows: string[][]) {
-  const csv = [headers.join(";"), ...rows.map(r => r.join(";"))].join("\n");
+  const csv = [headers.join(";"), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";"))].join("\n");
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -20,7 +22,7 @@ function downloadCSV(filename: string, headers: string[], rows: string[][]) {
 }
 
 export default function SettingsPage() {
-  const { categories, addCategory, updateCategory, deleteCategory, products, purchases, sales, getProduct } = useStore();
+  const { categories, addCategory, updateCategory, deleteCategory, products, purchases, sales, expenses, getProduct } = useStore();
   const [newCat, setNewCat] = useState("");
   const [editingCat, setEditingCat] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -48,7 +50,7 @@ export default function SettingsPage() {
 
   const exportDashboard = async () => {
     try {
-      await exportDashboardXlsx(purchases, sales, products, getProduct);
+      await exportDashboardXlsx(purchases, sales, products, getProduct, expenses);
       toast.success("Dashboard exportado");
     } catch (e) {
       toast.error("Erro ao exportar dashboard");
@@ -60,7 +62,7 @@ export default function SettingsPage() {
       ["Produto", "Quantidade", "Preço", "Total", "Data"],
       purchases.map(p => {
         const prod = getProduct(p.productId);
-        return [prod?.name ?? "", String(p.quantity), String(p.price), String(p.price * p.quantity), p.date];
+        return [prod?.name ?? "", String(p.quantity), p.price == null ? "" : String(p.price), p.price == null ? "" : String(p.price * p.quantity), p.date];
       })
     );
     toast.success("Compras exportadas");
@@ -71,7 +73,7 @@ export default function SettingsPage() {
       ["Produto", "Quantidade", "Preço Venda", "Total", "Lucro", "Data"],
       sales.map(s => {
         const prod = getProduct(s.productId);
-        return [prod?.name ?? "", String(s.quantity), String(s.salePrice), String(s.salePrice * s.quantity), String(s.profit), s.date];
+        return [prod?.name ?? "", String(s.quantity), String(s.salePrice), String(s.salePrice * s.quantity), s.profit == null ? "" : String(s.profit), s.date];
       })
     );
     toast.success("Vendas exportadas");
@@ -79,6 +81,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl">
+      <BookImport />
       {/* Categories */}
       <Card>
         <CardHeader><CardTitle className="text-base">Categorias</CardTitle></CardHeader>
@@ -132,6 +135,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {expenses.length > 0 && <Card><CardHeader><CardTitle className="text-base">Despesas operacionais</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Descrição</TableHead><TableHead>Categoria</TableHead><TableHead>Valor</TableHead><TableHead>Data</TableHead></TableRow></TableHeader><TableBody>{expenses.map(e=><TableRow key={e.id}><TableCell>{e.description}</TableCell><TableCell>{e.category}</TableCell><TableCell>{money(e.amount)}</TableCell><TableCell>{displayDate(e.date)}</TableCell></TableRow>)}</TableBody></Table></CardContent></Card>}
       {/* Export */}
       <Card>
         <CardHeader><CardTitle className="text-base">Exportar Dados (CSV)</CardTitle></CardHeader>

@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      expenses: {
+        Row: {
+          id: string
+          user_id: string
+          category: string
+          description: string
+          amount: number
+          date: string | null
+          source_ref: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          category: string
+          description: string
+          amount: number
+          date?: string | null
+          source_ref?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          category?: string
+          description?: string
+          amount?: number
+          date?: string | null
+          source_ref?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       allowed_emails: {
         Row: {
           created_at: string
@@ -55,29 +88,59 @@ export type Database = {
       }
       products: {
         Row: {
+          inventory_use: "business" | "personal"
+          store_visible: boolean
+          source_ref: string | null
+          source_data: Json
+          retail_price: number
+          condition: string
+          warranty_months: number
+          description: string
+          specifications: string
+          photo_urls: string[]
           category: string
           created_at: string
           id: string
           name: string
-          purchase_price: number
+          purchase_price: number | null
           supplier: string
           user_id: string
         }
         Insert: {
+          inventory_use?: "business" | "personal"
+          store_visible?: boolean
+          source_ref?: string | null
+          source_data?: Json
+          retail_price?: number
+          condition?: string
+          warranty_months?: number
+          description?: string
+          specifications?: string
+          photo_urls?: string[]
           category?: string
           created_at?: string
           id?: string
           name: string
-          purchase_price?: number
+          purchase_price?: number | null
           supplier?: string
           user_id: string
         }
         Update: {
+          inventory_use?: "business" | "personal"
+          store_visible?: boolean
+          source_ref?: string | null
+          source_data?: Json
+          retail_price?: number
+          condition?: string
+          warranty_months?: number
+          description?: string
+          specifications?: string
+          photo_urls?: string[]
           category?: string
           created_at?: string
           id?: string
           name?: string
-          purchase_price?: number
+          purchase_price?: number | null
           supplier?: string
           user_id?: string
         }
@@ -85,28 +148,31 @@ export type Database = {
       }
       purchases: {
         Row: {
+          source_ref: string | null
           created_at: string
-          date: string
+          date: string | null
           id: string
-          price: number
+          price: number | null
           product_id: string
           quantity: number
           user_id: string
         }
         Insert: {
+          source_ref?: string | null
           created_at?: string
-          date?: string
+          date?: string | null
           id?: string
-          price?: number
+          price?: number | null
           product_id: string
           quantity?: number
           user_id: string
         }
         Update: {
+          source_ref?: string | null
           created_at?: string
-          date?: string
+          date?: string | null
           id?: string
-          price?: number
+          price?: number | null
           product_id?: string
           quantity?: number
           user_id?: string
@@ -123,31 +189,34 @@ export type Database = {
       }
       sales: {
         Row: {
+          source_ref: string | null
           created_at: string
-          date: string
+          date: string | null
           id: string
           product_id: string
-          profit: number
+          profit: number | null
           quantity: number
           sale_price: number
           user_id: string
         }
         Insert: {
+          source_ref?: string | null
           created_at?: string
-          date?: string
+          date?: string | null
           id?: string
           product_id: string
-          profit?: number
+          profit?: number | null
           quantity?: number
           sale_price?: number
           user_id: string
         }
         Update: {
+          source_ref?: string | null
           created_at?: string
-          date?: string
+          date?: string | null
           id?: string
           product_id?: string
-          profit?: number
+          profit?: number | null
           quantity?: number
           sale_price?: number
           user_id?: string

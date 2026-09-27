@@ -1,3 +1,4 @@
+import { money, displayDate as formatDate } from "@/lib/dashboardMetrics";
 import { useState, useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { usePersistedState } from "@/hooks/usePersistedState";
@@ -59,8 +60,11 @@ function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: str
 }
 
 export default function Sales() {
-  const { sales, purchases, products, categories, addSale, updateSale, deleteSale, getProduct, updateProduct } = useStore();
+  const { sales, purchases, products, categories, addSale, updateSale, deleteSale, getProduct, updateProduct, updatePurchase } = useStore();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [issueFilter, setIssueFilter] = useState("all");
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [productId, setProductId] = useState("");
   const [salePrice, setSalePrice] = useState("");
@@ -81,7 +85,7 @@ export default function Sales() {
     sales.forEach(s => sold.set(s.productId, (sold.get(s.productId) ?? 0) + s.quantity));
     return products.filter(p => {
       const stock = (purchased.get(p.id) ?? 0) - (sold.get(p.id) ?? 0);
-      return stock > 0;
+      return stock > 0 && p.inventoryUse !== "personal";
     });
   }, [products, purchases, sales]);
 
@@ -90,7 +94,8 @@ export default function Sales() {
     if (!productId || !salePrice) return null;
     const sp = Number(salePrice);
     if (isNaN(sp) || sp <= 0) return null;
-    const cost = purchasePriceOverride ? Number(purchasePriceOverride) : (getProduct(productId)?.purchasePrice ?? 0);
+    const cost = purchasePriceOverride ? Number(purchasePriceOverride) : getProduct(productId)?.purchasePrice;
+    if (cost == null) return null;
     if (isNaN(cost)) return null;
     const profit = sp - cost;
     const margin = sp > 0 ? (profit / sp) * 100 : 0;
@@ -108,13 +113,13 @@ export default function Sales() {
     setProductId(s.productId);
     setSalePrice(String(s.salePrice));
     const prod = getProduct(s.productId);
-    setPurchasePriceOverride(prod ? String(prod.purchasePrice) : "");
+    setPurchasePriceOverride(s.profit == null ? "" : String(s.salePrice - s.profit / s.quantity));
     setDate(s.date);
     setDialogOpen(true);
   };
 
   const save = async () => {
-    if (!productId || !salePrice || !date) { toast.error("Preencha todos os campos"); return; }
+    if (!productId || !salePrice || (!date && !editingSale)) { toast.error("Preencha todos os campos"); return; }
 
     const parsedSalePrice = Number(salePrice);
     if (isNaN(parsedSalePrice) || parsedSalePrice < 0) { toast.error("Preço de venda inválido"); return; }
@@ -124,19 +129,23 @@ export default function Sales() {
     if (overridePrice !== null && (isNaN(overridePrice) || overridePrice < 0)) { toast.error("Preço de compra inválido"); return; }
 
     const product = getProduct(productId);
-    const effectivePurchasePrice = overridePrice ?? (product?.purchasePrice ?? 0);
+    const effectivePurchasePrice = overridePrice ?? (product?.purchasePrice ?? null);
 
     // Sync product purchasePrice if overridden
     if (overridePrice != null && product && product.purchasePrice !== overridePrice) {
       await updateProduct({ ...product, purchasePrice: overridePrice });
     }
 
+    if (product?.sourceRef && overridePrice != null) {
+      const purchase=purchases.find(p=>p.productId===productId);
+      if (purchase && purchase.price !== overridePrice) await updatePurchase({...purchase,price:overridePrice});
+    }
     if (editingSale) {
-      await updateSale({ id: editingSale.id, productId, quantity: 1, salePrice: parsedSalePrice, date, purchasePrice: effectivePurchasePrice });
+      await updateSale({ id: editingSale.id, productId, quantity: editingSale.quantity, salePrice: parsedSalePrice, date, purchasePrice: effectivePurchasePrice });
       toast.success("Venda atualizada");
     } else {
       const sale = await addSale({ productId, quantity: 1, salePrice: parsedSalePrice, date, purchasePrice: effectivePurchasePrice });
-      toast.success(`Venda registada — Lucro: ${sale.profit.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}`);
+      toast.success(`Venda registada — Lucro: ${money(sale.profit)}`);
     }
     setDialogOpen(false);
     setEditingSale(null);
@@ -159,6 +168,9 @@ export default function Sales() {
   const filtered = useMemo(() => {
     let result = sales.filter(s => {
       const prod = getProduct(s.productId);
+      if (search && !prod?.name.toLocaleLowerCase("pt-PT").includes(search.toLocaleLowerCase("pt-PT"))) return false;
+      if (issueFilter === "undated" && s.date) return false;
+      if (issueFilter === "cost" && s.profit != null) return false;
       if (catFilter !== "all" && prod?.category !== catFilter) return false;
       if (searchDate && !s.date.includes(searchDate)) return false;
       return true;
@@ -184,9 +196,12 @@ export default function Sales() {
     }
 
     return result;
-  }, [sales, catFilter, searchDate, sortField, sortDir, getProduct]);
+  }, [sales, search, issueFilter, catFilter, searchDate, sortField, sortDir, getProduct]);
 
-  const fmt = (v: number) => v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
+  const pages = Math.max(1, Math.ceil(filtered.length / 50));
+  const currentPage = Math.min(page, pages);
+  const visible = filtered.slice((currentPage-1)*50,currentPage*50);
+  const fmt = money;
   const displayDate = searchDate ? `${MONTHS[parseInt(searchDate.slice(5, 7)) - 1]} ${searchDate.slice(0, 4)}` : "";
 
   return (
@@ -229,7 +244,7 @@ export default function Sales() {
                 <Select value={productId} onValueChange={(v) => {
                   setProductId(v);
                   const prod = getProduct(v);
-                  if (prod) setPurchasePriceOverride(String(prod.purchasePrice));
+                  if (prod) setPurchasePriceOverride(prod.purchasePrice == null ? "" : String(prod.purchasePrice));
                 }}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
@@ -273,11 +288,17 @@ export default function Sales() {
         </Dialog>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3">
+        <Input className="sm:max-w-xs" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
+        <Select value={issueFilter} onValueChange={v=>{setIssueFilter(v);setPage(1);}}><SelectTrigger className="w-full sm:w-56" aria-label="Dados a confirmar"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos os registos</SelectItem><SelectItem value="undated">Sem data</SelectItem><SelectItem value="cost">Custo por confirmar</SelectItem></SelectContent></Select>
+        <p className="text-sm text-muted-foreground">{filtered.length} registos</p>
+      </div>
+      <div className="flex items-center justify-end gap-3 text-sm"><Button variant="outline" size="sm" disabled={currentPage===1} onClick={()=>setPage(currentPage-1)}>Anterior</Button><span>Página {currentPage} de {pages}</span><Button variant="outline" size="sm" disabled={currentPage===pages} onClick={()=>setPage(currentPage+1)}>Seguinte</Button></div>
       {/* Mobile: card list; Desktop: table */}
       <div className="block sm:hidden space-y-3">
         {filtered.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">Nenhuma venda encontrada</p>
-        ) : filtered.map(s => {
+        ) : visible.map(s => {
           const margin = s.salePrice > 0 ? (s.profit / s.salePrice) * 100 : 0;
           return (
             <Card key={s.id}>
@@ -304,10 +325,10 @@ export default function Sales() {
                   </div>
                   <div>
                     <p className="text-[10px] text-muted-foreground">Margem</p>
-                    <p className={cn("font-semibold", margin >= 0 ? "text-success" : "text-destructive")}>{margin.toFixed(1)}%</p>
+                    <p className={cn("font-semibold", margin >= 0 ? "text-success" : "text-destructive")}>{s.profit == null ? "Por confirmar" : `${margin.toFixed(1)}%`}</p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">{new Date(s.date).toLocaleDateString("pt-PT")}</p>
+                <p className="text-xs text-muted-foreground">{formatDate(s.date)}</p>
               </CardContent>
             </Card>
           );
@@ -340,15 +361,15 @@ export default function Sales() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhuma venda encontrada</TableCell></TableRow>
-              ) : filtered.map(s => {
+              ) : visible.map(s => {
                 const margin = s.salePrice > 0 ? (s.profit / s.salePrice) * 100 : 0;
                 return (
                   <TableRow key={s.id}>
-                    <TableCell className="font-medium">{getProduct(s.productId)?.name ?? "—"}</TableCell>
+                    <TableCell className="font-medium">{getProduct(s.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(s.productId)?.category}{getProduct(s.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(s.productId)?.sourceData?.row}` : ""}</p></TableCell>
                     <TableCell>{fmt(s.salePrice)}</TableCell>
                     <TableCell className="text-success font-semibold">{fmt(s.profit)}</TableCell>
-                    <TableCell className={cn("font-semibold", margin >= 0 ? "text-success" : "text-destructive")}>{margin.toFixed(1)}%</TableCell>
-                    <TableCell>{new Date(s.date).toLocaleDateString("pt-PT")}</TableCell>
+                    <TableCell className={cn("font-semibold", margin >= 0 ? "text-success" : "text-destructive")}>{s.profit == null ? "Por confirmar" : `${margin.toFixed(1)}%`}</TableCell>
+                    <TableCell>{formatDate(s.date)}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(s)}>

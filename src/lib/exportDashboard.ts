@@ -1,107 +1,19 @@
-import ExcelJS from "exceljs";
-import type { Product, Purchase, Sale } from "@/types";
+import type { Product, Purchase, Sale, Expense } from "@/types";
 
 const EUR = '#,##0.00 "€"';
 const PCT = "0.0%";
 
-function computeDashboard(purchases: Purchase[], sales: Sale[], products: Product[], getProduct: (id: string) => Product | undefined) {
-  const totalPurchases = purchases.reduce((s, p) => s + p.price * p.quantity, 0);
-  const totalSales = sales.reduce((s, v) => s + v.salePrice * v.quantity, 0);
-  const totalProfit = sales.reduce((s, v) => s + v.profit, 0);
-
-  const purchasedQty = new Map<string, number>();
-  const soldQty = new Map<string, number>();
-  purchases.forEach(p => purchasedQty.set(p.productId, (purchasedQty.get(p.productId) ?? 0) + p.quantity));
-  sales.forEach(s => soldQty.set(s.productId, (soldQty.get(s.productId) ?? 0) + s.quantity));
-  let stockValue = 0;
-  let productsInStock = 0;
-  purchasedQty.forEach((qty, productId) => {
-    const inStock = Math.max(0, qty - (soldQty.get(productId) ?? 0));
-    if (inStock > 0) productsInStock++;
-    stockValue += inStock * (getProduct(productId)?.purchasePrice ?? 0);
-  });
-
-  const avgProfitPerSale = sales.length > 0 ? totalProfit / sales.length : 0;
-  const avgMargin = totalSales > 0 ? totalProfit / totalSales : 0;
-
-  const soldProductIds = new Set(sales.map(s => s.productId));
-  const cogs = purchases.filter(p => soldProductIds.has(p.productId)).reduce((sum, p) => sum + p.price * p.quantity, 0);
-  const roiRealized = cogs > 0 ? totalProfit / cogs : 0;
-  const stockTurnover = stockValue > 0 ? cogs / stockValue : 0;
-
-  let totalDays = 0, count = 0;
-  sales.forEach(s => {
-    const pp = purchases.filter(p => p.productId === s.productId).sort((a, b) => a.date.localeCompare(b.date));
-    if (pp.length > 0) {
-      const diff = (new Date(s.date).getTime() - new Date(pp[0].date).getTime()) / (1000 * 60 * 60 * 24);
-      if (diff >= 0) { totalDays += diff; count++; }
-    }
-  });
-  const avgVelocity = count > 0 ? totalDays / count : 0;
-
-  const topMap = new Map<string, number>();
-  sales.forEach(s => {
-    const name = getProduct(s.productId)?.name ?? "Desconhecido";
-    topMap.set(name, (topMap.get(name) ?? 0) + s.quantity);
-  });
-  const topProducts = [...topMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
-
-  const profitMap = new Map<string, number>();
-  sales.forEach(s => {
-    const name = getProduct(s.productId)?.name ?? "Desconhecido";
-    profitMap.set(name, (profitMap.get(name) ?? 0) + s.profit);
-  });
-  const profitByProduct = [...profitMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
-
-  const monthProfit = new Map<string, number>();
-  sales.forEach(s => {
-    const m = s.date.slice(0, 7);
-    monthProfit.set(m, (monthProfit.get(m) ?? 0) + s.profit);
-  });
-  const allMonths = new Set<string>(monthProfit.keys());
-  purchases.forEach(p => allMonths.add(p.date.slice(0, 7)));
-  const profitOverTime: { month: string; profit: number }[] = [];
-  if (allMonths.size > 0) {
-    const sorted = [...allMonths].sort();
-    const [sy, sm] = sorted[0].split("-").map(Number);
-    const [ey, em] = sorted[sorted.length - 1].split("-").map(Number);
-    let y = sy, mo = sm;
-    while (y < ey || (y === ey && mo <= em)) {
-      const k = `${y}-${String(mo).padStart(2, "0")}`;
-      profitOverTime.push({ month: k, profit: monthProfit.get(k) ?? 0 });
-      mo++; if (mo > 12) { mo = 1; y++; }
-    }
-  }
-
-  const pvsMap = new Map<string, { compras: number; vendas: number }>();
-  purchases.forEach(p => {
-    const m = p.date.slice(0, 7);
-    const e = pvsMap.get(m) ?? { compras: 0, vendas: 0 };
-    e.compras += p.price * p.quantity;
-    pvsMap.set(m, e);
-  });
-  sales.forEach(s => {
-    const m = s.date.slice(0, 7);
-    const e = pvsMap.get(m) ?? { compras: 0, vendas: 0 };
-    e.vendas += s.salePrice * s.quantity;
-    pvsMap.set(m, e);
-  });
-  const purchasesVsSales = [...pvsMap.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([month, v]) => ({ month, ...v }));
-
-  return {
-    totalPurchases, totalSales, totalProfit, stockValue, productsInStock,
-    avgProfitPerSale, avgMargin, roiRealized, stockTurnover, avgVelocity,
-    productCount: products.length, topProducts, profitByProduct, profitOverTime, purchasesVsSales,
-  };
-}
+import { computeDashboard } from "@/lib/dashboardMetrics";
 
 export async function exportDashboardXlsx(
   purchases: Purchase[],
   sales: Sale[],
   products: Product[],
   getProduct: (id: string) => Product | undefined,
+  expenses: Expense[] = [],
 ) {
-  const d = computeDashboard(purchases, sales, products, getProduct);
+  const { default: ExcelJS } = await import("exceljs");
+  const d = computeDashboard(purchases, sales, products, expenses);
   const wb = new ExcelJS.Workbook();
   wb.creator = "Vending Machine";
   wb.created = new Date();
@@ -121,7 +33,12 @@ export async function exportDashboardXlsx(
   const kpis: [string, number | string, string?][] = [
     ["Total Compras", d.totalPurchases, EUR],
     ["Total Vendas", d.totalSales, EUR],
-    ["Lucro Total", d.totalProfit, EUR],
+    [d.missingCosts ? "Lucro apurado (parcial)" : "Lucro das vendas", d.totalProfit, EUR],
+    ["Despesas operacionais", d.totalExpenses, EUR],
+    ["Resultado após despesas", d.netProfit, EUR],
+    ["Vendas sem custo", d.missingCosts],
+    ["Vendas sem data", d.undatedSales],
+    ["Leitura / uso pessoal", d.personalValue, EUR],
     ["Valor em Stock", d.stockValue, EUR],
     ["Produtos", d.productCount],
     ["Margem Média", d.avgMargin, PCT],
@@ -178,6 +95,9 @@ export async function exportDashboardXlsx(
   const wsC = wb.addWorksheet("Compras");
   wsC.columns = [
     { header: "Produto", key: "produto", width: 28 },
+    { header: "Categoria", key: "categoria", width: 18 },
+    { header: "Utilização", key: "uso", width: 18 },
+    { header: "Quantidade", key: "quantidade", width: 12 },
     { header: "Preço", key: "price", width: 14 },
     { header: "Data", key: "date", width: 14 },
   ];
@@ -188,6 +108,7 @@ export async function exportDashboardXlsx(
     .forEach(p => {
       const row = wsC.addRow({
         produto: getProduct(p.productId)?.name ?? "",
+        categoria: getProduct(p.productId)?.category, uso:getProduct(p.productId)?.inventoryUse === "personal" ? "Leitura" : "Negócio", quantidade:p.quantity,
         price: p.price,
         date: p.date,
       });
@@ -198,6 +119,8 @@ export async function exportDashboardXlsx(
   const wsV = wb.addWorksheet("Vendas");
   wsV.columns = [
     { header: "Produto", key: "produto", width: 28 },
+    { header: "Categoria", key: "categoria", width: 18 },
+    { header: "Quantidade", key: "quantidade", width: 12 },
     { header: "Preço Venda", key: "price", width: 14 },
     { header: "Lucro", key: "profit", width: 14 },
     { header: "Data", key: "date", width: 14 },
@@ -209,6 +132,7 @@ export async function exportDashboardXlsx(
     .forEach(s => {
       const row = wsV.addRow({
         produto: getProduct(s.productId)?.name ?? "",
+        categoria:getProduct(s.productId)?.category,quantidade:s.quantity,
         price: s.salePrice,
         profit: s.profit,
         date: s.date,
@@ -217,6 +141,11 @@ export async function exportDashboardXlsx(
       row.getCell("profit").numFmt = EUR;
     });
 
+  const expenseSheet=wb.addWorksheet("Despesas");
+  expenseSheet.addRow(["Categoria","Descrição","Valor","Data"]);
+  expenseSheet.columns=[{width:18},{width:36},{width:16},{width:16}];
+  expenseSheet.getRow(1).font={bold:true};
+  expenses.forEach(e=>{const row=expenseSheet.addRow([e.category,e.description,e.amount,e.date]);row.getCell(3).numFmt=EUR;});
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const url = URL.createObjectURL(blob);
