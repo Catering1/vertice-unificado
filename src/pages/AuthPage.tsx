@@ -58,7 +58,7 @@ export default function AuthPage() {
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <TrendingUp className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-primary">Vending Machine</span>
+            <span className="text-2xl font-bold text-primary">Vendig Machine Store</span>
           </div>
           <CardTitle className="text-lg">{isLogin ? "Iniciar Sessão" : "Criar Conta"}</CardTitle>
         </CardHeader>

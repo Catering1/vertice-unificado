@@ -15,7 +15,7 @@ export async function exportDashboardXlsx(
   const { default: ExcelJS } = await import("exceljs");
   const d = computeDashboard(purchases, sales, products, expenses);
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Vending Machine";
+  wb.creator = "Vendig Machine Store";
   wb.created = new Date();
 
   // ===== Dashboard sheet =====

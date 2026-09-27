@@ -48,7 +48,7 @@ export default function ProductPage() {
   const isIllustrative = databasePhotos.length === 0 && !product.image_url && presentation.illustrative;
 
   return <main className="min-h-screen bg-background text-foreground">
-    <header className="border-b border-border"><div className="mx-auto flex h-16 max-w-7xl items-center px-5 sm:px-8"><Link to="/" className="text-xl font-extrabold tracking-tight">Vértice<span className="text-muted-foreground">.</span></Link></div></header>
+    <header className="border-b border-border"><div className="mx-auto flex h-16 max-w-7xl items-center px-5 sm:px-8"><Link to="/" className="text-xl font-extrabold tracking-tight">Vendig Machine Store<span className="text-muted-foreground">.</span></Link></div></header>
     <section className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:py-14">
       <Link to="/#stock" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"><ArrowLeft size={17} /> Voltar ao catálogo</Link>
       <div className="mt-8 grid gap-10 lg:grid-cols-[1.15fr_0.85fr]">
