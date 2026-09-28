@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  passwordRecovery: boolean;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   resetPassword: (email: string) => Promise<{ error: any }>;
@@ -19,11 +20,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
       setLoading(false);
     });
 
@@ -51,13 +54,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
-    const redirectTo = new URL(`${import.meta.env.BASE_URL}admin/reset-password`, window.location.origin).toString();
+    const redirectTo = new URL(import.meta.env.BASE_URL, window.location.origin).toString();
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     return { error };
   };
 
   const updatePassword = async (password: string) => {
     const { error } = await supabase.auth.updateUser({ password });
+    if (!error) setPasswordRecovery(false);
     return { error };
   };
 
@@ -66,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, resetPassword, updatePassword, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, passwordRecovery, signUp, signIn, resetPassword, updatePassword, signOut }}>
       {children}
     </AuthContext.Provider>
   );

@@ -44,6 +44,13 @@ function AuthRoute() {
   return <AuthPage />;
 }
 
+function PasswordRecoveryRoute() {
+  const { passwordRecovery, loading } = useAuth();
+  if (loading) return null;
+  if (passwordRecovery) return <Navigate to="/admin/reset-password" replace />;
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -51,6 +58,7 @@ const App = () => (
       <Sonner />
       <AuthProvider>
         <BrowserRouter basename={import.meta.env.BASE_URL}>
+          <PasswordRecoveryRoute />
           <Routes>
             <Route path="/" element={<Storefront />} />
             <Route path="/produto/:id" element={<ProductPage />} />
