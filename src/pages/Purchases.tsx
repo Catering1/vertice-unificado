@@ -2,7 +2,7 @@ import { money, displayDate as formatDate } from "@/lib/dashboardMetrics";
 import { useState, useMemo, useRef } from "react";
 import { useStore } from "@/lib/store";
 import { usePersistedState } from "@/hooks/usePersistedState";
-import { Purchase } from "@/types";
+import { Purchase, VintedOrderStatus } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,19 @@ type SortField = "product" | "price" | "date";
 type SortDir = "asc" | "desc";
 
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+const ORDER_STATUSES: { value: VintedOrderStatus; label: string }[] = [
+  { value: "not_tracked", label: "Não acompanhado" },
+  { value: "ordered", label: "Pedido realizado / a preparar" },
+  { value: "shipped", label: "Enviado" },
+  { value: "electronic_verification", label: "Em verificação eletrónica" },
+  { value: "delivered", label: "Entregue — por inspecionar" },
+  { value: "received_verified", label: "Recebido e inspecionado" },
+  { value: "return_in_progress", label: "Devolução em curso" },
+  { value: "refund_partial", label: "Reembolso parcial" },
+  { value: "refunded", label: "Reembolsado" },
+  { value: "cancelled", label: "Cancelado" },
+];
+const orderStatusLabel = (status?: VintedOrderStatus) => ORDER_STATUSES.find(x => x.value === status)?.label ?? "Não acompanhado";
 
 function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const now = new Date();
@@ -79,6 +92,9 @@ export default function Purchases() {
   const [specifications, setSpecifications] = useState("");
   const [price, setPrice] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [orderStatus, setOrderStatus] = useState<VintedOrderStatus>("not_tracked");
+  const [orderReference, setOrderReference] = useState("");
+  const [orderStatusNote, setOrderStatusNote] = useState("");
 
   const [searchDate, setSearchDate] = usePersistedState("purchases-searchDate", "");
   const [catFilter, setCatFilter] = usePersistedState("purchases-catFilter", "all");
@@ -94,6 +110,7 @@ export default function Purchases() {
     setInventoryUse("business");
     setProductName(""); setProductCategory("Outros"); setProductSupplier(""); setRetailPrice(""); setCondition("Verificado"); setWarrantyMonths("0"); setDescription(""); setSpecifications("");
     setPrice(""); setDate(new Date().toISOString().slice(0, 10));
+    setOrderStatus("not_tracked"); setOrderReference(""); setOrderStatusNote("");
     setDialogOpen(true);
   };
 
@@ -111,6 +128,9 @@ export default function Purchases() {
     setInventoryUse(prod?.inventoryUse ?? "business");
     setPrice(p.price == null ? "" : String(p.price));
     setDate(p.date);
+    setOrderStatus(p.orderStatus ?? "not_tracked");
+    setOrderReference(p.orderReference ?? "");
+    setOrderStatusNote(p.orderStatusNote ?? "");
     setDialogOpen(true);
   };
 
@@ -138,10 +158,10 @@ export default function Purchases() {
     }
 
     if (editingPurchase) {
-      await updatePurchase({ id: editingPurchase.id, productId, quantity: editingPurchase.quantity, price: priceParsed, date });
+      await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, orderStatus, orderReference, orderStatusNote });
       toast.success("Compra atualizada");
     } else {
-      await addPurchase({ productId, quantity: 1, price: priceParsed, date });
+      await addPurchase({ productId, quantity: 1, price: priceParsed, date, orderStatus, orderReference, orderStatusNote });
       toast.success("Compra registada");
     }
     setDialogOpen(false);
@@ -348,6 +368,12 @@ export default function Purchases() {
               <p className="text-xs leading-5 text-muted-foreground">As fotos são adicionadas na ficha do produto depois de receberes e testares o equipamento.</p>
               <div><Label>Utilização</Label><Select value={inventoryUse} onValueChange={v=>setInventoryUse(v as "business" | "personal")}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="business">Disponível para negócio</SelectItem><SelectItem value="personal">Leitura / uso pessoal</SelectItem></SelectContent></Select></div>
               <div><Label>Data</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+              <div className="space-y-3 rounded-md border border-border p-3">
+                <div><Label>Estado privado da encomenda</Label><Select value={orderStatus} onValueChange={v => setOrderStatus(v as VintedOrderStatus)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ORDER_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select></div>
+                <div><Label>Referência da encomenda (opcional)</Label><Input maxLength={200} value={orderReference} onChange={e => setOrderReference(e.target.value)} placeholder="Referência Vinted" /></div>
+                <div><Label>Nota privada do estado</Label><textarea value={orderStatusNote} onChange={e => setOrderStatusNote(e.target.value)} maxLength={1000} rows={2} placeholder="Ex.: atualização recebida hoje; reembolso parcial de 20 €" className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
+                <p className="text-xs leading-5 text-muted-foreground">Informação visível apenas nesta área administrativa; nunca aparece na loja pública.</p>
+              </div>
               <Button onClick={save}>{editingPurchase ? "Guardar" : "Registar"}</Button>
             </div>
           </DialogContent>
@@ -383,6 +409,7 @@ export default function Purchases() {
                 <p className="font-semibold">{fmt(p.price)}</p>
               </div>
               <p className="text-xs text-muted-foreground">{formatDate(p.date)}</p>
+              {(p.orderStatus && p.orderStatus !== "not_tracked") && <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>}
             </CardContent>
           </Card>
         ))}
@@ -410,7 +437,7 @@ export default function Purchases() {
                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : visible.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {getProduct(p.productId)?.inventoryUse === "personal" ? "Leitura" : (productStock.get(p.productId) ?? 0) > 0 ? "Ativo" : "Vendido"}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p></TableCell>
+                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {getProduct(p.productId)?.inventoryUse === "personal" ? "Leitura" : (productStock.get(p.productId) ?? 0) > 0 ? "Ativo" : "Vendido"}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p>{p.orderStatus && p.orderStatus !== "not_tracked" && <p className="text-xs font-normal text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>

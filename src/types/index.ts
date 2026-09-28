@@ -22,7 +22,23 @@ export interface Purchase {
   quantity: number;
   price: number | null;
   date: string;
+  orderStatus?: VintedOrderStatus;
+  orderReference?: string | null;
+  orderStatusNote?: string | null;
+  orderStatusUpdatedAt?: string | null;
 }
+
+export type VintedOrderStatus =
+  | "not_tracked"
+  | "ordered"
+  | "shipped"
+  | "electronic_verification"
+  | "delivered"
+  | "received_verified"
+  | "return_in_progress"
+  | "refund_partial"
+  | "refunded"
+  | "cancelled";
 
 export interface Sale {
   id: string;

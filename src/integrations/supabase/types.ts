@@ -148,6 +148,10 @@ export type Database = {
       }
       purchases: {
         Row: {
+          order_reference: string | null
+          order_status: string
+          order_status_note: string | null
+          order_status_updated_at: string | null
           source_ref: string | null
           created_at: string
           date: string | null
@@ -158,6 +162,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          order_reference?: string | null
+          order_status?: string
+          order_status_note?: string | null
+          order_status_updated_at?: string | null
           source_ref?: string | null
           created_at?: string
           date?: string | null
@@ -168,6 +176,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          order_reference?: string | null
+          order_status?: string
+          order_status_note?: string | null
+          order_status_updated_at?: string | null
           source_ref?: string | null
           created_at?: string
           date?: string | null

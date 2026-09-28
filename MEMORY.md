@@ -1,6 +1,6 @@
 # Memória do projeto Vendig Machine Store
 
-Atualizado em 27 de setembro de 2026.
+Atualizado em 28 de setembro de 2026.
 
 ## Regra de continuidade
 
@@ -9,7 +9,7 @@ Atualizado em 27 de setembro de 2026.
 
 ## Objetivo
 
-Este é o terceiro repositório independente que unifica a loja pública e o dashboard do negócio. Os repositórios `verticemachine` e `tech-exchange-portugal` devem manter-se separados e não devem ser alterados para desenvolver esta versão.
+O repositório ativo da loja pública e do dashboard é `Catering1/vertice-unificado`. Em 28 de setembro de 2026, a pesquisa GitHub `user:Catering1` encontrou apenas este repositório relacionado com Vértice (além do repositório sem relação `play-gather-app`). Os nomes antigos `verticemachine`, `tech-exchange-portugal` e `v-rtice-unificado` devolveram 404 na API GitHub; não é possível concluir apenas pelo 404 se foram eliminados ou tornados privados. Usar apenas `vertice-unificado` como fonte canónica.
 
 ## Ligações importantes
 
@@ -18,6 +18,7 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - Administração: `https://catering1.github.io/vertice-unificado/admin/login`
 - Supabase ativo: projeto `pxpxipewhwwsiogoyjov` (`https://pxpxipewhwwsiogoyjov.supabase.co`). Os dados do dashboard foram migrados para este projeto.
 - O código corre a partir de `Catering1/vertice-unificado`; produção é servida por GitHub Pages em `https://catering1.github.io/vertice-unificado/`.
+- No teste GitHub de 28 de setembro, o repositório `Catering1/vertice-unificado` tinha ID `1377287079`, visibilidade pública e branches `main` e `gh-pages`. `main` remoto estava em `b9c8f7525f1379f52e5760b28da4ed90d0d6a5eb`; commits locais recentes ainda não sincronizados. O GitHub CLI local reportou credencial inválida.
 - O projeto Lovable `My Trade Tracker` (ID `37e34560-c141-4c02-8861-1289f7c17fc3`) e os antigos endereços Lovable são históricos. Não fazem parte do fluxo ativo nem devem receber alterações.
 - O repositório separado `https://github.com/Catering1/v-rtice-unificado` também é histórico; não publicar lá.
 
@@ -50,6 +51,12 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - Copiar `dist/index.html` para `dist/404.html` antes de publicar, para que rotas como `/admin/login` funcionem no GitHub Pages.
 - A página pública é publicada na branch `gh-pages`; o código fonte fica na branch `main`.
 - `Catering1/vertice-unificado` é a única fonte canónica. Todas as alterações de código, memória e publicação deste projeto devem ser feitas apenas nesse repositório. Não sincronizar `Catering1/v-rtice-unificado` e não alterar os repositórios originais `verticemachine` ou `tech-exchange-portugal`.
+- A skill do fluxo recorrente Vinted → dashboard → OLX está em `.agents/skills/verificar-vinted-registar-dashboard-anunciar-olx/SKILL.md`. A rotina ativa do Codex `verificar-vinted-dashboard-e-an-ncios-olx` corre todos os dias às 09:00, hora local de Lisboa, no projeto local `Master Vending Machine and Vertice`; deve atuar apenas sobre `vertice-unificado` e seguir as salvaguardas da skill.
+- Execução manual da rotina em 28/09/2026: sessões autenticadas da Vinted, dashboard e OLX acessíveis. A lista Vinted “Em curso” confirmou Fold 7 (629,75 €, enviado/a caminho), Fold 8 Ultra (980,54 €, enviado pelo centro de verificação), Flip 8 (665,54 €, verificação bem-sucedida), S25 Ultra (611,19 €, devolução iniciada), S26 Ultra (639,29 €, envio para centro de verificação), Galaxy Buds3 Silver (46,29 €, etiqueta enviada ao vendedor), S26+ (429,29 €, pagamento bem-sucedido) e Galaxy Watch4 Classic (41,29 €, devolução iniciada). Os quatro primeiros já estão associados a compras ativas no dashboard; os outros quatro não foram encontrados como registos ativos nesta conferência. Não foi possível confirmar RAM/armazenamento, custo discriminado, vendedor nem detalhes das conversas para os quatro novos. Não foram criadas compras novas para evitar duplicação/atribuição incerta, nem anúncios para produtos em trânsito, verificação ou devolução.
+- A skill da rotina diária estava em falta: a automação continuava ativa, mas apontava para `.agents/skills/verificar-vinted-registar-dashboard-anunciar-olx/SKILL.md`, que não existia no projeto nem na pasta pessoal de skills. Foi reconstruída no repositório unificado nesse caminho e a agenda deve usar essas instruções.
+- A rotina inclui revisão de compras e mudanças de estado Vinted (envio, verificação eletrónica, reembolso, devolução e cancelamento), com informação sempre privada. Em 28/09/2026 foram acrescentados à tabela `purchases` os campos privados `order_status`, `order_reference`, `order_status_note` e `order_status_updated_at`, editáveis no formulário administrativo de Compras. A tabela mantém RLS por utilizador. A função pública `get_public_store_products()` continua a devolver apenas dados de catálogo e contagem de stock; não expõe estes campos e agora exclui do stock compras acompanhadas cujo estado não seja `received_verified`. Compras históricas em `not_tracked` mantêm o comportamento antigo.
+- Regra operacional da rotina: um produto em trânsito, em verificação, em devolução/reembolso ou sem posse física não pode ser anunciado no OLX. Para anunciar, confirmar que está recebido, inspecionado, ativo no stock, sem anúncio OLX correspondente, com RAM/armazenamento confirmados e fotografias reais. A autorização anterior cobre anúncios elegíveis, mas não pagamentos de taxas, pacotes ou destaques.
+- Em 28 de setembro de 2026, a verificação manual encontrou dashboard autenticado e OLX autenticado com 3 anúncios ativos, dos quais Logitech Brio e Surface Laptop Go 3 correspondem a stock do dashboard, mais 2 anúncios por pagar. A rota `/member/purchases` da Vinted não existe; a home da Vinted abriu, mas ainda é necessário localizar pela navegação da conta uma lista de compras fiável antes de atualizar dados.
 
 ## Preços e anúncios externos
 
@@ -62,7 +69,7 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - RAM e armazenamento são campos obrigatórios nos anúncios de equipamentos eletrónicos. Antes de criar ou publicar um anúncio, procurar estes dados em fontes fiáveis (ficha técnica oficial, caixa/fotografias reais, anúncio de origem ou histórico da compra). Se, depois dessa pesquisa, continuarem por confirmar, perguntar ao utilizador e não inventar nem omitir silenciosamente a informação.
 - Esta regra aplica-se também às descrições do site e aos rascunhos: quando RAM ou armazenamento não estiverem confirmados, marcar o campo como pendente internamente e bloquear a publicação externa até obter confirmação.
 - O OLX conserva apenas um anúncio inacabado de cada vez nesta conta; não existe uma área de vários rascunhos. Preparar os anúncios em fila e só substituir o rascunho atual depois de este ser publicado ou descartado com confirmação do utilizador.
-- Os anúncios podem ser preparados automaticamente com as fotografias e dados guardados no Vértice, mas a publicação final num canal externo deve ser confirmada pelo utilizador.
+- A autorização anterior permite publicar anúncios elegíveis sem nova confirmação, mas não permite inventar detalhes. Nunca pagar taxas, pacotes ou destaques. Se faltar uma informação essencial (RAM, armazenamento, custo, posse ou fotos reais), deixar apenas esse item pendente.
 
 ## Estado da campanha OLX em 22 de setembro de 2026
 
@@ -71,6 +78,7 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - O anúncio `Logitech Brio 4K Ultra HD Webcam`, ID OLX `673787302`, foi corrigido para remover a imagem gerada por IA e está ativo, sem fotografia.
 - Os anúncios `Samsung Galaxy Z Flip8 256GB Novo - Mint` (ID OLX `673781444`) e `Samsung Galaxy Z Fold8 Ultra 256GB Novo - Shadow Violet` (ID OLX `673776297`) foram reativados sem pagamento e estão pendentes de moderação.
 - O anúncio `Microsoft Surface Laptop Go 3 (2023) - Bateria 86%`, ID OLX `673786275`, está ativo com fotografias reais.
+- Verificação OLX em 28/09/2026: separador “Ativos” mostra Logitech Brio ID `673787302`, Surface Laptop Go 3 ID `673786275` e um anúncio de serviço sem relação ID `672706240`; “Por pagar” mostra dois itens. Nenhum serviço pago. Não há confirmação nesta vista de Samsung ativo; confirmar os separadores “Pendentes”, “Por pagar” e “Para edição” antes de considerar criar duplicados.
 - Não preparar o segundo S25 Ultra enquanto a compra correspondente continuar com devolução iniciada na Vinted.
 - Não publicar o Surface Laptop Studio até existirem correspondência confirmada da compra, custo total, especificações e fotografias reais do equipamento.
 
