@@ -9,11 +9,12 @@ import { TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AuthPage() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, resetPassword } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +53,24 @@ export default function AuthPage() {
     }
   };
 
+  const handlePasswordReset = async () => {
+    if (!email) {
+      toast.error("Indique o email para receber o link de recuperação.");
+      return;
+    }
+
+    setResetLoading(true);
+    const { error } = await resetPassword(email);
+    setResetLoading(false);
+
+    if (error) {
+      toast.error("Não foi possível enviar o email de recuperação.");
+      return;
+    }
+
+    toast.success("Email enviado. Use o link para definir uma nova password.");
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
@@ -76,6 +95,16 @@ export default function AuthPage() {
               {loading ? "A processar..." : isLogin ? "Entrar" : "Registar"}
             </Button>
           </form>
+          {isLogin && (
+            <button
+              type="button"
+              onClick={handlePasswordReset}
+              disabled={resetLoading}
+              className="mt-3 w-full text-center text-sm text-primary underline disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {resetLoading ? "A enviar email..." : "Esqueci-me da password"}
+            </button>
+          )}
           <p className="mt-4 text-center text-sm text-muted-foreground">
             {isLogin ? "Não tem conta?" : "Já tem conta?"}{" "}
             <button onClick={() => setIsLogin(!isLogin)} className="text-primary underline">

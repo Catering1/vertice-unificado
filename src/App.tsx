@@ -11,6 +11,7 @@ import Purchases from "@/pages/Purchases";
 import Sales from "@/pages/Sales";
 import SettingsPage from "@/pages/SettingsPage";
 import AuthPage from "@/pages/AuthPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import Storefront from "./pages/Storefront";
 import ProductPage from "./pages/ProductPage";
@@ -53,6 +54,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Storefront />} />
             <Route path="/produto/:id" element={<ProductPage />} />
+            <Route path="/admin/reset-password" element={<ResetPasswordPage />} />
             <Route path="/admin/login" element={<AuthRoute />} />
             <Route path="/admin/*" element={<ProtectedRoutes />} />
             <Route path="*" element={<NotFound />} />
