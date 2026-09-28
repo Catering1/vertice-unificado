@@ -11,13 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Trash2, Upload, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon } from "lucide-react";
+import { Plus, Trash2, Upload, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, Grid2X2, List, Package } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 
 type SortField = "product" | "price" | "date";
 type SortDir = "asc" | "desc";
+type ViewMode = "table" | "gallery";
 
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const ORDER_STATUSES: { value: VintedOrderStatus; label: string }[] = [
@@ -103,6 +104,7 @@ export default function Purchases() {
 
   const [sortField, setSortField] = usePersistedState<SortField | null>("purchases-sortField", null);
   const [sortDir, setSortDir] = usePersistedState<SortDir>("purchases-sortDir", "asc");
+  const [viewMode, setViewMode] = usePersistedState<ViewMode>("purchases-viewMode", "table");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -394,8 +396,42 @@ export default function Purchases() {
         <Input className="sm:max-w-xs" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
         <Select value={issueFilter} onValueChange={v=>{setIssueFilter(v);setPage(1);}}><SelectTrigger className="w-full sm:w-56" aria-label="Dados a confirmar"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos os registos</SelectItem><SelectItem value="undated">Sem data</SelectItem><SelectItem value="cost">Custo por confirmar</SelectItem></SelectContent></Select>
         <p className="text-sm text-muted-foreground">{filtered.length} registos</p>
+        <div className="ml-auto flex items-center rounded-md border bg-background p-0.5" aria-label="Modo de visualização">
+          <Button variant={viewMode === "table" ? "secondary" : "ghost"} size="sm" className="h-8 gap-1.5" onClick={() => setViewMode("table")} aria-pressed={viewMode === "table"}>
+            <List className="h-4 w-4" /> <span className="hidden sm:inline">Lista</span>
+          </Button>
+          <Button variant={viewMode === "gallery" ? "secondary" : "ghost"} size="sm" className="h-8 gap-1.5" onClick={() => setViewMode("gallery")} aria-pressed={viewMode === "gallery"}>
+            <Grid2X2 className="h-4 w-4" /> <span className="hidden sm:inline">Galeria</span>
+          </Button>
+        </div>
       </div>
       <div className="flex items-center justify-end gap-3 text-sm"><Button variant="outline" size="sm" disabled={currentPage===1} onClick={()=>setPage(currentPage-1)}>Anterior</Button><span>Página {currentPage} de {pages}</span><Button variant="outline" size="sm" disabled={currentPage===pages} onClick={()=>setPage(currentPage+1)}>Seguinte</Button></div>
+      {viewMode === "gallery" ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {visible.map(p => {
+            const product = getProduct(p.productId);
+            const photoUrl = product?.photoUrls?.[0];
+            const stockState = product?.inventoryUse === "personal" ? "Uso pessoal" : (productStock.get(p.productId) ?? 0) > 0 ? "Ativo" : "Vendido";
+            return (
+              <Card key={p.id} className="group overflow-hidden">
+                <div className="relative aspect-[16/10] bg-secondary">
+                  {photoUrl ? <img src={photoUrl} alt={product?.name ?? "Produto"} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" /> : <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground"><Package className="h-9 w-9" /><span className="text-sm">Sem fotografia</span></div>}
+                  <span className="absolute left-3 top-3 rounded-full bg-background/95 px-2.5 py-1 text-xs font-medium shadow-sm">{stockState}</span>
+                </div>
+                <CardContent className="space-y-3 p-4">
+                  <div className="flex gap-3">
+                    <div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{product?.name ?? "Produto removido"}</h2><p className="mt-0.5 text-sm text-muted-foreground">{product?.category ?? "Sem categoria"} · {product?.condition || "Estado por confirmar"}</p></div>
+                    <div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} aria-label={`Editar ${product?.name ?? "compra"}`}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }} aria-label={`Remover ${product?.name ?? "compra"}`}><Trash2 className="h-4 w-4" /></Button></div>
+                  </div>
+                  <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Compra: {formatDate(p.date)}</p>{p.deliveryDate && <p>Entrega: {formatDate(p.deliveryDate)}</p>}</div></div>
+                  {p.orderStatus && p.orderStatus !== "not_tracked" && <p className="border-t pt-3 text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>}
+                </CardContent>
+              </Card>
+            );
+          })}
+          {filtered.length === 0 && <p className="col-span-full py-8 text-center text-muted-foreground">Nenhuma compra encontrada</p>}
+        </div>
+      ) : <>
       {/* Mobile: card list; Desktop: table */}
       <div className="block sm:hidden space-y-3">
         {filtered.length === 0 ? (
@@ -467,6 +503,7 @@ export default function Purchases() {
           </Table>
         </CardContent>
       </Card>
+      </>}
     </div>
   );
 }
