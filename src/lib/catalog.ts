@@ -42,7 +42,7 @@ const catalog: Record<string, CatalogPresentation> = {
   },
   "z fold 7": {
     condition: "Muito bom",
-    description: "Galaxy Z Fold7 5G para quem procura produtividade e entretenimento num único equipamento. O ecrã exterior funciona como num smartphone convencional e, quando aberto, o painel Dynamic AMOLED 2X de 8 polegadas oferece espaço para multitarefa, leitura, edição de documentos e consumo de conteúdos.\n\nA unidade disponível tem 12 GB de RAM, 256 GB de armazenamento e acabamento azul. O sistema fotográfico é liderado por uma câmara de 200 MP e a bateria tem 4.400 mAh. O equipamento apresenta-se em muito bom estado visual, tem menos de um ano e inclui caixa original, película protetora instalada e fatura. As quatro fotografias apresentadas são do artigo real.\n\nO telemóvel está desbloqueado e pronto a utilizar com a operadora da preferência do comprador.",
+    description: "Galaxy Z Fold7 5G para quem procura produtividade e entretenimento num único equipamento. O ecrã exterior funciona como num smartphone convencional e, quando aberto, o painel Dynamic AMOLED 2X de 8 polegadas oferece espaço para multitarefa, leitura, edição de documentos e consumo de conteúdos.\n\nA unidade disponível tem 12 GB de RAM, 256 GB de armazenamento e acabamento azul. O sistema fotográfico é liderado por uma câmara de 200 MP e a bateria tem 4.400 mAh. O equipamento apresenta-se em muito bom estado visual, tem menos de um ano e inclui caixa original, película protetora instalada e fatura. As quatro fotografias apresentadas são do artigo real.\n\nEstá desbloqueado.",
     illustrative: false,
     photos: [zFold701, zFold702, zFold703, zFold704],
     price: 849,
