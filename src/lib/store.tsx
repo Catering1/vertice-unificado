@@ -23,6 +23,7 @@ const PurchaseSchema = z.object({
   quantity: z.number().int().min(1).max(100000),
   price: z.number().min(0).max(1000000),
   date: z.string(),
+  deliveryDate: z.string().optional().nullable(),
   orderStatus: z.enum(["not_tracked", "ordered", "shipped", "electronic_verification", "delivered", "received_verified", "return_in_progress", "refund_partial", "refunded", "cancelled"]).optional(),
   orderReference: z.string().max(200).optional().nullable(),
   orderStatusNote: z.string().max(1000).optional().nullable(),
@@ -106,7 +107,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           inventoryUse: r.inventory_use ?? "business", storeVisible: r.store_visible ?? true,
           sourceRef: r.source_ref, sourceData: r.source_data ?? {},
         })));
-        setPurchases(purchs.map(r => ({id: r.id, productId: r.product_id, quantity: r.quantity, price: r.price == null ? null : Number(r.price), date: r.date ?? "", orderStatus: (r.order_status ?? "not_tracked") as VintedOrderStatus, orderReference: r.order_reference ?? "", orderStatusNote: r.order_status_note ?? "", orderStatusUpdatedAt: r.order_status_updated_at ?? null})));
+        setPurchases(purchs.map(r => ({id: r.id, productId: r.product_id, quantity: r.quantity, price: r.price == null ? null : Number(r.price), date: r.date ?? "", deliveryDate: r.delivery_date ?? null, orderStatus: (r.order_status ?? "not_tracked") as VintedOrderStatus, orderReference: r.order_reference ?? "", orderStatusNote: r.order_status_note ?? "", orderStatusUpdatedAt: r.order_status_updated_at ?? null})));
         setSales(sold.map(r => ({id: r.id, productId: r.product_id, quantity: r.quantity, salePrice: Number(r.sale_price), profit: r.profit == null ? null : Number(r.profit), date: r.date ?? ""})));
         setExpenses(costs.map(r => ({id: r.id, category: r.category, description: r.description, amount: Number(r.amount), date: r.date ?? ""})));
         const names = cats.map(r => r.name);
@@ -160,11 +161,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const orderStatus = validated.orderStatus ?? "not_tracked";
     const orderStatusUpdatedAt = validated.orderStatusUpdatedAt ?? (orderStatus === "not_tracked" ? null : new Date().toISOString());
     const { data, error } = await supabase.from("purchases").insert({
-      user_id: user!.id, product_id: validated.productId, quantity: validated.quantity, price: validated.price, date: validated.date,
+      user_id: user!.id, product_id: validated.productId, quantity: validated.quantity, price: validated.price, date: validated.date, delivery_date: validated.deliveryDate || null,
       order_status: orderStatus, order_reference: validated.orderReference?.trim() || null, order_status_note: validated.orderStatusNote?.trim() || null, order_status_updated_at: orderStatusUpdatedAt,
     } as any).select().single();
     if (error) throw error;
-    setPurchases(prev => [...prev, { id: data.id, productId: data.product_id, quantity: data.quantity, price: data.price == null ? null : Number(data.price), date: data.date ?? "", orderStatus: data.order_status, orderReference: data.order_reference ?? "", orderStatusNote: data.order_status_note ?? "", orderStatusUpdatedAt: data.order_status_updated_at }]);
+    setPurchases(prev => [...prev, { id: data.id, productId: data.product_id, quantity: data.quantity, price: data.price == null ? null : Number(data.price), date: data.date ?? "", deliveryDate: data.delivery_date ?? null, orderStatus: data.order_status, orderReference: data.order_reference ?? "", orderStatusNote: data.order_status_note ?? "", orderStatusUpdatedAt: data.order_status_updated_at }]);
   };
 
   const updatePurchase = async (p: Purchase) => {
@@ -173,11 +174,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const orderStatus = validated.orderStatus ?? previous?.orderStatus ?? "not_tracked";
     const orderReference = validated.orderReference === undefined ? (previous?.orderReference ?? "") : validated.orderReference;
     const orderStatusNote = validated.orderStatusNote === undefined ? (previous?.orderStatusNote ?? "") : validated.orderStatusNote;
+    const deliveryDate = validated.deliveryDate === undefined ? (previous?.deliveryDate ?? null) : validated.deliveryDate;
     const statusChanged = orderStatus !== (previous?.orderStatus ?? "not_tracked")
       || (orderStatusNote?.trim() || "") !== (previous?.orderStatusNote?.trim() || "");
     const orderStatusUpdatedAt = statusChanged ? new Date().toISOString() : (validated.orderStatusUpdatedAt ?? previous?.orderStatusUpdatedAt ?? null);
     const { error } = await supabase.from("purchases").update({
-      product_id: p.productId, quantity: p.quantity, price: p.price, date: p.date || null,
+      product_id: p.productId, quantity: p.quantity, price: p.price, date: p.date || null, delivery_date: deliveryDate || null,
       order_status: orderStatus, order_reference: orderReference?.trim() || null, order_status_note: orderStatusNote?.trim() || null, order_status_updated_at: orderStatusUpdatedAt,
     } as any).eq("id", p.id);
     if (error) throw error;
@@ -189,7 +191,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setSales(prev=>prev.map(s=>s.id===sale.id ? {...s,profit} : s));
       }
     }
-    setPurchases(prev => prev.map(x => x.id === p.id ? {...p, orderStatus, orderReference: orderReference?.trim() || "", orderStatusNote: orderStatusNote?.trim() || "", orderStatusUpdatedAt} : x));
+    setPurchases(prev => prev.map(x => x.id === p.id ? {...p, deliveryDate, orderStatus, orderReference: orderReference?.trim() || "", orderStatusNote: orderStatusNote?.trim() || "", orderStatusUpdatedAt} : x));
   };
 
   const deletePurchase = async (id: string) => {

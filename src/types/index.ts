@@ -22,6 +22,7 @@ export interface Purchase {
   quantity: number;
   price: number | null;
   date: string;
+  deliveryDate?: string | null;
   orderStatus?: VintedOrderStatus;
   orderReference?: string | null;
   orderStatusNote?: string | null;

@@ -99,7 +99,8 @@ export async function exportDashboardXlsx(
     { header: "Utilização", key: "uso", width: 18 },
     { header: "Quantidade", key: "quantidade", width: 12 },
     { header: "Preço", key: "price", width: 14 },
-    { header: "Data", key: "date", width: 14 },
+    { header: "Data da compra", key: "date", width: 16 },
+    { header: "Data de entrega", key: "deliveryDate", width: 16 },
   ];
   wsC.getRow(1).font = { bold: true };
   purchases
@@ -111,6 +112,7 @@ export async function exportDashboardXlsx(
         categoria: getProduct(p.productId)?.category, uso:getProduct(p.productId)?.inventoryUse === "personal" ? "Leitura" : "Negócio", quantidade:p.quantity,
         price: p.price,
         date: p.date,
+        deliveryDate: p.deliveryDate ?? "",
       });
       row.getCell("price").numFmt = EUR;
     });

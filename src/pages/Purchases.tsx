@@ -92,6 +92,7 @@ export default function Purchases() {
   const [specifications, setSpecifications] = useState("");
   const [price, setPrice] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [deliveryDate, setDeliveryDate] = useState("");
   const [orderStatus, setOrderStatus] = useState<VintedOrderStatus>("not_tracked");
   const [orderReference, setOrderReference] = useState("");
   const [orderStatusNote, setOrderStatusNote] = useState("");
@@ -109,7 +110,7 @@ export default function Purchases() {
     setEditingPurchase(null);
     setInventoryUse("business");
     setProductName(""); setProductCategory("Outros"); setProductSupplier(""); setRetailPrice(""); setCondition("Verificado"); setWarrantyMonths("0"); setDescription(""); setSpecifications("");
-    setPrice(""); setDate(new Date().toISOString().slice(0, 10));
+    setPrice(""); setDate(new Date().toISOString().slice(0, 10)); setDeliveryDate("");
     setOrderStatus("not_tracked"); setOrderReference(""); setOrderStatusNote("");
     setDialogOpen(true);
   };
@@ -128,6 +129,7 @@ export default function Purchases() {
     setInventoryUse(prod?.inventoryUse ?? "business");
     setPrice(p.price == null ? "" : String(p.price));
     setDate(p.date);
+    setDeliveryDate(p.deliveryDate ?? "");
     setOrderStatus(p.orderStatus ?? "not_tracked");
     setOrderReference(p.orderReference ?? "");
     setOrderStatusNote(p.orderStatusNote ?? "");
@@ -158,10 +160,10 @@ export default function Purchases() {
     }
 
     if (editingPurchase) {
-      await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, orderStatus, orderReference, orderStatusNote });
+      await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, deliveryDate: deliveryDate || null, orderStatus, orderReference, orderStatusNote });
       toast.success("Compra atualizada");
     } else {
-      await addPurchase({ productId, quantity: 1, price: priceParsed, date, orderStatus, orderReference, orderStatusNote });
+      await addPurchase({ productId, quantity: 1, price: priceParsed, date, deliveryDate: deliveryDate || null, orderStatus, orderReference, orderStatusNote });
       toast.success("Compra registada");
     }
     setDialogOpen(false);
@@ -367,7 +369,11 @@ export default function Purchases() {
               <div><Label>Especificações</Label><textarea value={specifications} onChange={e => setSpecifications(e.target.value)} maxLength={3000} rows={3} placeholder="Ex: 256 GB · 12 GB RAM · bateria 92% · caixa e carregador incluídos" className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
               <p className="text-xs leading-5 text-muted-foreground">As fotos são adicionadas na ficha do produto depois de receberes e testares o equipamento.</p>
               <div><Label>Utilização</Label><Select value={inventoryUse} onValueChange={v=>setInventoryUse(v as "business" | "personal")}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="business">Disponível para negócio</SelectItem><SelectItem value="personal">Leitura / uso pessoal</SelectItem></SelectContent></Select></div>
-              <div><Label>Data</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Data da compra</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+                <div><Label>Data de entrega da encomenda</Label><Input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} /></div>
+              </div>
+              <p className="-mt-2 text-xs text-muted-foreground">Indica a data prevista ou a data em que a encomenda foi entregue.</p>
               <div className="space-y-3 rounded-md border border-border p-3">
                 <div>
                   <Label>Estado da compra e entrega</Label>
@@ -412,7 +418,8 @@ export default function Purchases() {
                 <p className="text-[10px] text-muted-foreground">Preço</p>
                 <p className="font-semibold">{fmt(p.price)}</p>
               </div>
-              <p className="text-xs text-muted-foreground">{formatDate(p.date)}</p>
+              <p className="text-xs text-muted-foreground">Compra: {formatDate(p.date)}</p>
+              {p.deliveryDate && <p className="text-xs text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}
               {(p.orderStatus && p.orderStatus !== "not_tracked") && <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>}
             </CardContent>
           </Card>
@@ -431,7 +438,7 @@ export default function Purchases() {
                   <div className="flex items-center">Preço <SortIcon field="price" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("date")}>
-                  <div className="flex items-center">Data <SortIcon field="date" /></div>
+                  <div className="flex items-center">Data da compra <SortIcon field="date" /></div>
                 </TableHead>
                 <TableHead className="w-24"></TableHead>
               </TableRow>
@@ -441,7 +448,7 @@ export default function Purchases() {
                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : visible.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {getProduct(p.productId)?.inventoryUse === "personal" ? "Leitura" : (productStock.get(p.productId) ?? 0) > 0 ? "Ativo" : "Vendido"}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p>{p.orderStatus && p.orderStatus !== "not_tracked" && <p className="text-xs font-normal text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>}</TableCell>
+                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {getProduct(p.productId)?.inventoryUse === "personal" ? "Leitura" : (productStock.get(p.productId) ?? 0) > 0 ? "Ativo" : "Vendido"}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p>{p.orderStatus && p.orderStatus !== "not_tracked" && <p className="text-xs font-normal text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>

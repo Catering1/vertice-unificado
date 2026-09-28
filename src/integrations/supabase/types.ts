@@ -155,6 +155,7 @@ export type Database = {
           source_ref: string | null
           created_at: string
           date: string | null
+          delivery_date: string | null
           id: string
           price: number | null
           product_id: string
@@ -169,6 +170,7 @@ export type Database = {
           source_ref?: string | null
           created_at?: string
           date?: string | null
+          delivery_date?: string | null
           id?: string
           price?: number | null
           product_id: string
@@ -183,6 +185,7 @@ export type Database = {
           source_ref?: string | null
           created_at?: string
           date?: string | null
+          delivery_date?: string | null
           id?: string
           price?: number | null
           product_id?: string
