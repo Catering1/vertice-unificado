@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1728" />
+      <stop offset="1" stop-color="#174d48" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <circle cx="1000" cy="90" r="260" fill="#b8e4cb" opacity=".08" />
+  <rect x="95" y="105" width="82" height="82" rx="22" fill="#a8dfbd" />
+  <path d="M120 145h32m-16-16v32" stroke="#0d1728" stroke-width="8" stroke-linecap="round" />
+  <text x="95" y="310" fill="#fff" font-family="Arial, sans-serif" font-size="76" font-weight="700">Vendig Machine</text>
+  <text x="95" y="400" fill="#a8dfbd" font-family="Arial, sans-serif" font-size="76" font-weight="700">Store</text>
+  <text x="100" y="485" fill="#d2ddd9" font-family="Arial, sans-serif" font-size="29">Gestão de compras, vendas e stock</text>
+</svg>
