@@ -19,7 +19,7 @@ O Lovable já não faz parte do fluxo de execução nem de publicação. As alte
 
 ## Publicação e autenticação
 
-O site de produção está em GitHub Pages. No Supabase, configura o URL do site como `https://catering1.github.io/vertice-unificado/` e adiciona esse endereço à lista de redirecionamentos permitidos em Authentication → URL Configuration. Para desenvolvimento local, permite também `http://localhost:8080/**`.
+O site de produção está em GitHub Pages. No Supabase, configura o URL do site como `https://catering1.github.io/vertice-unificado/` e permite os redirecionamentos `https://catering1.github.io/vertice-unificado/**` e `http://localhost:8080/**` em Authentication → URL Configuration. O link de confirmação de email usa o caminho-base correto em cada ambiente.
 
 ## Análise por IA (opcional)
 
