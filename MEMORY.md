@@ -1,6 +1,6 @@
 # Memória do projeto Vendig Machine Store
 
-Atualizado em 28 de setembro de 2026.
+Atualizado em 29 de setembro de 2026.
 
 ## Regra de continuidade
 
@@ -63,6 +63,7 @@ O repositório ativo da loja pública e do dashboard é `Catering1/vertice-unifi
 
 - O dashboard é a única fonte de elegibilidade para anúncios externos: publicar apenas produtos registados como compras e atualmente ativos/em venda no dashboard. O histórico da Vinted serve apenas para confirmar dados, custo e fotografias do produto correspondente; nunca anunciar outras compras da Vinted que não estejam ativas no dashboard (por exemplo, livros, roupa ou artigos pessoais).
 - Em 28/09/2026 o utilizador confirmou que criou dois perfis Chrome separados para trabalhar com duas contas OLX autenticadas. A automação deve tratar cada perfil como uma sessão independente e publicar apenas na conta atribuída ao produto no dashboard, quando esse campo existir. Não terminar sessão nem misturar contas durante o mesmo anúncio.
+- No formulário de compras, `Condição do artigo` descreve o estado físico/comercial do produto; `Estado da compra e entrega` acompanha a encomenda e permanece privado. São dimensões diferentes e devem aparecer juntas, com rótulos claros, sem fundir os valores nem perder o estado logístico.
 - O dashboard deve evoluir para suportar perfis/contas OLX por produto, por exemplo `conta_olx`, `olx_profile_name`, `olx_ad_id`, `olx_status`, `olx_published_at` e `olx_published_account`. Enquanto estes campos não existirem, usar decisão operacional conservadora: produtos premium numa conta e acessórios/produtos mais baratos noutra, registando a escolha na nota privada do produto.
 - Não duplicar o mesmo artigo em várias contas OLX sem decisão explícita. Usar múltiplas contas para segmentar tipos de produto, gerir volume e separar canais, não para criar anúncios repetidos do mesmo equipamento.
 - Antes de publicar cada produto, pesquisar anúncios atuais do mesmo equipamento. Dar prioridade aos comparáveis do OLX no distrito de Lisboa e confirmar a faixa de mercado em lojas de usados ou recondicionados, como a CeX ou equivalentes.
@@ -78,6 +79,7 @@ O repositório ativo da loja pública e do dashboard é `Catering1/vertice-unifi
 ## Estado da campanha OLX em 22 de setembro de 2026
 
 - O anúncio `Samsung Galaxy Z Fold7 256GB Azul - SIM bloqueado` foi criado com quatro fotografias reais, preço de 849 € e ID OLX `673788064`. O OLX exige pagamento para ativar a categoria Samsung; o anúncio ficou em `Por pagar` e nenhum pagamento foi realizado.
+- Em 29/09/2026, a sessão OLX acessível continuava a mostrar o Z Fold7 `673788064` em `Por pagar`; não está público. O ambiente de navegador desta tarefa só expôs a sessão OLX já aberta e não disponibilizou o Chrome/perfil OLX 2, pelo que não foi possível criar uma cópia na segunda conta. A publicação/ativação continua sem qualquer pagamento autorizado.
 - O anúncio `Samsung Galaxy S25 Ultra 256GB Titanium Black`, ID OLX `673782413`, também permanece em `Por pagar`. Não efetuar pagamentos sem uma instrução explícita do utilizador.
 - O anúncio `Logitech Brio 4K Ultra HD Webcam`, ID OLX `673787302`, foi corrigido para remover a imagem gerada por IA e está ativo, sem fotografia.
 - Os anúncios `Samsung Galaxy Z Flip8 256GB Novo - Mint` (ID OLX `673781444`) e `Samsung Galaxy Z Fold8 Ultra 256GB Novo - Shadow Violet` (ID OLX `673776297`) foram reativados sem pagamento e estão pendentes de moderação.

@@ -360,7 +360,7 @@ export default function Purchases() {
                 <div><Label>Garantia (meses)</Label><Input type="number" min={0} max={120} value={warrantyMonths} onChange={e => setWarrantyMonths(e.target.value)} /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>Estado</Label><Input placeholder="Ex: Como novo" value={condition} onChange={e => setCondition(e.target.value)} /></div>
+                <div><Label>Condição do artigo</Label><Input placeholder="Ex: Como novo" value={condition} onChange={e => setCondition(e.target.value)} /></div>
                 <div><Label>Fornecedor</Label><Input placeholder="Opcional" value={productSupplier} onChange={e => setProductSupplier(e.target.value)} /></div>
               </div>
               <div><Label>Descrição para a página do produto</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado estético, funcionamento, acessórios incluídos e qualquer defeito a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
@@ -369,10 +369,14 @@ export default function Purchases() {
               <div><Label>Utilização</Label><Select value={inventoryUse} onValueChange={v=>setInventoryUse(v as "business" | "personal")}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="business">Disponível para negócio</SelectItem><SelectItem value="personal">Leitura / uso pessoal</SelectItem></SelectContent></Select></div>
               <div><Label>Data</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
               <div className="space-y-3 rounded-md border border-border p-3">
-                <div><Label>Estado privado da encomenda</Label><Select value={orderStatus} onValueChange={v => setOrderStatus(v as VintedOrderStatus)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ORDER_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select></div>
+                <div>
+                  <Label>Estado da compra e entrega</Label>
+                  <p className="mb-2 mt-1 text-xs text-muted-foreground">Acompanha a encomenda. É informação privada; não aparece no anúncio público.</p>
+                  <Select value={orderStatus} onValueChange={v => setOrderStatus(v as VintedOrderStatus)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ORDER_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>
+                </div>
                 <div><Label>Referência da encomenda (opcional)</Label><Input maxLength={200} value={orderReference} onChange={e => setOrderReference(e.target.value)} placeholder="Referência Vinted" /></div>
                 <div><Label>Nota privada do estado</Label><textarea value={orderStatusNote} onChange={e => setOrderStatusNote(e.target.value)} maxLength={1000} rows={2} placeholder="Ex.: atualização recebida hoje; reembolso parcial de 20 €" className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-                <p className="text-xs leading-5 text-muted-foreground">Informação visível apenas nesta área administrativa; nunca aparece na loja pública.</p>
+                <p className="text-xs leading-5 text-muted-foreground">A condição do artigo e o estado da compra são apresentados juntos nesta área; a encomenda, referência e nota são privados e nunca aparecem na loja pública.</p>
               </div>
               <Button onClick={save}>{editingPurchase ? "Guardar" : "Registar"}</Button>
             </div>
