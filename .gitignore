@@ -9,6 +9,10 @@ lerna-debug.log*
 
 node_modules
 supabase/.temp/
+supabase/functions/.env
+supabase/functions/.env.*
+.env.local
+.env.*.local
 dist
 dist-ssr
 *.local

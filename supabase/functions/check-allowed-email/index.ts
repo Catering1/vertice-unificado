@@ -1,17 +1,17 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
 const allowedOrigins = [
-  "https://deal-data-dazzle.lovable.app",
-  "https://id-preview--37e34560-c141-4c02-8861-1289f7c17fc3.lovable.app",
+  "https://catering1.github.io",
   "http://localhost:5173",
   "http://localhost:8080",
 ];
 
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get("origin") || "";
+  const allowedOrigin = allowedOrigins.includes(origin) ? origin : "https://catering1.github.io";
   return {
-    "Access-Control-Allow-Origin": allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
+    "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
   };
 }
 
@@ -24,6 +24,12 @@ Deno.serve(async (req) => {
 
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 405,
+    });
   }
 
   try {
@@ -39,7 +45,8 @@ Deno.serve(async (req) => {
     }
     rateLimitMap.set(clientIP, now);
 
-    const { email } = await req.json();
+    const payload = await req.json();
+    const email = payload?.email;
     if (!email || typeof email !== "string" || email.length > 255) {
       return new Response(JSON.stringify({ error: "Invalid request" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -56,22 +63,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
-
-    const { data, error } = await supabase
-      .from("allowed_emails")
-      .select("id")
-      .eq("email", email.toLowerCase().trim())
-      .maybeSingle();
-
-    if (error) throw error;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const secretKeysJson = Deno.env.get("SUPABASE_SECRET_KEYS");
+    const secretKey = secretKeysJson
+      ? JSON.parse(secretKeysJson)["default"]
+      : Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !secretKey) throw new Error("Supabase server credentials are not configured");
+    const query = new URL(`${supabaseUrl}/rest/v1/allowed_emails`);
+    query.searchParams.set("select", "id");
+    query.searchParams.set("email", `eq.${email.toLowerCase().trim()}`);
+    query.searchParams.set("limit", "1");
+    const result = await fetch(query, { headers: { apikey: secretKey } });
+    if (!result.ok) throw new Error(`Email lookup failed (${result.status})`);
+    const rows = await result.json();
 
     // Add random delay to prevent timing attacks
     await new Promise((resolve) => setTimeout(resolve, 500 + Math.random() * 1500));
 
-    return new Response(JSON.stringify({ allowed: !!data }), {
+    return new Response(JSON.stringify({ allowed: Array.isArray(rows) && rows.length > 0 }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (_e) {

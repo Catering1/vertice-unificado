@@ -1,4 +1,4 @@
-# Memória do projeto Vértice Unificado
+# Memória do projeto Vendig Machine Store
 
 Atualizado em 27 de setembro de 2026.
 
@@ -16,11 +16,10 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - Repositório: `https://github.com/Catering1/vertice-unificado`
 - Site público: `https://catering1.github.io/vertice-unificado/`
 - Administração: `https://catering1.github.io/vertice-unificado/admin/login`
-- Supabase: projeto `mjtqdeesfapqfmxkhaby`
-- O projeto Lovable atual (`My Trade Tracker`, ID `37e34560-c141-4c02-8861-1289f7c17fc3`) continua ligado a `Catering1/verticemachine`. A interface Lovable não disponibilizou a troca desse repositório por `Catering1/vertice-unificado`; não forçar código para o repositório original sem uma instrução explícita para o alterar.
-- Projeto Lovable independente: `Vértice Unificado` (ID `b7bb56f3-4641-4faf-90c9-ef28268d9299`), criado na conta `bbonito003@gmail.com`.
-- O Lovable criou anteriormente o repositório separado `https://github.com/Catering1/v-rtice-unificado`. Deve ser tratado apenas como uma cópia histórica: não aplicar lá novas alterações nem o usar para publicação.
-- Publicação Lovable: `https://unified-vertex-core.lovable.app/`.
+- Supabase ativo: projeto `pxpxipewhwwsiogoyjov` (`https://pxpxipewhwwsiogoyjov.supabase.co`). Os dados do dashboard foram migrados para este projeto.
+- O código corre a partir de `Catering1/vertice-unificado`; produção é servida por GitHub Pages em `https://catering1.github.io/vertice-unificado/`.
+- O projeto Lovable `My Trade Tracker` (ID `37e34560-c141-4c02-8861-1289f7c17fc3`) e os antigos endereços Lovable são históricos. Não fazem parte do fluxo ativo nem devem receber alterações.
+- O repositório separado `https://github.com/Catering1/v-rtice-unificado` também é histórico; não publicar lá.
 
 ## Dados e stock
 
@@ -30,7 +29,8 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 - A migração de referência está em `supabase/migrations/20260919000000_public_inventory_rpc.sql`.
 - O dashboard suporta visões por categoria e uma visão agregada. O histórico dos livros é importado da folha `Livros` nas Configurações com referências estáveis por linha, para permitir repetir uma importação interrompida sem duplicar registos.
 - Livros em leitura ficam marcados como uso pessoal, fora do stock disponível. Todos os livros importados ficam ocultos da montra pública. Custos e datas desconhecidos ficam vazios; o dashboard apresenta o lucro conhecido como parcial e sinaliza esses registos para revisão.
-- A migração `supabase/migrations/20260926231640_books_categories_and_source_data.sql` foi aplicada no Cloud do projeto Lovable. Ela acrescenta os campos de origem e uso pessoal, permite datas e custos em falta, cria despesas privadas e restringe a função pública ao stock comercial visível.
+- A migração `supabase/migrations/20260926231640_books_categories_and_source_data.sql` foi originalmente aplicada no ambiente Cloud do Lovable. A estrutura e os dados necessários estão agora também no projeto Supabase ativo `pxpxipewhwwsiogoyjov`.
+- O site e os dados já não dependem do Lovable. A análise por IA é opcional e requer `OPENAI_API_KEY` configurada como secret da Edge Function Supabase `analyze-dashboard`.
 
 ## Imagens e design
 
@@ -46,7 +46,7 @@ Este é o terceiro repositório independente que unifica a loja pública e o das
 
 ## Publicação
 
-- A aplicação é Vite/React. Para publicar no GitHub Pages, compilar com `VITE_BASE_PATH=/vertice-unificado/`.
+- A aplicação é Vite/React. Para publicar no GitHub Pages, compilar com `VITE_BASE_PATH=/vertice-unificado/`; localmente o valor predefinido `/` mantém as rotas do servidor de desenvolvimento funcionais.
 - Copiar `dist/index.html` para `dist/404.html` antes de publicar, para que rotas como `/admin/login` funcionem no GitHub Pages.
 - A página pública é publicada na branch `gh-pages`; o código fonte fica na branch `main`.
 - `Catering1/vertice-unificado` é a única fonte canónica. Todas as alterações de código, memória e publicação deste projeto devem ser feitas apenas nesse repositório. Não sincronizar `Catering1/v-rtice-unificado` e não alterar os repositórios originais `verticemachine` ou `tech-exchange-portugal`.

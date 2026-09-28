@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardData {
   totalPurchases: string;
@@ -37,11 +38,19 @@ export default function AnalyzeDialog({ dashboardData }: AnalyzeDialogProps) {
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-dashboard`;
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Inicia sessão para analisar o dashboard.");
+        setLoading(false);
+        return;
+      }
+
       const resp = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ dashboardData }),
       });

@@ -1,92 +1,81 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+const allowedOrigins = new Set([
+  "https://catering1.github.io",
+  "http://localhost:5173",
+  "http://localhost:8080",
+]);
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+function corsHeaders(origin: string | null) {
+  const headers = new Headers({
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  });
+  if (origin && allowedOrigins.has(origin)) headers.set("Access-Control-Allow-Origin", origin);
+  return headers;
+}
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+const systemPrompt = `És um analista de negócios especializado em comércio e revenda. Analisa os dados enviados pelo dashboard e gera 5 a 8 insights acionáveis em português de Portugal.
+
+Para cada insight, começa com um emoji relevante, um título curto em negrito e uma explicação concisa. Foca-te na saúde geral do negócio, oportunidades de melhoria, alertas e riscos, eficiência operacional e recomendações estratégicas. Sê direto, prático e usa apenas os números fornecidos.`;
+
+Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const headers = corsHeaders(origin);
+
+  if (req.method === "OPTIONS") return new Response(null, { headers });
+  if (origin && !allowedOrigins.has(origin)) {
+    return Response.json({ error: "Origem não autorizada." }, { status: 403, headers });
+  }
+  if (req.method !== "POST") {
+    return Response.json({ error: "Método não permitido." }, { status: 405, headers });
+  }
+
+  const apiKey = Deno.env.get("OPENAI_API_KEY") ?? Deno.env.get("AI_API_KEY");
+  if (!apiKey) {
+    return Response.json({
+      error: "A análise por IA ainda não está configurada. O administrador tem de definir OPENAI_API_KEY nos secrets das Edge Functions do Supabase.",
+    }, { status: 503, headers });
+  }
 
   try {
-    const { dashboardData } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const body = await req.json();
+    const dashboardData = body?.dashboardData;
+    if (!dashboardData || typeof dashboardData !== "object" || Array.isArray(dashboardData)) {
+      return Response.json({ error: "Dados do dashboard inválidos." }, { status: 400, headers });
+    }
 
-    const systemPrompt = `És um analista de negócios especializado em e-commerce e revenda. Analisa os dados do dashboard fornecidos e gera 5-8 insights acionáveis em português de Portugal. 
-
-Para cada insight, usa este formato:
-- Começa com um emoji relevante (📈, ⚠️, 💡, 🎯, 📊, 🔄, 💰, 🏆, etc.)
-- Título curto em negrito
-- Explicação concisa e acionável
-
-Foca-te em:
-1. Saúde geral do negócio
-2. Oportunidades de melhoria
-3. Alertas e riscos
-4. Eficiência operacional
-5. Recomendações estratégicas
-
-Sê direto, prático e baseado nos números fornecidos.`;
-
-    const userPrompt = `Analisa os seguintes dados do meu dashboard de negócio:
-
-- Total Compras: ${dashboardData.totalPurchases}€
-- Total Vendas: ${dashboardData.totalSales}€
-- Lucro Total: ${dashboardData.totalProfit}€
-- Margem Média: ${dashboardData.avgMargin}%
-- ROI Total: ${dashboardData.roiTotal}%
-- ROI Realizado: ${dashboardData.roiRealized}%
-- Stock Turnover: ${dashboardData.stockTurnover}
-- Valor em Stock: ${dashboardData.stockValue}€
-- Tempo Médio de Venda: ${dashboardData.avgVelocity} dias
-- Lucro Médio por Venda: ${dashboardData.avgProfitPerSale}€
-- Número de Produtos: ${dashboardData.productCount}
-- Top 5 Produtos (por quantidade vendida): ${dashboardData.topProducts}
-
-Gera os insights agora.`;
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const endpoint = Deno.env.get("AI_CHAT_COMPLETIONS_URL") ?? "https://api.openai.com/v1/chat/completions";
+    const model = Deno.env.get("AI_MODEL") ?? "gpt-4.1-mini";
+    const response = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          { role: "user", content: `Analisa os seguintes dados do meu dashboard de negócio:\n\n${JSON.stringify(dashboardData)}` },
         ],
         stream: true,
       }),
+      signal: AbortSignal.timeout(60_000),
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de pedidos excedido. Tenta novamente mais tarde." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos esgotados. Adiciona fundos em Settings > Workspace > Usage." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Erro ao contactar IA" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const details = await response.text();
+      console.error("AI provider error:", response.status, details.slice(0, 1000));
+      return Response.json({
+        error: response.status === 429
+          ? "Limite de pedidos da IA excedido. Tenta novamente mais tarde."
+          : "Não foi possível analisar o dashboard. Verifica a chave e a configuração do fornecedor de IA.",
+      }, { status: response.status === 429 ? 429 : 502, headers });
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-    });
-  } catch (e) {
-    console.error("analyze error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const streamHeaders = new Headers(headers);
+    streamHeaders.set("Content-Type", "text/event-stream; charset=utf-8");
+    streamHeaders.set("Cache-Control", "no-cache");
+    return new Response(response.body, { headers: streamHeaders });
+  } catch (error) {
+    console.error("analyze-dashboard error:", error);
+    return Response.json({ error: "Erro ao analisar os dados do dashboard." }, { status: 500, headers });
   }
 });

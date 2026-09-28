@@ -1,1 +1,7 @@
-project_id = "mjtqdeesfapqfmxkhaby"
+project_id = "pxpxipewhwwsiogoyjov"
+
+[functions.check-allowed-email]
+verify_jwt = false
+
+[functions.analyze-dashboard]
+verify_jwt = true
