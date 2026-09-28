@@ -57,8 +57,6 @@ interface StoreContextType {
 
 const StoreContext = createContext<StoreContextType | null>(null);
 
-const DEFAULT_CATEGORIES = ["Eletrónica", "Roupas", "Alimentos", "Casa", "Outros"];
-
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
@@ -108,11 +106,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setSales(sold.map(r => ({id: r.id, productId: r.product_id, quantity: r.quantity, salePrice: Number(r.sale_price), profit: r.profit == null ? null : Number(r.profit), date: r.date ?? ""})));
         setExpenses(costs.map(r => ({id: r.id, category: r.category, description: r.description, amount: Number(r.amount), date: r.date ?? ""})));
         const names = cats.map(r => r.name);
-        if (!names.length) {
-          const { error } = await supabase.from("categories").insert(DEFAULT_CATEGORIES.map(name => ({user_id: user!.id, name})));
-          if (error) throw error;
-          setCategories(DEFAULT_CATEGORIES);
-        } else setCategories(names);
+        setCategories(names);
       } catch {
         if (!cancelled) { setError("Não foi possível carregar todos os dados. Atualize a página para tentar novamente."); toast.error("Erro ao carregar os dados"); }
       } finally { if (!cancelled) setLoading(false); }

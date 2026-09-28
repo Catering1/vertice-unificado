@@ -15,7 +15,14 @@ import AnalyzeDialog from "@/components/dashboard/AnalyzeDialog";
 export default function Dashboard() {
   const store = useStore();
   const [category, setCategory] = usePersistedState("dashboard-category", "all");
-  const categories = useMemo(() => [...new Set([...store.categories, ...store.products.map(p => p.category), ...store.expenses.map(e => e.category)])].sort((a,b) => a.localeCompare(b, "pt")), [store.categories,store.products,store.expenses]);
+  const categories = useMemo(() => {
+    const activeProductIds = new Set([
+      ...store.purchases.map(purchase => purchase.productId),
+      ...store.sales.map(sale => sale.productId),
+    ]);
+    return [...new Set(store.products.filter(product => activeProductIds.has(product.id)).map(product => product.category))]
+      .sort((a,b) => a.localeCompare(b, "pt"));
+  }, [store.products,store.purchases,store.sales]);
   const activeCategory = categories.includes(category) ? category : "all";
   const data = useMemo(() => categoryData(store.products,store.purchases,store.sales,store.expenses,activeCategory), [store.products,store.purchases,store.sales,store.expenses,activeCategory]);
   const d = useMemo(() => computeDashboard(data.purchases,data.sales,data.products,data.expenses), [data]);
@@ -26,18 +33,18 @@ export default function Dashboard() {
   const fmt = money;
   const partial = d.missingCosts > 0;
   const kpis = [
-    {label: "Total de vendas", value: fmt(d.totalSales), icon: DollarSign},
-    {label: partial ? "Lucro apurado (parcial)" : "Lucro das vendas", value: fmt(d.totalProfit), icon: TrendingUp},
-    {label: "Compras registadas", value: fmt(d.totalPurchases), icon: ShoppingCart},
-    {label: "Stock disponível", value: fmt(d.stockValue), icon: Warehouse},
-    {label: "Unidades vendidas", value: String(d.unitsSold), icon: Package},
-    {label: "Despesas operacionais", value: fmt(d.totalExpenses), icon: Calculator},
-    {label: partial ? "Resultado após despesas (parcial)" : "Resultado após despesas", value: fmt(d.netProfit), icon: TrendingUp},
-    {label: "Unidades em stock", value: String(d.stockUnits), icon: Package},
-    {label: partial ? "Margem das vendas com custo" : "Margem das vendas", value: `${(d.avgMargin*100).toFixed(1)}%`, icon: Percent},
-    {label: "ROI das vendas com custo", value: `${(d.roiRealized*100).toFixed(1)}%`, icon: RefreshCw},
-    {label: "Tempo médio até à venda", value: `${d.avgVelocity.toFixed(0)} dias`, icon: Clock},
-  ].map(k => ({...k,iconBg:"bg-primary/10",iconColor:"text-primary"}));
+    {label: "Total de vendas", value: fmt(d.totalSales), icon: DollarSign, iconBg:"bg-blue-100", iconColor:"text-blue-700", valueClassName:"text-blue-700", accentClassName:"border-blue-100"},
+    {label: partial ? "Lucro apurado (parcial)" : "Lucro das vendas", value: fmt(d.totalProfit), icon: TrendingUp, iconBg:"bg-emerald-100", iconColor:"text-emerald-700", valueClassName:"text-emerald-700", accentClassName:"border-emerald-100"},
+    {label: "Compras registadas", value: fmt(d.totalPurchases), icon: ShoppingCart, iconBg:"bg-amber-100", iconColor:"text-amber-700", valueClassName:"text-amber-700", accentClassName:"border-amber-100"},
+    {label: "Stock disponível", value: fmt(d.stockValue), icon: Warehouse, iconBg:"bg-indigo-100", iconColor:"text-indigo-700", valueClassName:"text-indigo-700", accentClassName:"border-indigo-100"},
+    {label: "Unidades vendidas", value: String(d.unitsSold), icon: Package, iconBg:"bg-violet-100", iconColor:"text-violet-700", valueClassName:"text-violet-700", accentClassName:"border-violet-100"},
+    {label: "Despesas operacionais", value: fmt(d.totalExpenses), icon: Calculator, iconBg:"bg-rose-100", iconColor:"text-rose-700", valueClassName:"text-rose-700", accentClassName:"border-rose-100"},
+    {label: partial ? "Resultado após despesas (parcial)" : "Resultado após despesas", value: fmt(d.netProfit), icon: TrendingUp, iconBg:d.netProfit >= 0 ? "bg-green-100" : "bg-red-100", iconColor:d.netProfit >= 0 ? "text-green-700" : "text-red-700", valueClassName:d.netProfit >= 0 ? "text-green-700" : "text-red-700", accentClassName:d.netProfit >= 0 ? "border-green-100" : "border-red-100"},
+    {label: "Unidades em stock", value: String(d.stockUnits), icon: Package, iconBg:"bg-cyan-100", iconColor:"text-cyan-700", valueClassName:"text-cyan-700", accentClassName:"border-cyan-100"},
+    {label: partial ? "Margem das vendas com custo" : "Margem das vendas", value: `${(d.avgMargin*100).toFixed(1)}%`, icon: Percent, iconBg:"bg-teal-100", iconColor:"text-teal-700", valueClassName:"text-teal-700", accentClassName:"border-teal-100"},
+    {label: "ROI das vendas com custo", value: `${(d.roiRealized*100).toFixed(1)}%`, icon: RefreshCw, iconBg:"bg-sky-100", iconColor:"text-sky-700", valueClassName:"text-sky-700", accentClassName:"border-sky-100"},
+    {label: "Tempo médio até à venda", value: `${d.avgVelocity.toFixed(0)} dias`, icon: Clock, iconBg:"bg-orange-100", iconColor:"text-orange-700", valueClassName:"text-orange-700", accentClassName:"border-orange-100"},
+  ];
   const topProducts = d.topProducts.map(([name,qty]) => ({name,qty}));
   const profitByProduct = d.profitByProduct.map(([name,profit]) => ({name,profit}));
   const {profitOverTime,purchasesVsSales} = d;
@@ -85,7 +92,7 @@ export default function Dashboard() {
       {activeCategory === "all" && summaries.length > 0 && <section className="overflow-hidden rounded-xl border bg-card">
         <h2 className="px-5 pt-5 text-base font-semibold">Comparar categorias</h2>
         <div className="overflow-x-auto p-5"><table className="w-full text-sm"><thead><tr className="border-b text-left text-muted-foreground"><th className="pb-3">Categoria</th><th className="pb-3 text-right">Vendas</th><th className="pb-3 text-right">Lucro apurado</th><th className="pb-3 text-right">Stock</th></tr></thead>
-        <tbody>{summaries.map(c => <tr key={c.name} className="border-b last:border-0"><td className="py-3"><button className="font-medium underline-offset-4 hover:underline" onClick={() => setCategory(c.name)}>{c.name}</button></td><td className="text-right">{fmt(c.totalSales)}</td><td className="text-right">{fmt(c.totalProfit)}{c.missingCosts > 0 ? " *" : ""}</td><td className="text-right">{fmt(c.stockValue)}</td></tr>)}</tbody></table></div>
+        <tbody>{summaries.map(c => <tr key={c.name} className="border-b last:border-0"><td className="py-3"><button className="font-semibold text-primary underline-offset-4 hover:underline" onClick={() => setCategory(c.name)}>{c.name}</button></td><td className="text-right font-semibold text-blue-700">{fmt(c.totalSales)}</td><td className="text-right font-semibold text-emerald-700">{fmt(c.totalProfit)}{c.missingCosts > 0 ? " *" : ""}</td><td className="text-right font-semibold text-indigo-700">{fmt(c.stockValue)}</td></tr>)}</tbody></table></div>
         {summaries.some(c => c.missingCosts) && <p className="px-5 pb-4 text-xs text-muted-foreground">* Parcial: existem custos de compra por confirmar.</p>}
       </section>}
       {/* Charts row 1 */}
