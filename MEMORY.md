@@ -98,6 +98,9 @@ O repositório ativo da loja pública e do dashboard é `Catering1/vertice-unifi
 
 ## Limitações conhecidas e próximos passos
 
+- Na rotina de 29/09/2026, a Vinted mostrou o S26+ enviado para o centro de verificação (previsão 06–13/10) e o Fold7 com atraso na entrega; continua sem posse física confirmada. O S26 Ultra já constava como enviado ao centro. As outras encomendas acompanhadas continuavam em preparação, verificação, trânsito ou devolução, sem confirmação de receção e inspeção.
+- A edição de compras acompanhadas falhava quando `order_status_updated_at` vinha do Supabase com offset `+00:00`: a validação Zod aceitava apenas `Z`. O schema foi corrigido para aceitar timestamps com offset. Verificar a gravação no dashboard de produção após publicar o frontend.
+
 - O formulário de contacto apresenta uma confirmação visual, mas ainda não envia email, WhatsApp ou pedido para a base de dados.
 - Os preços atuais surgem como “Sob consulta” quando o preço de venda é zero.
 - Criar no dashboard um fluxo de “pronto para anúncio” com fotos, estado, preço, descrição curta e links de publicação.

@@ -27,7 +27,7 @@ const PurchaseSchema = z.object({
   orderStatus: z.enum(["not_tracked", "ordered", "shipped", "electronic_verification", "delivered", "received_verified", "return_in_progress", "refund_partial", "refunded", "cancelled"]).optional(),
   orderReference: z.string().max(200).optional().nullable(),
   orderStatusNote: z.string().max(1000).optional().nullable(),
-  orderStatusUpdatedAt: z.string().datetime().optional().nullable(),
+  orderStatusUpdatedAt: z.string().datetime({ offset: true }).optional().nullable(),
 });
 
 const SaleSchema = z.object({
