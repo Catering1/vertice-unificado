@@ -1,6 +1,9 @@
 import logitechBrio from "@/assets/products/logitech-brio.png";
 import s25Ultra2 from "@/assets/products/s25-ultra-2.png";
 import surfaceLaptopStudio from "@/assets/products/surface-laptop-studio.png";
+import buds3SilverIllustrative from "@/assets/products/buds3-silver-illustrative.png";
+import s26PlusIllustrative from "@/assets/products/s26-plus-illustrative.png";
+import s26UltraIllustrative from "@/assets/products/s26-ultra-illustrative.png";
 import s25Ultra01 from "@/assets/products/real/s25-ultra-01.webp";
 import s25Ultra02 from "@/assets/products/real/s25-ultra-02.webp";
 import s25Ultra03 from "@/assets/products/real/s25-ultra-03.webp";
@@ -24,6 +27,30 @@ export type CatalogPresentation = {
 };
 
 const catalog: Record<string, CatalogPresentation> = {
+  "samsung galaxy s26+": {
+    condition: "Em processo de entrega",
+    description: "Samsung Galaxy S26+ registado como encomenda a caminho. A configuração final, o estado do equipamento, os acessórios incluídos e a disponibilidade para venda serão confirmados após a receção e inspeção. A imagem apresentada é ilustrativa e será substituída por fotografias reais da unidade.",
+    illustrative: true,
+    photos: [s26PlusIllustrative],
+    price: 0,
+    specifications: ["Modelo Samsung Galaxy S26+", "RAM e armazenamento por confirmar após a receção"],
+  },
+  "samsung galaxy buds3 silver": {
+    condition: "Em processo de entrega",
+    description: "Samsung Galaxy Buds3 em acabamento prateado, atualmente em processo de entrega. O estado, os acessórios e o funcionamento serão confirmados na inspeção antes da disponibilização para venda. A imagem apresentada é ilustrativa e será substituída por fotografias reais.",
+    illustrative: true,
+    photos: [buds3SilverIllustrative],
+    price: 0,
+    specifications: ["Modelo Samsung Galaxy Buds3", "Cor Silver", "Estado e acessórios por confirmar após a receção"],
+  },
+  "samsung galaxy s26 ultra 1tb": {
+    condition: "Em processo de entrega",
+    description: "Samsung Galaxy S26 Ultra com 1 TB de armazenamento, atualmente em processo de entrega e verificação. A memória RAM, o estado da unidade, os acessórios e a disponibilidade final serão confirmados após a receção. A imagem apresentada é ilustrativa e será substituída por fotografias reais.",
+    illustrative: true,
+    photos: [s26UltraIllustrative],
+    price: 0,
+    specifications: ["1 TB de armazenamento", "RAM por confirmar após a receção", "Estado e acessórios por confirmar"],
+  },
   "z flip 8": {
     condition: "Novo, em caixa",
     description: "Um dobrável pensado para quem quer um telemóvel completo sem ocupar demasiado espaço no bolso. O Galaxy Z Flip8 abre para revelar um ecrã Dynamic AMOLED 2X de 6,9 polegadas com 120 Hz e mantém um ecrã exterior de 4,1 polegadas para consultar informação e usar funções rápidas sem abrir o equipamento.\n\nEsta unidade tem 256 GB de armazenamento, 12 GB de RAM e acabamento Mint. A câmara principal de 50 MP, acompanhada por uma ultra grande angular de 12 MP, permite fotografar e gravar com o telefone pousado em diferentes ângulos. A bateria de 4.300 mAh e o peso de apenas 180 g tornam-no especialmente interessante para utilização diária.\n\nEquipamento novo, apresentado na caixa original. Uma boa escolha para quem procura um smartphone premium diferente, compacto quando fechado e confortável para mensagens, redes sociais, fotografia e vídeo.",
