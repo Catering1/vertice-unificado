@@ -98,8 +98,10 @@ O repositório ativo da loja pública e do dashboard é `Catering1/vertice-unifi
 
 ## Limitações conhecidas e próximos passos
 
-- Na rotina de 29/09/2026, a Vinted mostrou o S26+ enviado para o centro de verificação (previsão 06–13/10) e o Fold7 com atraso na entrega; continua sem posse física confirmada. O S26 Ultra já constava como enviado ao centro. As outras encomendas acompanhadas continuavam em preparação, verificação, trânsito ou devolução, sem confirmação de receção e inspeção.
-- A edição de compras acompanhadas falhava quando `order_status_updated_at` vinha do Supabase com offset `+00:00`: a validação Zod aceitava apenas `Z`. O schema foi corrigido para aceitar timestamps com offset. Verificar a gravação no dashboard de produção após publicar o frontend.
+- Na rotina de 29/09/2026, a Vinted mostrou o S26+ enviado para o centro de verificação (previsão 06–13/10) e o Fold7 com atraso na entrega; continua sem posse física confirmada. O S26 Ultra já constava como enviado ao centro. As outras encomendas acompanhadas continuavam em preparação, verificação, trânsito ou devolução, sem confirmação de receção e inspeção. Os estados/notas privados do S26+ e Fold7 foram atualizados e confirmados no dashboard; custos e datas de compra mantiveram-se.
+- A edição de compras acompanhadas falhava quando `order_status_updated_at` vinha do Supabase com offset `+00:00`: a validação Zod aceitava apenas `Z`. O schema foi corrigido para aceitar timestamps com offset, publicado em `main` e `gh-pages`, e a gravação foi confirmada no dashboard de produção.
+- Na Vinted, uma compra Buds4 de 73,25 € foi cancelada em 28/09 e o reembolso foi enviado para o método de pagamento; a compra S26 Ultra 256 GB de 613,99 € não foi expedida e o reembolso foi enviado. Nenhuma das duas tem compra correspondente no dashboard, pelo que não foram criadas compras de revenda nem anúncios.
+- A conta OLX acessível na rotina tinha 3 anúncios ativos (Logitech Brio, Surface Laptop Go 3 e serviço sem relação), 2 `Por pagar` (Fold7 ID `673788064` e S25 Ultra ID `673782413`), e nenhum pendente ou para edição. Nenhuma publicação ou taxa nesta conta. A segunda conta/perfil Chrome continuou inacessível ao browser da rotina; o anúncio Fold7 ativo nessa conta, mencionado acima, requer revisão após confirmação de receção e inspeção da unidade.
 
 - O formulário de contacto apresenta uma confirmação visual, mas ainda não envia email, WhatsApp ou pedido para a base de dados.
 - Os preços atuais surgem como “Sob consulta” quando o preço de venda é zero.
