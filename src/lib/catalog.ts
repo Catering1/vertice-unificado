@@ -1,9 +1,12 @@
 import logitechBrio from "@/assets/products/logitech-brio.png";
 import s25Ultra2 from "@/assets/products/s25-ultra-2.png";
 import surfaceLaptopStudio from "@/assets/products/surface-laptop-studio.png";
-import buds3SilverIllustrative from "@/assets/products/buds3-silver-illustrative.png";
-import s26PlusIllustrative from "@/assets/products/s26-plus-illustrative.png";
-import s26UltraIllustrative from "@/assets/products/s26-ultra-illustrative.png";
+import buds3Silver01 from "@/assets/products/real/buds3-silver-01.webp";
+import buds3Silver02 from "@/assets/products/real/buds3-silver-02.webp";
+import s26Plus01 from "@/assets/products/real/s26-plus-01.webp";
+import s26Plus02 from "@/assets/products/real/s26-plus-02.webp";
+import s26Ultra1Tb01 from "@/assets/products/real/s26-ultra-1tb-01.webp";
+import s26Ultra1Tb02 from "@/assets/products/real/s26-ultra-1tb-02.webp";
 import s25Ultra01 from "@/assets/products/real/s25-ultra-01.webp";
 import s25Ultra02 from "@/assets/products/real/s25-ultra-02.webp";
 import s25Ultra03 from "@/assets/products/real/s25-ultra-03.webp";
@@ -29,27 +32,27 @@ export type CatalogPresentation = {
 const catalog: Record<string, CatalogPresentation> = {
   "samsung galaxy s26+": {
     condition: "Em processo de entrega",
-    description: "Samsung Galaxy S26+ registado como encomenda a caminho. A configuração final, o estado do equipamento, os acessórios incluídos e a disponibilidade para venda serão confirmados após a receção e inspeção. A imagem apresentada é ilustrativa e será substituída por fotografias reais da unidade.",
-    illustrative: true,
-    photos: [s26PlusIllustrative],
+    description: "Samsung Galaxy S26+ novo, em preto, com 128 GB de armazenamento. O equipamento encontra-se em processo de entrega e será sujeito a inspeção antes de ficar disponível para venda. As duas fotografias apresentadas são do artigo real no anúncio de origem; o estado final, os acessórios incluídos e a configuração completa serão confirmados após a receção.",
+    illustrative: false,
+    photos: [s26Plus01, s26Plus02],
     price: 0,
-    specifications: ["Modelo Samsung Galaxy S26+", "RAM e armazenamento por confirmar após a receção"],
+    specifications: ["Modelo Samsung Galaxy S26+", "128 GB de armazenamento", "Cor preta", "Novo", "RAM e restantes detalhes por confirmar após a receção"],
   },
   "samsung galaxy buds3 silver": {
     condition: "Em processo de entrega",
-    description: "Samsung Galaxy Buds3 em acabamento prateado, atualmente em processo de entrega. O estado, os acessórios e o funcionamento serão confirmados na inspeção antes da disponibilização para venda. A imagem apresentada é ilustrativa e será substituída por fotografias reais.",
-    illustrative: true,
-    photos: [buds3SilverIllustrative],
+    description: "Samsung Galaxy Buds3 em acabamento Silver, novos e sem utilização, acompanhados pela embalagem original. Estão em processo de entrega e serão inspecionados antes de ficarem disponíveis para venda. As duas fotografias apresentadas são do artigo real no anúncio de origem.",
+    illustrative: false,
+    photos: [buds3Silver01, buds3Silver02],
     price: 0,
-    specifications: ["Modelo Samsung Galaxy Buds3", "Cor Silver", "Estado e acessórios por confirmar após a receção"],
+    specifications: ["Modelo Samsung Galaxy Buds3", "Cor Silver", "Novos e sem utilização", "Embalagem original", "Funcionamento a confirmar após a receção"],
   },
   "samsung galaxy s26 ultra 1tb": {
     condition: "Em processo de entrega",
-    description: "Samsung Galaxy S26 Ultra com 1 TB de armazenamento, atualmente em processo de entrega e verificação. A memória RAM, o estado da unidade, os acessórios e a disponibilidade final serão confirmados após a receção. A imagem apresentada é ilustrativa e será substituída por fotografias reais.",
-    illustrative: true,
-    photos: [s26UltraIllustrative],
+    description: "Samsung Galaxy S26 Ultra preto com 1 TB de armazenamento, anunciado como novo. A unidade inclui capa de proteção e acessório de carregamento. Encontra-se em processo de entrega e verificação; a memória RAM, o funcionamento, o estado final e todos os acessórios serão confirmados após a receção. As duas fotografias apresentadas são do artigo real no anúncio de origem.",
+    illustrative: false,
+    photos: [s26Ultra1Tb01, s26Ultra1Tb02],
     price: 0,
-    specifications: ["1 TB de armazenamento", "RAM por confirmar após a receção", "Estado e acessórios por confirmar"],
+    specifications: ["1 TB de armazenamento", "Cor preta", "Anunciado como novo", "Inclui capa de proteção e acessório de carregamento", "RAM e estado final por confirmar após a receção"],
   },
   "z flip 8": {
     condition: "Novo, em caixa",
