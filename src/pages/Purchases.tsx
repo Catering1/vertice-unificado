@@ -14,6 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Plus, Trash2, Upload, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, Grid2X2, List, Package } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getCatalogPresentation } from "@/lib/catalog";
+import { isPurchaseStockEligible } from "@/lib/inventory";
 
 
 type SortField = "product" | "price" | "date";
@@ -175,7 +177,7 @@ export default function Purchases() {
   const productStock = useMemo(() => {
     const purchased = new Map<string, number>();
     const sold = new Map<string, number>();
-    purchases.forEach(p => purchased.set(p.productId, (purchased.get(p.productId) ?? 0) + p.quantity));
+    purchases.filter(isPurchaseStockEligible).forEach(p => purchased.set(p.productId, (purchased.get(p.productId) ?? 0) + p.quantity));
     sales.forEach(s => sold.set(s.productId, (sold.get(s.productId) ?? 0) + s.quantity));
     const stock = new Map<string, number>();
     purchased.forEach((qty, id) => stock.set(id, Math.max(0, qty - (sold.get(id) ?? 0))));
@@ -410,8 +412,9 @@ export default function Purchases() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map(p => {
             const product = getProduct(p.productId);
-            const photoUrl = product?.photoUrls?.[0];
-            const stockState = product?.inventoryUse === "personal" ? "Uso pessoal" : (productStock.get(p.productId) ?? 0) > 0 ? "Ativo" : "Vendido";
+            const photoUrl = product?.photoUrls?.[0] || getCatalogPresentation(product?.name ?? "").photos[0];
+            const stockQuantity = productStock.get(p.productId) ?? 0;
+            const stockState = product?.inventoryUse === "personal" ? "Uso pessoal" : stockQuantity > 0 ? "Ativo" : isPurchaseStockEligible(p) ? "Vendido" : orderStatusLabel(p.orderStatus);
             return (
               <Card key={p.id} className="group overflow-hidden">
                 <div className="relative aspect-[16/10] bg-secondary">

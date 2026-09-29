@@ -100,5 +100,11 @@ const emptyPresentation: CatalogPresentation = {
 };
 
 export function getCatalogPresentation(title: string): CatalogPresentation {
-  return catalog[title.trim().toLowerCase()] ?? emptyPresentation;
+  const normalized = title.trim().toLowerCase().replace(/fold\s*(\d)/g, "fold $1").replace(/flip\s*(\d)/g, "flip $1");
+  const direct = catalog[normalized];
+  if (direct) return direct;
+  const matchingKey = Object.keys(catalog)
+    .sort((a, b) => b.length - a.length)
+    .find(key => normalized.includes(key));
+  return matchingKey ? catalog[matchingKey] : emptyPresentation;
 }

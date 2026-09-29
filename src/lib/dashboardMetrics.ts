@@ -1,4 +1,5 @@
 import type { Expense, Product, Purchase, Sale } from "@/types";
+import { isPurchaseStockEligible } from "@/lib/inventory";
 
 export const money = (v: number | null) => v == null ? "Por confirmar" : v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 export const displayDate = (date: string) => date ? new Date(`${date}T12:00:00`).toLocaleDateString("pt-PT") : "Sem data";
@@ -19,7 +20,7 @@ export function computeDashboard(purchases: Purchase[], sales: Sale[], products:
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const purchased = new Map<string, number>();
   const sold = new Map<string, number>();
-  purchases.forEach(p => purchased.set(p.productId, (purchased.get(p.productId) ?? 0) + p.quantity));
+  purchases.filter(isPurchaseStockEligible).forEach(p => purchased.set(p.productId, (purchased.get(p.productId) ?? 0) + p.quantity));
   sales.forEach(s => sold.set(s.productId, (sold.get(s.productId) ?? 0) + s.quantity));
   let stockValue = 0, productsInStock = 0, stockUnits = 0, personalValue = 0, personalUnits = 0;
   products.forEach(p => {

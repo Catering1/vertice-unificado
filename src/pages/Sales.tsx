@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Plus, Trash2, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
+import { isPurchaseStockEligible } from "@/lib/inventory";
 import { cn } from "@/lib/utils";
 
 type SortField = "product" | "salePrice" | "profit" | "margin" | "date";
@@ -81,7 +82,7 @@ export default function Sales() {
   const availableProducts = useMemo(() => {
     const purchased = new Map<string, number>();
     const sold = new Map<string, number>();
-    purchases.forEach(p => purchased.set(p.productId, (purchased.get(p.productId) ?? 0) + p.quantity));
+    purchases.filter(isPurchaseStockEligible).forEach(p => purchased.set(p.productId, (purchased.get(p.productId) ?? 0) + p.quantity));
     sales.forEach(s => sold.set(s.productId, (sold.get(s.productId) ?? 0) + s.quantity));
     return products.filter(p => {
       const stock = (purchased.get(p.id) ?? 0) - (sold.get(p.id) ?? 0);
