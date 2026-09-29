@@ -319,6 +319,7 @@ export type Database = {
           image_url: string | null
           description: string | null
           stock_quantity: number
+          availability_status: string
         }[]
       }
     }
