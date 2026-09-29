@@ -46,7 +46,7 @@ export default function ProductPage() {
   const description = product.description || presentation.description;
   const price = Number(product.retail_price) > 0 ? Number(product.retail_price) : presentation.price;
   const condition = product.condition && product.condition !== "Verificado" ? product.condition : presentation.condition;
-  const isIllustrative = databasePhotos.length === 0 && !product.image_url && presentation.illustrative;
+  const isIllustrative = photos.length > 0 && databasePhotos.length === 0 && !product.image_url && presentation.illustrative;
   const comingSoon = product.availability_status === "coming_soon";
 
   return <main className="min-h-screen bg-background text-foreground">

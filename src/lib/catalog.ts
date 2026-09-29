@@ -91,8 +91,8 @@ const catalog: Record<string, CatalogPresentation> = {
 };
 
 const emptyPresentation: CatalogPresentation = {
-  condition: "Verificado",
-  description: "Equipamento disponível e verificado. Contacta-nos para receber todos os detalhes antes da compra.",
+  condition: "Detalhes a confirmar",
+  description: "Os detalhes, o estado final e as fotografias reais serão acrescentados após a receção e verificação do equipamento.",
   illustrative: true,
   photos: [],
   price: 0,
