@@ -388,8 +388,7 @@ export default function Purchases() {
                   <Select value={orderReceiptStatus(orderStatus)} onValueChange={v => setOrderStatus(v === "received" ? "received_verified" : "ordered")}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ORDER_RECEIPT_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>
                 </div>
                 <div><Label>Referência da encomenda (opcional)</Label><Input maxLength={200} value={orderReference} onChange={e => setOrderReference(e.target.value)} placeholder="Referência Vinted" /></div>
-                <div><Label>Nota privada do estado</Label><textarea value={orderStatusNote} onChange={e => setOrderStatusNote(e.target.value)} maxLength={1000} rows={2} placeholder="Ex.: atualização recebida hoje; reembolso parcial de 20 €" className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-                <p className="text-xs leading-5 text-muted-foreground">O estado da compra, a referência e a nota são privados e não alteram o estado Ativo/Vendido.</p>
+                <p className="text-xs leading-5 text-muted-foreground">A referência é privada e não aparece na loja pública.</p>
               </div>
               <Button onClick={save}>{editingPurchase ? "Guardar" : "Registar"}</Button>
             </div>
@@ -463,7 +462,7 @@ export default function Purchases() {
               <p className="text-xs text-muted-foreground">Compra: {formatDate(p.date)}</p>
               <p className="text-xs text-muted-foreground">Estado: {commercialStatus(p.productId)}</p>
               {p.deliveryDate && <p className="text-xs text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}
-              <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>
+              <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
             </CardContent>
           </Card>
         ))}
@@ -491,7 +490,7 @@ export default function Purchases() {
                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : visible.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p.productId)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}</TableCell>
+                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p.productId)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}</p>{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>
