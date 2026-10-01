@@ -15,7 +15,6 @@ import { Plus, Trash2, Upload, Pencil, ArrowUpDown, ArrowUp, ArrowDown, Calendar
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getCatalogPresentation } from "@/lib/catalog";
-import { isPurchaseStockEligible } from "@/lib/inventory";
 
 
 type SortField = "product" | "price" | "date";
@@ -177,12 +176,13 @@ export default function Purchases() {
   const productStock = useMemo(() => {
     const purchased = new Map<string, number>();
     const sold = new Map<string, number>();
-    purchases.filter(isPurchaseStockEligible).forEach(p => purchased.set(p.productId, (purchased.get(p.productId) ?? 0) + p.quantity));
+    purchases.forEach(p => purchased.set(p.productId, (purchased.get(p.productId) ?? 0) + p.quantity));
     sales.forEach(s => sold.set(s.productId, (sold.get(s.productId) ?? 0) + s.quantity));
     const stock = new Map<string, number>();
     purchased.forEach((qty, id) => stock.set(id, Math.max(0, qty - (sold.get(id) ?? 0))));
     return stock;
   }, [purchases, sales]);
+  const commercialStatus = (productId: string) => (productStock.get(productId) ?? 0) > 0 ? "Ativo" : "Vendido";
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -373,6 +373,7 @@ export default function Purchases() {
               <div><Label>Especificações</Label><textarea value={specifications} onChange={e => setSpecifications(e.target.value)} maxLength={3000} rows={3} placeholder="Ex: 256 GB · 12 GB RAM · bateria 92% · caixa e carregador incluídos" className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
               <p className="text-xs leading-5 text-muted-foreground">As fotos são adicionadas na ficha do produto depois de receberes e testares o equipamento.</p>
               <div><Label>Utilização</Label><Select value={inventoryUse} onValueChange={v=>setInventoryUse(v as "business" | "personal")}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="business">Disponível para negócio</SelectItem><SelectItem value="personal">Leitura / uso pessoal</SelectItem></SelectContent></Select></div>
+              <div><Label>Estado</Label><Input readOnly value={inventoryUse === "personal" ? "Uso pessoal" : editingPurchase ? commercialStatus(editingPurchase.productId) : "Ativo"} /><p className="mt-1 text-xs text-muted-foreground">Calculado a partir das compras e vendas registadas.</p></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Data da compra</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
                 <div><Label>Data de entrega da encomenda</Label><Input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} /></div>
@@ -380,13 +381,13 @@ export default function Purchases() {
               <p className="-mt-2 text-xs text-muted-foreground">Indica a data prevista ou a data em que a encomenda foi entregue.</p>
               <div className="space-y-3 rounded-md border border-border p-3">
                 <div>
-                  <Label>Estado da compra e entrega</Label>
+                  <Label>Estado da compra</Label>
                   <p className="mb-2 mt-1 text-xs text-muted-foreground">Acompanha a encomenda. É informação privada; não aparece no anúncio público.</p>
                   <Select value={orderStatus} onValueChange={v => setOrderStatus(v as VintedOrderStatus)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ORDER_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>
                 </div>
                 <div><Label>Referência da encomenda (opcional)</Label><Input maxLength={200} value={orderReference} onChange={e => setOrderReference(e.target.value)} placeholder="Referência Vinted" /></div>
                 <div><Label>Nota privada do estado</Label><textarea value={orderStatusNote} onChange={e => setOrderStatusNote(e.target.value)} maxLength={1000} rows={2} placeholder="Ex.: atualização recebida hoje; reembolso parcial de 20 €" className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-                <p className="text-xs leading-5 text-muted-foreground">A condição do artigo e o estado da compra são apresentados juntos nesta área; a encomenda, referência e nota são privados e nunca aparecem na loja pública.</p>
+                <p className="text-xs leading-5 text-muted-foreground">O estado da compra, a referência e a nota são privados e não alteram o estado Ativo/Vendido.</p>
               </div>
               <Button onClick={save}>{editingPurchase ? "Guardar" : "Registar"}</Button>
             </div>
@@ -414,7 +415,7 @@ export default function Purchases() {
             const product = getProduct(p.productId);
             const photoUrl = product?.photoUrls?.[0] || getCatalogPresentation(product?.name ?? "").photos[0];
             const stockQuantity = productStock.get(p.productId) ?? 0;
-            const stockState = product?.inventoryUse === "personal" ? "Uso pessoal" : stockQuantity > 0 ? "Ativo" : isPurchaseStockEligible(p) ? "Vendido" : orderStatusLabel(p.orderStatus);
+            const stockState = product?.inventoryUse === "personal" ? "Uso pessoal" : stockQuantity > 0 ? "Ativo" : "Vendido";
             return (
               <Card key={p.id} className="group overflow-hidden">
                 <div className="relative aspect-[16/10] bg-secondary">
@@ -458,6 +459,7 @@ export default function Purchases() {
                 <p className="font-semibold">{fmt(p.price)}</p>
               </div>
               <p className="text-xs text-muted-foreground">Compra: {formatDate(p.date)}</p>
+              <p className="text-xs text-muted-foreground">Estado: {getProduct(p.productId)?.inventoryUse === "personal" ? "Uso pessoal" : commercialStatus(p.productId)}</p>
               {p.deliveryDate && <p className="text-xs text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}
               {(p.orderStatus && p.orderStatus !== "not_tracked") && <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>}
             </CardContent>
@@ -487,7 +489,7 @@ export default function Purchases() {
                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : visible.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {getProduct(p.productId)?.inventoryUse === "personal" ? "Leitura" : (productStock.get(p.productId) ?? 0) > 0 ? "Ativo" : "Vendido"}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p>{p.orderStatus && p.orderStatus !== "not_tracked" && <p className="text-xs font-normal text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}</TableCell>
+                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {getProduct(p.productId)?.inventoryUse === "personal" ? "Leitura" : commercialStatus(p.productId)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p>{p.orderStatus && p.orderStatus !== "not_tracked" && <p className="text-xs font-normal text-muted-foreground">Estado da compra: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>
