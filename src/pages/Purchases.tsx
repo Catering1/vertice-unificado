@@ -102,6 +102,7 @@ export default function Purchases() {
   const [searchDate, setSearchDate] = usePersistedState("purchases-searchDate", "");
   const [catFilter, setCatFilter] = usePersistedState("purchases-catFilter", "all");
   const [stockFilter, setStockFilter] = usePersistedState("purchases-stockFilter", "all");
+  const [orderStatusFilter, setOrderStatusFilter] = usePersistedState<VintedOrderStatus | "all">("purchases-orderStatusFilter", "all");
 
   const [sortField, setSortField] = usePersistedState<SortField | null>("purchases-sortField", null);
   const [sortDir, setSortDir] = usePersistedState<SortDir>("purchases-sortDir", "asc");
@@ -206,10 +207,9 @@ export default function Purchases() {
       if (issueFilter === "cost" && p.price != null) return false;
       if (catFilter !== "all" && prod?.category !== catFilter) return false;
       if (searchDate && !p.date.includes(searchDate)) return false;
-      if (stockFilter === "reading" && prod?.inventoryUse !== "personal") return false;
-      if ((stockFilter === "active" || stockFilter === "sold") && prod?.inventoryUse === "personal") return false;
-      if (stockFilter === "active" && (productStock.get(p.productId) ?? 0) <= 0) return false;
+      if ((stockFilter === "active" || stockFilter === "reading") && (productStock.get(p.productId) ?? 0) <= 0) return false;
       if (stockFilter === "sold" && (productStock.get(p.productId) ?? 0) > 0) return false;
+      if (orderStatusFilter !== "all" && (p.orderStatus ?? "not_tracked") !== orderStatusFilter) return false;
       return true;
     });
 
@@ -226,7 +226,7 @@ export default function Purchases() {
     }
 
     return result;
-  }, [purchases, search, issueFilter, catFilter, searchDate, stockFilter, productStock, sortField, sortDir, getProduct]);
+  }, [purchases, search, issueFilter, catFilter, searchDate, stockFilter, orderStatusFilter, productStock, sortField, sortDir, getProduct]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / 50));
   const currentPage = Math.min(page, pages);
@@ -306,15 +306,23 @@ export default function Purchases() {
             </PopoverContent>
           </Popover>
 
-          <Select value={stockFilter} onValueChange={setStockFilter}>
+          <Select value={stockFilter === "reading" ? "active" : stockFilter} onValueChange={v => { setStockFilter(v); setPage(1); }}>
             <SelectTrigger className="flex-1 sm:flex-none sm:w-[180px]">
-              <span className="truncate">{stockFilter === "all" ? "Estado: Todos" : stockFilter === "active" ? "Estado: Ativos" : stockFilter === "reading" ? "Estado: Leitura" : "Estado: Vendidos"}</span>
+              <span className="truncate">{stockFilter === "all" ? "Estado: Todos" : stockFilter === "sold" ? "Estado: Vendidos" : "Estado: Ativos"}</span>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="active">Ativos</SelectItem>
               <SelectItem value="sold">Vendidos</SelectItem>
-              <SelectItem value="reading">Leitura / uso pessoal</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={orderStatusFilter} onValueChange={v => { setOrderStatusFilter(v as VintedOrderStatus | "all"); setPage(1); }}>
+            <SelectTrigger className="w-full sm:flex-none sm:w-[240px]">
+              <span className="truncate">{orderStatusFilter === "all" ? "Estado da encomenda: Todos" : `Encomenda: ${orderStatusLabel(orderStatusFilter)}`}</span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os estados da encomenda</SelectItem>
+              {ORDER_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={catFilter} onValueChange={setCatFilter}>
@@ -373,7 +381,7 @@ export default function Purchases() {
               <div><Label>Especificações</Label><textarea value={specifications} onChange={e => setSpecifications(e.target.value)} maxLength={3000} rows={3} placeholder="Ex: 256 GB · 12 GB RAM · bateria 92% · caixa e carregador incluídos" className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
               <p className="text-xs leading-5 text-muted-foreground">As fotos são adicionadas na ficha do produto depois de receberes e testares o equipamento.</p>
               <div><Label>Utilização</Label><Select value={inventoryUse} onValueChange={v=>setInventoryUse(v as "business" | "personal")}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="business">Disponível para negócio</SelectItem><SelectItem value="personal">Leitura / uso pessoal</SelectItem></SelectContent></Select></div>
-              <div><Label>Estado</Label><Input readOnly value={inventoryUse === "personal" ? "Uso pessoal" : editingPurchase ? commercialStatus(editingPurchase.productId) : "Ativo"} /><p className="mt-1 text-xs text-muted-foreground">Calculado a partir das compras e vendas registadas.</p></div>
+              <div><Label>Estado</Label><Input readOnly value={editingPurchase ? commercialStatus(editingPurchase.productId) : "Ativo"} /><p className="mt-1 text-xs text-muted-foreground">Calculado a partir das compras e vendas registadas.</p></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Data da compra</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
                 <div><Label>Data de entrega da encomenda</Label><Input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} /></div>
@@ -415,7 +423,7 @@ export default function Purchases() {
             const product = getProduct(p.productId);
             const photoUrl = product?.photoUrls?.[0] || getCatalogPresentation(product?.name ?? "").photos[0];
             const stockQuantity = productStock.get(p.productId) ?? 0;
-            const stockState = product?.inventoryUse === "personal" ? "Uso pessoal" : stockQuantity > 0 ? "Ativo" : "Vendido";
+            const stockState = stockQuantity > 0 ? "Ativo" : "Vendido";
             return (
               <Card key={p.id} className="group overflow-hidden">
                 <div className="relative aspect-[16/10] bg-secondary">
@@ -459,7 +467,7 @@ export default function Purchases() {
                 <p className="font-semibold">{fmt(p.price)}</p>
               </div>
               <p className="text-xs text-muted-foreground">Compra: {formatDate(p.date)}</p>
-              <p className="text-xs text-muted-foreground">Estado: {getProduct(p.productId)?.inventoryUse === "personal" ? "Uso pessoal" : commercialStatus(p.productId)}</p>
+              <p className="text-xs text-muted-foreground">Estado: {commercialStatus(p.productId)}</p>
               {p.deliveryDate && <p className="text-xs text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}
               {(p.orderStatus && p.orderStatus !== "not_tracked") && <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>}
             </CardContent>
@@ -489,7 +497,7 @@ export default function Purchases() {
                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : visible.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {getProduct(p.productId)?.inventoryUse === "personal" ? "Leitura" : commercialStatus(p.productId)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p>{p.orderStatus && p.orderStatus !== "not_tracked" && <p className="text-xs font-normal text-muted-foreground">Estado da compra: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}</TableCell>
+                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p.productId)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p>{p.orderStatus && p.orderStatus !== "not_tracked" && <p className="text-xs font-normal text-muted-foreground">Estado da compra: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>
