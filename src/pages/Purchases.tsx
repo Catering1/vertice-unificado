@@ -22,19 +22,14 @@ type SortDir = "asc" | "desc";
 type ViewMode = "table" | "gallery";
 
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-const ORDER_STATUSES: { value: VintedOrderStatus; label: string }[] = [
-  { value: "not_tracked", label: "Não acompanhado" },
-  { value: "ordered", label: "Pedido realizado / a preparar" },
-  { value: "shipped", label: "Enviado" },
-  { value: "electronic_verification", label: "Em verificação eletrónica" },
-  { value: "delivered", label: "Entregue — por inspecionar" },
-  { value: "received_verified", label: "Recebido e inspecionado" },
-  { value: "return_in_progress", label: "Devolução em curso" },
-  { value: "refund_partial", label: "Reembolso parcial" },
-  { value: "refunded", label: "Reembolsado" },
-  { value: "cancelled", label: "Cancelado" },
+type OrderReceiptStatus = "pending" | "received";
+const ORDER_RECEIPT_STATUSES: { value: OrderReceiptStatus; label: string }[] = [
+  { value: "pending", label: "Por receber" },
+  { value: "received", label: "Recebido" },
 ];
-const orderStatusLabel = (status?: VintedOrderStatus) => ORDER_STATUSES.find(x => x.value === status)?.label ?? "Não acompanhado";
+const orderReceiptStatus = (status?: VintedOrderStatus): OrderReceiptStatus =>
+  status === "delivered" || status === "received_verified" ? "received" : "pending";
+const orderStatusLabel = (status?: VintedOrderStatus) => orderReceiptStatus(status) === "received" ? "Recebido" : "Por receber";
 
 function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const now = new Date();
@@ -102,7 +97,7 @@ export default function Purchases() {
   const [searchDate, setSearchDate] = usePersistedState("purchases-searchDate", "");
   const [catFilter, setCatFilter] = usePersistedState("purchases-catFilter", "all");
   const [stockFilter, setStockFilter] = usePersistedState("purchases-stockFilter", "all");
-  const [orderStatusFilter, setOrderStatusFilter] = usePersistedState<VintedOrderStatus | "all">("purchases-orderStatusFilter", "all");
+  const [orderStatusFilter, setOrderStatusFilter] = usePersistedState<OrderReceiptStatus | "all">("purchases-orderStatusFilter", "all");
 
   const [sortField, setSortField] = usePersistedState<SortField | null>("purchases-sortField", null);
   const [sortDir, setSortDir] = usePersistedState<SortDir>("purchases-sortDir", "asc");
@@ -209,7 +204,7 @@ export default function Purchases() {
       if (searchDate && !p.date.includes(searchDate)) return false;
       if ((stockFilter === "active" || stockFilter === "reading") && (productStock.get(p.productId) ?? 0) <= 0) return false;
       if (stockFilter === "sold" && (productStock.get(p.productId) ?? 0) > 0) return false;
-      if (orderStatusFilter !== "all" && (p.orderStatus ?? "not_tracked") !== orderStatusFilter) return false;
+      if (orderStatusFilter !== "all" && orderReceiptStatus(p.orderStatus) !== orderStatusFilter) return false;
       return true;
     });
 
@@ -316,13 +311,13 @@ export default function Purchases() {
               <SelectItem value="sold">Vendidos</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={orderStatusFilter} onValueChange={v => { setOrderStatusFilter(v as VintedOrderStatus | "all"); setPage(1); }}>
+          <Select value={orderStatusFilter === "all" || orderStatusFilter === "pending" || orderStatusFilter === "received" ? orderStatusFilter : "all"} onValueChange={v => { setOrderStatusFilter(v as OrderReceiptStatus | "all"); setPage(1); }}>
             <SelectTrigger className="w-full sm:flex-none sm:w-[240px]">
-              <span className="truncate">{orderStatusFilter === "all" ? "Estado da encomenda: Todos" : `Encomenda: ${orderStatusLabel(orderStatusFilter)}`}</span>
+              <span className="truncate">{orderStatusFilter === "all" ? "Estado da encomenda: Todos" : orderStatusFilter === "received" ? "Encomenda: Recebido" : "Encomenda: Por receber"}</span>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os estados da encomenda</SelectItem>
-              {ORDER_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              {ORDER_RECEIPT_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={catFilter} onValueChange={setCatFilter}>
@@ -389,9 +384,9 @@ export default function Purchases() {
               <p className="-mt-2 text-xs text-muted-foreground">Indica a data prevista ou a data em que a encomenda foi entregue.</p>
               <div className="space-y-3 rounded-md border border-border p-3">
                 <div>
-                  <Label>Estado da compra</Label>
+                  <Label>Estado da encomenda</Label>
                   <p className="mb-2 mt-1 text-xs text-muted-foreground">Acompanha a encomenda. É informação privada; não aparece no anúncio público.</p>
-                  <Select value={orderStatus} onValueChange={v => setOrderStatus(v as VintedOrderStatus)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ORDER_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>
+                  <Select value={orderReceiptStatus(orderStatus)} onValueChange={v => setOrderStatus(v === "received" ? "received_verified" : "ordered")}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ORDER_RECEIPT_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>
                 </div>
                 <div><Label>Referência da encomenda (opcional)</Label><Input maxLength={200} value={orderReference} onChange={e => setOrderReference(e.target.value)} placeholder="Referência Vinted" /></div>
                 <div><Label>Nota privada do estado</Label><textarea value={orderStatusNote} onChange={e => setOrderStatusNote(e.target.value)} maxLength={1000} rows={2} placeholder="Ex.: atualização recebida hoje; reembolso parcial de 20 €" className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
@@ -436,7 +431,7 @@ export default function Purchases() {
                     <div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} aria-label={`Editar ${product?.name ?? "compra"}`}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }} aria-label={`Remover ${product?.name ?? "compra"}`}><Trash2 className="h-4 w-4" /></Button></div>
                   </div>
                   <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Compra: {formatDate(p.date)}</p>{p.deliveryDate && <p>Entrega: {formatDate(p.deliveryDate)}</p>}</div></div>
-                  {p.orderStatus && p.orderStatus !== "not_tracked" && <p className="border-t pt-3 text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>}
+                  <p className="border-t pt-3 text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
                 </CardContent>
               </Card>
             );
@@ -469,7 +464,7 @@ export default function Purchases() {
               <p className="text-xs text-muted-foreground">Compra: {formatDate(p.date)}</p>
               <p className="text-xs text-muted-foreground">Estado: {commercialStatus(p.productId)}</p>
               {p.deliveryDate && <p className="text-xs text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}
-              {(p.orderStatus && p.orderStatus !== "not_tracked") && <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>}
+              <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>
             </CardContent>
           </Card>
         ))}
@@ -497,7 +492,7 @@ export default function Purchases() {
                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : visible.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p.productId)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p>{p.orderStatus && p.orderStatus !== "not_tracked" && <p className="text-xs font-normal text-muted-foreground">Estado da compra: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}</TableCell>
+                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p.productId)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}{p.orderStatusNote ? ` · ${p.orderStatusNote}` : ""}</p>{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>
