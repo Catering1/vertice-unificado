@@ -1,6 +1,6 @@
 # Memória do projeto Vendig Machine Store
 
-Atualizado em 29 de setembro de 2026.
+Atualizado em 2 de outubro de 2026.
 
 ## Regra de continuidade
 
@@ -99,6 +99,10 @@ O repositório ativo da loja pública e do dashboard é `Catering1/vertice-unifi
 - Não publicar o Surface Laptop Studio até existirem correspondência confirmada da compra, custo total, especificações e fotografias reais do equipamento.
 
 ## Limitações conhecidas e próximos passos
+
+- Rotina de 02/10/2026: a Vinted mostrou o Fold7 como pedido concluído após entrega e cancelamento da devolução, mas sem inspeção comercial confirmada; o Fold8 estava no ponto de recolha, ainda sem levantamento/inspeção confirmado. No dashboard, ambos apareciam incorretamente como `received_verified` apesar das notas anteriores. O Fold7 foi corrigido para `delivered_uninspected` e o Fold8 para `shipped`; gravações confirmadas na lista. Buds3 passou a `shipped`; S26+ chegou ao centro e manteve `electronic_verification`; Flip8 passou a `shipped`. Notas privadas atualizadas e gravações confirmadas. S26 Ultra 1 TB permanece a caminho do centro; S25 Ultra e Watch4 continuam em devolução. Nenhuma compra nova de revenda foi criada.
+- Em 02/10/2026, a conta OLX acessível mostrou quatro anúncios ativos, incluindo Fold8 ID `673776297` apesar de a unidade ainda não ter sido recolhida. A tentativa de terminar esse anúncio foi bloqueada pela revisão automática no passo final por falta de autorização específica para terminar um anúncio ativo; permanece ativo e requer decisão do proprietário. Fold7 ID `673788064` e S25 Ultra ID `673782413` continuam `Por pagar`; zero pendentes e zero para edição. Não foram feitos pagamentos nem publicados anúncios novos. O segundo perfil OLX, onde a memória regista um Fold7 ativo, continua sem acesso nesta sessão.
+- Após a correção dos estados, a vista de compras ativas de eletrónica do dashboard continha apenas Logitech Brio, S25 Ultra da unidade antiga, Surface Laptop Studio e Surface Laptop Go 3. Brio e Go 3 já têm anúncios ativos; o S25 Ultra tem anúncio `Por pagar`; o Studio continua sem correspondência, especificações e fotografias reais suficientes. Não criar anúncios duplicados ou do Studio até resolver esses dados.
 
 - Na rotina de 29/09/2026, a Vinted mostrou o S26+ enviado para o centro de verificação (previsão 06–13/10) e o Fold7 com atraso na entrega; continua sem posse física confirmada. O S26 Ultra já constava como enviado ao centro. As outras encomendas acompanhadas continuavam em preparação, verificação, trânsito ou devolução, sem confirmação de receção e inspeção. Os estados/notas privados do S26+ e Fold7 foram atualizados e confirmados no dashboard; custos e datas de compra mantiveram-se.
 - A edição de compras acompanhadas falhava quando `order_status_updated_at` vinha do Supabase com offset `+00:00`: a validação Zod aceitava apenas `Z`. O schema foi corrigido para aceitar timestamps com offset, publicado em `main` e `gh-pages`, e a gravação foi confirmada no dashboard de produção.
