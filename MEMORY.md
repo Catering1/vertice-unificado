@@ -15,10 +15,10 @@ O repositório ativo da loja pública e do dashboard é `Catering1/vertice-unifi
 ## Ligações importantes
 
 - Repositório: `https://github.com/Catering1/vertice-unificado`
-- Site público: `https://catering1.github.io/vertice-unificado/`
-- Administração: `https://catering1.github.io/vertice-unificado/admin/login`
+- Site público principal: `https://vertice-unificado.vercel.app/`
+- Administração: `https://vertice-unificado.vercel.app/admin/login`
 - Supabase ativo: projeto `pxpxipewhwwsiogoyjov` (`https://pxpxipewhwwsiogoyjov.supabase.co`). Os dados do dashboard foram migrados para este projeto.
-- O código corre a partir de `Catering1/vertice-unificado`; produção é servida por GitHub Pages em `https://catering1.github.io/vertice-unificado/`.
+- O código corre a partir de `Catering1/vertice-unificado`; a produção principal é publicada automaticamente pela integração Vercel quando a branch `main` recebe alterações. Em 03/10/2026, o commit `c977529` gerou um deployment Vercel de produção concluído com sucesso e o domínio estável respondeu com HTTP 200 em `https://vertice-unificado.vercel.app/`. O GitHub Pages permanece como publicação histórica/alternativa e não é o alvo principal live.
 - No teste GitHub de 28 de setembro, o repositório `Catering1/vertice-unificado` tinha ID `1377287079`, visibilidade pública e branches `main` e `gh-pages`. As alterações de estado Vinted foram publicadas em `main` (commit `2febb98`) e em `gh-pages` (commit `411adb2`); nenhum outro repositório foi alterado.
 - O projeto Lovable `My Trade Tracker` (ID `37e34560-c141-4c02-8861-1289f7c17fc3`) e os antigos endereços Lovable são históricos. Não fazem parte do fluxo ativo nem devem receber alterações.
 - O repositório separado `https://github.com/Catering1/v-rtice-unificado` também é histórico; não publicar lá.
@@ -51,9 +51,10 @@ O repositório ativo da loja pública e do dashboard é `Catering1/vertice-unifi
 
 ## Publicação
 
+- O alvo principal de produção é a Vercel em `https://vertice-unificado.vercel.app/`. Depois de validar alterações, criar commit e enviar `HEAD` para `main`; confirmar no estado do commit que o contexto `Vercel` terminou com sucesso e validar o domínio estável antes de declarar a publicação concluída.
 - A aplicação é Vite/React. Para publicar no GitHub Pages, compilar com `VITE_BASE_PATH=/vertice-unificado/`; localmente o valor predefinido `/` mantém as rotas do servidor de desenvolvimento funcionais.
 - Copiar `dist/index.html` para `dist/404.html` antes de publicar, para que rotas como `/admin/login` funcionem no GitHub Pages.
-- A página pública é publicada na branch `gh-pages`; o código fonte fica na branch `main`.
+- A publicação alternativa do GitHub Pages usa a branch `gh-pages`; o código fonte e o deployment Vercel principal usam a branch `main`.
 - `Catering1/vertice-unificado` é a única fonte canónica. Todas as alterações de código, memória e publicação deste projeto devem ser feitas apenas nesse repositório. Não sincronizar `Catering1/v-rtice-unificado` e não alterar os repositórios originais `verticemachine` ou `tech-exchange-portugal`.
 - A skill do fluxo recorrente Vinted → dashboard → OLX está em `.agents/skills/verificar-vinted-registar-dashboard-anunciar-olx/SKILL.md`. A rotina ativa do Codex `verificar-vinted-dashboard-e-an-ncios-olx` corre todos os dias às 09:00, hora local de Lisboa, no projeto local `Master Vending Machine and Vertice`; deve atuar apenas sobre `vertice-unificado` e seguir as salvaguardas da skill.
 - Execução manual da rotina em 28/09/2026: sessões autenticadas da Vinted, dashboard e OLX acessíveis. As oito encomendas em curso foram sincronizadas com o dashboard. Fold 7 (629,75 € Vinted / 630 € dashboard) ficou `Enviado`; Fold 8 Ultra (980,54 € / 980 €) ficou `Enviado`; Flip 8 (665,54 € / 665,54 €) ficou `Em verificação eletrónica`, com nota de verificação aprovada e expedição prevista pelo centro em 2 dias úteis; segundo S25 Ultra (611,19 €) ficou `Devolução em curso`; S26 Ultra 1 TB (639,29 €) criado como compra, `Em verificação eletrónica`; Buds3 Silver (46,29 €) criado como compra, `Pedido realizado / a preparar`; S26+ (429,29 €) criado como compra, `Pedido realizado / a preparar`; Watch4 Classic (41,29 €) criado como compra com data aproximada de 28/08/2026, `Devolução em curso`. Referências e notas de encomenda foram guardadas em campos privados. A Vinted mostrava diferenças de 0,25 €, 0,54 €, 8,59 €, 1,49 €, 8,59 € e 3,85 € entre alguns totais da lista e o detalhe/dashboard; cada diferença foi anotada para reconciliação, sem alterar os valores já registados. RAM/armazenamento continuam pendentes nos S26 Ultra e S26+; não criar anúncios até confirmar posse física, inspeção, fotos reais e especificações.
