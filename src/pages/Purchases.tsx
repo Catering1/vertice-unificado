@@ -1,7 +1,7 @@
 import { money, displayDate as formatDate } from "@/lib/dashboardMetrics";
 import { useState, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { activeUnitsByPurchase } from "@/lib/inventory";
+import { activeUnitsByPurchase, purchaseReceiptStatus, PurchaseReceiptStatus } from "@/lib/inventory";
 import { useStore } from "@/lib/store";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { Purchase, VintedOrderStatus } from "@/types";
@@ -24,14 +24,11 @@ type SortDir = "asc" | "desc";
 type ViewMode = "table" | "gallery";
 
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-type OrderReceiptStatus = "pending" | "received";
-const ORDER_RECEIPT_STATUSES: { value: OrderReceiptStatus; label: string }[] = [
+const ORDER_RECEIPT_STATUSES: { value: PurchaseReceiptStatus; label: string }[] = [
   { value: "pending", label: "Por receber" },
   { value: "received", label: "Recebido" },
 ];
-const orderReceiptStatus = (status?: VintedOrderStatus): OrderReceiptStatus =>
-  status === "delivered" || status === "received_verified" ? "received" : "pending";
-const orderStatusLabel = (status?: VintedOrderStatus) => orderReceiptStatus(status) === "received" ? "Recebido" : "Por receber";
+const orderStatusLabel = (status?: VintedOrderStatus) => purchaseReceiptStatus({ orderStatus: status }) === "received" ? "Recebido" : "Por receber";
 
 function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const now = new Date();
@@ -101,7 +98,7 @@ export default function Purchases() {
   const [searchDate, setSearchDate] = usePersistedState("purchases-searchDate", "");
   const [catFilter, setCatFilter] = usePersistedState("purchases-catFilter", "all");
   const [stockFilter, setStockFilter] = usePersistedState("purchases-stockFilter", "all");
-  const [orderStatusFilter, setOrderStatusFilter] = usePersistedState<OrderReceiptStatus | "all">("purchases-orderStatusFilter", "all");
+  const [orderStatusFilter, setOrderStatusFilter] = usePersistedState<PurchaseReceiptStatus | "all">("purchases-orderStatusFilter", "all");
 
   const [sortField, setSortField] = usePersistedState<SortField | null>("purchases-sortField", null);
   const [sortDir, setSortDir] = usePersistedState<SortDir>("purchases-sortDir", "asc");
@@ -211,7 +208,7 @@ export default function Purchases() {
       if (searchDate && !p.date.includes(searchDate)) return false;
       if ((stockFilter === "active" || stockFilter === "reading") && (productStock.get(p.id) ?? 0) <= 0) return false;
       if (stockFilter === "sold" && (productStock.get(p.id) ?? 0) > 0) return false;
-      if (orderStatusFilter !== "all" && orderReceiptStatus(p.orderStatus) !== orderStatusFilter) return false;
+      if (orderStatusFilter !== "all" && purchaseReceiptStatus(p) !== orderStatusFilter) return false;
       return true;
     });
 
@@ -312,7 +309,7 @@ export default function Purchases() {
               <SelectItem value="sold">Vendidos</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={orderStatusFilter === "all" || orderStatusFilter === "pending" || orderStatusFilter === "received" ? orderStatusFilter : "all"} onValueChange={v => { setOrderStatusFilter(v as OrderReceiptStatus | "all"); setPage(1); }}>
+          <Select value={orderStatusFilter === "all" || orderStatusFilter === "pending" || orderStatusFilter === "received" ? orderStatusFilter : "all"} onValueChange={v => { setOrderStatusFilter(v as PurchaseReceiptStatus | "all"); setPage(1); }}>
             <SelectTrigger className="w-full sm:flex-none sm:w-[240px]">
               <span className="truncate">{orderStatusFilter === "all" ? "Estado da encomenda: Todos" : orderStatusFilter === "received" ? "Encomenda: Recebido" : "Encomenda: Por receber"}</span>
             </SelectTrigger>

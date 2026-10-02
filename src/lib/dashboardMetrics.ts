@@ -1,5 +1,5 @@
 import type { Expense, Product, Purchase, Sale } from "@/types";
-import { activeUnitsByPurchase } from "@/lib/inventory";
+import { activeUnitsByPurchase, purchaseReceiptStatus } from "@/lib/inventory";
 
 export const money = (v: number | null) => v == null ? "Por confirmar" : v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 export const displayDate = (date: string) => date ? new Date(`${date}T12:00:00`).toLocaleDateString("pt-PT") : "Sem data";
@@ -20,13 +20,25 @@ export function computeDashboard(purchases: Purchase[], sales: Sale[], products:
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const activeUnits = activeUnitsByPurchase(purchases, sales);
   let stockValue = 0, productsInStock = 0, stockUnits = 0, personalValue = 0, personalUnits = 0;
+  let pendingStockUnits = 0, pendingStockValue = 0, receivedStockUnits = 0, receivedStockValue = 0;
   const activeProductIds = new Set<string>();
   purchases.forEach(purchase => {
     const qty = activeUnits.get(purchase.id) ?? 0;
     const product = byId.get(purchase.productId);
     const value = qty * (purchase.price ?? 0);
     if (product?.inventoryUse === "personal") { personalUnits += qty; personalValue += value; }
-    else { stockUnits += qty; stockValue += value; if (qty) activeProductIds.add(purchase.productId); }
+    else {
+      stockUnits += qty;
+      stockValue += value;
+      if (purchaseReceiptStatus(purchase) === "received") {
+        receivedStockUnits += qty;
+        receivedStockValue += value;
+      } else {
+        pendingStockUnits += qty;
+        pendingStockValue += value;
+      }
+      if (qty) activeProductIds.add(purchase.productId);
+    }
   });
   productsInStock = activeProductIds.size;
   const purchaseDates = new Map<string, string>();
@@ -68,7 +80,8 @@ export function computeDashboard(purchases: Purchase[], sales: Sale[], products:
   }
   return {
     totalPurchases, totalSales, totalProfit, totalExpenses, netProfit: totalProfit - totalExpenses,
-    stockValue, productsInStock, stockUnits, personalValue, personalUnits, cogs,
+    stockValue, productsInStock, stockUnits, pendingStockUnits, pendingStockValue,
+    receivedStockUnits, receivedStockValue, personalValue, personalUnits, cogs,
     productCount: products.length, unitsSold: sales.reduce((n, s) => n + s.quantity, 0),
     avgProfitPerSale: knownSales.length ? totalProfit / knownSales.length : 0,
     avgMargin: knownRevenue > 0 ? totalProfit / knownRevenue : 0,

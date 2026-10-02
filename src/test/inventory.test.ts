@@ -38,6 +38,11 @@ describe("purchase identity and active stock value", () => {
     expect(activeUnitsByPurchase(purchases, sales)).toEqual(new Map([["a", 0], ["b", 1]]));
     const dashboard = computeDashboard(purchases, sales, products);
     expect(dashboard.stockValue).toBe(120);
+    expect(dashboard.stockUnits).toBe(1);
+    expect(dashboard.pendingStockValue).toBe(120);
+    expect(dashboard.pendingStockUnits).toBe(1);
+    expect(dashboard.receivedStockValue).toBe(0);
+    expect(dashboard.receivedStockUnits).toBe(0);
     expect(dashboard.totalPurchases).toBe(200);
   });
 
@@ -50,6 +55,20 @@ describe("purchase identity and active stock value", () => {
   it("keeps a product active when it has no sale, independently of delivery status", () => {
     const pending = [{ ...purchases[0], orderStatus: "ordered" as const }];
     expect(activeUnitsByPurchase(pending, [])).toEqual(new Map([["a", 1]]));
-    expect(computeDashboard(pending, [], products).stockValue).toBe(80);
+    const dashboard = computeDashboard(pending, [], products);
+    expect(dashboard.stockValue).toBe(80);
+    expect(dashboard.pendingStockValue).toBe(80);
+    expect(dashboard.receivedStockValue).toBe(0);
+  });
+
+  it("separates received active stock from stock still pending receipt", () => {
+    const received = [{ ...purchases[0], orderStatus: "received_verified" as const }];
+    const dashboard = computeDashboard(received, [], products);
+    expect(dashboard.stockUnits).toBe(1);
+    expect(dashboard.stockValue).toBe(80);
+    expect(dashboard.pendingStockUnits).toBe(0);
+    expect(dashboard.pendingStockValue).toBe(0);
+    expect(dashboard.receivedStockUnits).toBe(1);
+    expect(dashboard.receivedStockValue).toBe(80);
   });
 });
