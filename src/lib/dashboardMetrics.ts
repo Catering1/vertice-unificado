@@ -1,5 +1,5 @@
 import type { Expense, Product, Purchase, Sale } from "@/types";
-import { isPurchaseStockEligible, remainingByPurchase } from "@/lib/inventory";
+import { activeUnitsByPurchase } from "@/lib/inventory";
 
 export const money = (v: number | null) => v == null ? "Por confirmar" : v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 export const displayDate = (date: string) => date ? new Date(`${date}T12:00:00`).toLocaleDateString("pt-PT") : "Sem data";
@@ -18,11 +18,11 @@ export function computeDashboard(purchases: Purchase[], sales: Sale[], products:
   const knownRevenue = knownSales.reduce((sum, s) => sum + s.salePrice * s.quantity, 0);
   const cogs = knownRevenue - totalProfit;
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const remaining = remainingByPurchase(purchases, sales);
+  const activeUnits = activeUnitsByPurchase(purchases, sales);
   let stockValue = 0, productsInStock = 0, stockUnits = 0, personalValue = 0, personalUnits = 0;
   const activeProductIds = new Set<string>();
-  purchases.filter(isPurchaseStockEligible).forEach(purchase => {
-    const qty = remaining.get(purchase.id) ?? 0;
+  purchases.forEach(purchase => {
+    const qty = activeUnits.get(purchase.id) ?? 0;
     const product = byId.get(purchase.productId);
     const value = qty * (purchase.price ?? 0);
     if (product?.inventoryUse === "personal") { personalUnits += qty; personalValue += value; }

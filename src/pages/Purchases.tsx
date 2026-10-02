@@ -1,7 +1,7 @@
 import { money, displayDate as formatDate } from "@/lib/dashboardMetrics";
 import { useState, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { remainingByPurchase } from "@/lib/inventory";
+import { activeUnitsByPurchase } from "@/lib/inventory";
 import { useStore } from "@/lib/store";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { Purchase, VintedOrderStatus } from "@/types";
@@ -181,7 +181,7 @@ export default function Purchases() {
   };
 
   const productStock = useMemo(() => {
-    return remainingByPurchase(purchases, sales);
+    return activeUnitsByPurchase(purchases, sales);
   }, [purchases, sales]);
   const commercialStatus = (purchaseId: string) => (productStock.get(purchaseId) ?? 0) > 0 ? "Ativo" : "Vendido";
 

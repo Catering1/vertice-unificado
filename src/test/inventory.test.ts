@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPurchaseStockEligible, remainingByPurchase } from "@/lib/inventory";
+import { activeUnitsByPurchase, isPurchaseStockEligible } from "@/lib/inventory";
 import { computeDashboard } from "@/lib/dashboardMetrics";
 import type { Product, Purchase, Sale, VintedOrderStatus } from "@/types";
 
@@ -35,24 +35,21 @@ describe("purchase identity and active stock value", () => {
   const sales: Sale[] = [{ id: "sale", productId: "first", quantity: 1, salePrice: 150, profit: 70, date: "2026-09-30" }];
 
   it("keeps an identically named later purchase active after the first is sold", () => {
-    expect(remainingByPurchase(purchases, sales)).toEqual(new Map([["a", 0], ["b", 1]]));
+    expect(activeUnitsByPurchase(purchases, sales)).toEqual(new Map([["a", 0], ["b", 1]]));
     const dashboard = computeDashboard(purchases, sales, products);
     expect(dashboard.stockValue).toBe(120);
     expect(dashboard.totalPurchases).toBe(200);
   });
 
-  it("values legacy shared-product purchases at their own purchase prices", () => {
+  it("marks every legacy purchase of a product as sold when that product has a sale", () => {
     const legacy = purchases.map(p => ({ ...p, productId: "first" }));
-    expect(remainingByPurchase(legacy, sales)).toEqual(new Map([["a", 0], ["b", 1]]));
-    expect(computeDashboard(legacy, sales, products).stockValue).toBe(120);
+    expect(activeUnitsByPurchase(legacy, sales)).toEqual(new Map([["a", 0], ["b", 0]]));
+    expect(computeDashboard(legacy, sales, products).stockValue).toBe(0);
   });
 
-  it("uses received stock before pending orders for legacy shared products", () => {
-    const legacy = [
-      { ...purchases[0], productId: "first", orderStatus: "ordered" as const },
-      { ...purchases[1], productId: "first", orderStatus: "received_verified" as const },
-    ];
-    expect(remainingByPurchase(legacy, sales)).toEqual(new Map([["b", 0], ["a", 1]]));
-    expect(computeDashboard(legacy, sales, products).stockValue).toBe(0);
+  it("keeps a product active when it has no sale, independently of delivery status", () => {
+    const pending = [{ ...purchases[0], orderStatus: "ordered" as const }];
+    expect(activeUnitsByPurchase(pending, [])).toEqual(new Map([["a", 1]]));
+    expect(computeDashboard(pending, [], products).stockValue).toBe(80);
   });
 });

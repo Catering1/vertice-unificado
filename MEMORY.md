@@ -25,6 +25,7 @@ O repositório ativo da loja pública e do dashboard é `Catering1/vertice-unifi
 
 ## Dados e stock
 
+- No dashboard administrativo, o estado comercial de uma compra é automático: `Ativo` quando não existe qualquer venda associada ao `product_id`; `Vendido` assim que existe pelo menos uma venda desse produto. O cartão `Compras em stock ativo` soma o preço de compra (vezes a quantidade) das compras comerciais ativas. O estado logístico da encomenda é uma dimensão separada e não altera este cálculo.
 - A montra pública usa a função Supabase `get_public_store_products()`.
 - A função só expõe campos seguros para visitantes e calcula o stock como compras menos vendas.
 - Um produto com stock zero deixa de aparecer na loja pública. Registar uma venda no dashboard é, por isso, a ação que esgota a listagem.
