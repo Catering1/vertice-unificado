@@ -165,7 +165,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       order_status: orderStatus, order_reference: validated.orderReference?.trim() || null, order_status_note: validated.orderStatusNote?.trim() || null, order_status_updated_at: orderStatusUpdatedAt,
     } as any).select().single();
     if (error) throw error;
-    setPurchases(prev => [...prev, { id: data.id, productId: data.product_id, quantity: data.quantity, price: data.price == null ? null : Number(data.price), date: data.date ?? "", deliveryDate: data.delivery_date ?? null, orderStatus: data.order_status, orderReference: data.order_reference ?? "", orderStatusNote: data.order_status_note ?? "", orderStatusUpdatedAt: data.order_status_updated_at }]);
+    setPurchases(prev => [...prev, { id: data.id, productId: data.product_id, quantity: data.quantity, price: data.price == null ? null : Number(data.price), date: data.date ?? "", deliveryDate: data.delivery_date ?? null, orderStatus: data.order_status as VintedOrderStatus, orderReference: data.order_reference ?? "", orderStatusNote: data.order_status_note ?? "", orderStatusUpdatedAt: data.order_status_updated_at }]);
   };
 
   const updatePurchase = async (p: Purchase) => {
@@ -183,7 +183,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       order_status: orderStatus, order_reference: orderReference?.trim() || null, order_status_note: orderStatusNote?.trim() || null, order_status_updated_at: orderStatusUpdatedAt,
     } as any).eq("id", p.id);
     if (error) throw error;
-    if (getProduct(p.productId)?.sourceRef) {
+    // A single purchase identifies the unit's cost unambiguously. Legacy products
+    // with several purchases retain their existing sale costs until reconciled.
+    if (purchases.filter(x => x.productId === p.productId).length === 1) {
       for (const sale of sales.filter(s=>s.productId===p.productId)) {
         const profit=p.price == null ? null : (sale.salePrice-p.price)*sale.quantity;
         const {error:saleError}=await supabase.from("sales").update({profit}).eq("id",sale.id);

@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Plus, Trash2, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { isPurchaseStockEligible } from "@/lib/inventory";
+import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 type SortField = "product" | "salePrice" | "profit" | "margin" | "date";
@@ -62,6 +63,8 @@ function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: str
 
 export default function Sales() {
   const { sales, purchases, products, categories, addSale, updateSale, deleteSale, getProduct, updateProduct, updatePurchase } = useStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedRecord = searchParams.get("registo");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -89,6 +92,13 @@ export default function Sales() {
       return stock > 0 && p.inventoryUse !== "personal";
     });
   }, [products, purchases, sales]);
+  const purchaseForProduct = useMemo(() => {
+    const map = new Map<string, typeof purchases[number]>();
+    for (const purchase of [...purchases].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))) {
+      if (!map.has(purchase.productId)) map.set(purchase.productId, purchase);
+    }
+    return map;
+  }, [purchases]);
 
   // Preview margin/profit
   const preview = useMemo(() => {
@@ -137,7 +147,7 @@ export default function Sales() {
       await updateProduct({ ...product, purchasePrice: overridePrice });
     }
 
-    if (product?.sourceRef && overridePrice != null) {
+    if (overridePrice != null && purchases.filter(p => p.productId === productId).length === 1) {
       const purchase=purchases.find(p=>p.productId===productId);
       if (purchase && purchase.price !== overridePrice) await updatePurchase({...purchase,price:overridePrice});
     }
@@ -169,6 +179,8 @@ export default function Sales() {
   const filtered = useMemo(() => {
     let result = sales.filter(s => {
       const prod = getProduct(s.productId);
+      if (selectedRecord && s.id !== selectedRecord) return false;
+      if (selectedRecord) return true;
       if (search && !prod?.name.toLocaleLowerCase("pt-PT").includes(search.toLocaleLowerCase("pt-PT"))) return false;
       if (issueFilter === "undated" && s.date) return false;
       if (issueFilter === "cost" && s.profit != null) return false;
@@ -183,10 +195,10 @@ export default function Sales() {
         switch (sortField) {
           case "product": cmp = (getProduct(a.productId)?.name ?? "").localeCompare(getProduct(b.productId)?.name ?? ""); break;
           case "salePrice": cmp = a.salePrice - b.salePrice; break;
-          case "profit": cmp = a.profit - b.profit; break;
+          case "profit": cmp = (a.profit ?? 0) - (b.profit ?? 0); break;
           case "margin": {
-            const mA = a.salePrice > 0 ? a.profit / a.salePrice : 0;
-            const mB = b.salePrice > 0 ? b.profit / b.salePrice : 0;
+            const mA = a.salePrice > 0 ? (a.profit ?? 0) / a.salePrice : 0;
+            const mB = b.salePrice > 0 ? (b.profit ?? 0) / b.salePrice : 0;
             cmp = mA - mB;
             break;
           }
@@ -197,7 +209,7 @@ export default function Sales() {
     }
 
     return result;
-  }, [sales, search, issueFilter, catFilter, searchDate, sortField, sortDir, getProduct]);
+  }, [sales, selectedRecord, search, issueFilter, catFilter, searchDate, sortField, sortDir, getProduct]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / 50));
   const currentPage = Math.min(page, pages);
@@ -237,7 +249,7 @@ export default function Sales() {
         <Button className="w-full sm:w-auto" onClick={openNew}><Plus className="mr-2 h-4 w-4" />Nova Venda</Button>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
             <DialogHeader><DialogTitle>{editingSale ? "Editar Venda" : "Registar Venda"}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-2">
               <div>
@@ -245,11 +257,17 @@ export default function Sales() {
                 <Select value={productId} onValueChange={(v) => {
                   setProductId(v);
                   const prod = getProduct(v);
-                  if (prod) setPurchasePriceOverride(prod.purchasePrice == null ? "" : String(prod.purchasePrice));
+                  if (prod) {
+                    const cost = purchaseForProduct.get(v)?.price ?? prod.purchasePrice;
+                    setPurchasePriceOverride(cost == null ? "" : String(cost));
+                  }
                 }}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
-                    {(editingSale ? products : availableProducts).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                    {(editingSale ? products : availableProducts).map(p => {
+                      const purchase = purchaseForProduct.get(p.id);
+                      return <SelectItem key={p.id} value={p.id}>{p.name} · {p.category} · {purchase?.date || "sem data"} · {p.id.slice(0, 8)}</SelectItem>;
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -290,13 +308,14 @@ export default function Sales() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
+        {selectedRecord && <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm"><span>Venda selecionada a partir do dashboard</span><Button size="sm" variant="outline" onClick={() => setSearchParams({})}>Ver todas</Button></div>}
         <Input className="sm:max-w-xs" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
         <Select value={issueFilter} onValueChange={v=>{setIssueFilter(v);setPage(1);}}><SelectTrigger className="w-full sm:w-56" aria-label="Dados a confirmar"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos os registos</SelectItem><SelectItem value="undated">Sem data</SelectItem><SelectItem value="cost">Custo por confirmar</SelectItem></SelectContent></Select>
         <p className="text-sm text-muted-foreground">{filtered.length} registos</p>
       </div>
       <div className="flex items-center justify-end gap-3 text-sm"><Button variant="outline" size="sm" disabled={currentPage===1} onClick={()=>setPage(currentPage-1)}>Anterior</Button><span>Página {currentPage} de {pages}</span><Button variant="outline" size="sm" disabled={currentPage===pages} onClick={()=>setPage(currentPage+1)}>Seguinte</Button></div>
       {/* Mobile: card list; Desktop: table */}
-      <div className="block sm:hidden space-y-3">
+      <div className="block space-y-3 lg:hidden">
         {filtered.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">Nenhuma venda encontrada</p>
         ) : visible.map(s => {
@@ -329,14 +348,14 @@ export default function Sales() {
                     <p className={cn("font-semibold", margin >= 0 ? "text-success" : "text-destructive")}>{s.profit == null ? "Por confirmar" : `${margin.toFixed(1)}%`}</p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">{formatDate(s.date)}</p>
+                <p className="text-xs text-muted-foreground">{formatDate(s.date)} · Ref. {s.id.slice(0, 8)}</p>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      <Card className="hidden sm:block">
+      <Card className="hidden lg:block">
         <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>

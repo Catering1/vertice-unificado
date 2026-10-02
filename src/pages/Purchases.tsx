@@ -1,5 +1,7 @@
 import { money, displayDate as formatDate } from "@/lib/dashboardMetrics";
 import { useState, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
+import { remainingByPurchase } from "@/lib/inventory";
 import { useStore } from "@/lib/store";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { Purchase, VintedOrderStatus } from "@/types";
@@ -71,8 +73,11 @@ function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: str
 }
 
 export default function Purchases() {
-  const { purchases, sales, products, categories, addPurchase, updatePurchase, deletePurchase, getProduct, addProduct, updateProduct } = useStore();
+  const { purchases, sales, categories, addPurchase, updatePurchase, deletePurchase, getProduct, addProduct, updateProduct } = useStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedRecord = searchParams.get("registo");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [issueFilter, setIssueFilter] = useState("all");
@@ -90,7 +95,6 @@ export default function Purchases() {
   const [price, setPrice] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [deliveryDate, setDeliveryDate] = useState("");
-  const [orderStatus, setOrderStatus] = useState<VintedOrderStatus>("not_tracked");
   const [orderReference, setOrderReference] = useState("");
   const [orderStatusNote, setOrderStatusNote] = useState("");
 
@@ -110,7 +114,7 @@ export default function Purchases() {
     setInventoryUse("business");
     setProductName(""); setProductCategory("Outros"); setProductSupplier(""); setRetailPrice(""); setCondition("Verificado"); setWarrantyMonths("0"); setDescription(""); setSpecifications("");
     setPrice(""); setDate(new Date().toISOString().slice(0, 10)); setDeliveryDate("");
-    setOrderStatus("not_tracked"); setOrderReference(""); setOrderStatusNote("");
+    setOrderReference(""); setOrderStatusNote("");
     setDialogOpen(true);
   };
 
@@ -129,14 +133,14 @@ export default function Purchases() {
     setPrice(p.price == null ? "" : String(p.price));
     setDate(p.date);
     setDeliveryDate(p.deliveryDate ?? "");
-    setOrderStatus(p.orderStatus ?? "not_tracked");
     setOrderReference(p.orderReference ?? "");
     setOrderStatusNote(p.orderStatusNote ?? "");
     setDialogOpen(true);
   };
 
   const save = async () => {
-    if (!productName.trim() || ((!price || !date) && !editingPurchase)) {
+    if (saving) return;
+    if (!productName.trim() || !price || !date) {
       toast.error("Preencha todos os campos");
       return;
     }
@@ -144,41 +148,42 @@ export default function Purchases() {
     if (priceParsed != null && (!Number.isFinite(priceParsed) || priceParsed < 0)) { toast.error("Preço inválido"); return; }
     const retailPriceParsed = retailPrice ? Number(retailPrice) : 0;
     const warrantyMonthsParsed = Number(warrantyMonths || 0);
+    const orderStatus: VintedOrderStatus = deliveryDate ? "received_verified" : editingPurchase?.orderStatus === "not_tracked" ? "not_tracked" : "ordered";
     if (Number.isNaN(retailPriceParsed) || Number.isNaN(warrantyMonthsParsed) || warrantyMonthsParsed < 0) {
       toast.error("Verifique o preço de venda e a garantia");
       return;
     }
 
-    const existingProd = editingPurchase ? getProduct(editingPurchase.productId) : products.find(p => !p.sourceRef && p.category === productCategory && p.name.toLowerCase() === productName.trim().toLowerCase());
-    let productId: string;
-    if (existingProd) {
-      productId = existingProd.id;
-      await updateProduct({...existingProd,name:productName.trim(),category:productCategory,supplier:productSupplier,purchasePrice:priceParsed,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,inventoryUse});
-    } else {
-      productId = await addProduct({name:productName.trim(),category:productCategory,purchasePrice:priceParsed,supplier:productSupplier,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,photoUrls:[],inventoryUse,storeVisible:productCategory !== "Livros" && inventoryUse !== "personal"});
+    setSaving(true);
+    try {
+      const existingProd = editingPurchase ? getProduct(editingPurchase.productId) : undefined;
+      let productId: string;
+      if (existingProd) {
+        productId = existingProd.id;
+        await updateProduct({...existingProd,name:productName.trim(),category:productCategory,supplier:productSupplier,purchasePrice:priceParsed,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,inventoryUse});
+      } else {
+        productId = await addProduct({name:productName.trim(),category:productCategory,purchasePrice:priceParsed,supplier:productSupplier,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,photoUrls:[],inventoryUse,storeVisible:productCategory !== "Livros" && inventoryUse !== "personal"});
+      }
+      if (editingPurchase) {
+        await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, deliveryDate: deliveryDate || null, orderStatus, orderReference, orderStatusNote });
+        toast.success("Compra atualizada");
+      } else {
+        await addPurchase({ productId, quantity: 1, price: priceParsed, date, deliveryDate: deliveryDate || null, orderStatus, orderReference, orderStatusNote });
+        toast.success("Compra registada");
+      }
+      setDialogOpen(false);
+      setEditingPurchase(null);
+    } catch {
+      toast.error("Não foi possível guardar a compra. Tente novamente.");
+    } finally {
+      setSaving(false);
     }
-
-    if (editingPurchase) {
-      await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, deliveryDate: deliveryDate || null, orderStatus, orderReference, orderStatusNote });
-      toast.success("Compra atualizada");
-    } else {
-      await addPurchase({ productId, quantity: 1, price: priceParsed, date, deliveryDate: deliveryDate || null, orderStatus, orderReference, orderStatusNote });
-      toast.success("Compra registada");
-    }
-    setDialogOpen(false);
-    setEditingPurchase(null);
   };
 
   const productStock = useMemo(() => {
-    const purchased = new Map<string, number>();
-    const sold = new Map<string, number>();
-    purchases.forEach(p => purchased.set(p.productId, (purchased.get(p.productId) ?? 0) + p.quantity));
-    sales.forEach(s => sold.set(s.productId, (sold.get(s.productId) ?? 0) + s.quantity));
-    const stock = new Map<string, number>();
-    purchased.forEach((qty, id) => stock.set(id, Math.max(0, qty - (sold.get(id) ?? 0))));
-    return stock;
+    return remainingByPurchase(purchases, sales);
   }, [purchases, sales]);
-  const commercialStatus = (productId: string) => (productStock.get(productId) ?? 0) > 0 ? "Ativo" : "Vendido";
+  const commercialStatus = (purchaseId: string) => (productStock.get(purchaseId) ?? 0) > 0 ? "Ativo" : "Vendido";
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -197,13 +202,15 @@ export default function Purchases() {
   const filtered = useMemo(() => {
     let result = purchases.filter(p => {
       const prod = getProduct(p.productId);
+      if (selectedRecord && p.id !== selectedRecord) return false;
+      if (selectedRecord) return true;
       if (search && !prod?.name.toLocaleLowerCase("pt-PT").includes(search.toLocaleLowerCase("pt-PT"))) return false;
       if (issueFilter === "undated" && p.date) return false;
       if (issueFilter === "cost" && p.price != null) return false;
       if (catFilter !== "all" && prod?.category !== catFilter) return false;
       if (searchDate && !p.date.includes(searchDate)) return false;
-      if ((stockFilter === "active" || stockFilter === "reading") && (productStock.get(p.productId) ?? 0) <= 0) return false;
-      if (stockFilter === "sold" && (productStock.get(p.productId) ?? 0) > 0) return false;
+      if ((stockFilter === "active" || stockFilter === "reading") && (productStock.get(p.id) ?? 0) <= 0) return false;
+      if (stockFilter === "sold" && (productStock.get(p.id) ?? 0) > 0) return false;
       if (orderStatusFilter !== "all" && orderReceiptStatus(p.orderStatus) !== orderStatusFilter) return false;
       return true;
     });
@@ -213,7 +220,7 @@ export default function Purchases() {
         let cmp = 0;
         switch (sortField) {
           case "product": cmp = (getProduct(a.productId)?.name ?? "").localeCompare(getProduct(b.productId)?.name ?? ""); break;
-          case "price": cmp = a.price - b.price; break;
+          case "price": cmp = (a.price ?? 0) - (b.price ?? 0); break;
           case "date": cmp = a.date.localeCompare(b.date); break;
         }
         return sortDir === "asc" ? cmp : -cmp;
@@ -221,7 +228,7 @@ export default function Purchases() {
     }
 
     return result;
-  }, [purchases, search, issueFilter, catFilter, searchDate, stockFilter, orderStatusFilter, productStock, sortField, sortDir, getProduct]);
+  }, [purchases, selectedRecord, search, issueFilter, catFilter, searchDate, stockFilter, orderStatusFilter, productStock, sortField, sortDir, getProduct]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / 50));
   const currentPage = Math.min(page, pages);
@@ -264,13 +271,7 @@ export default function Purchases() {
           if (isNaN(priceVal) || priceVal < 0 || priceVal > 1000000) { skipped++; continue; }
           if (!/^\d{4}-\d{2}-\d{2}/.test(dateVal)) { skipped++; continue; }
 
-          const prod = products.find(p => p.name.toLowerCase() === name.toLowerCase());
-          let prodId: string;
-          if (prod) {
-            prodId = prod.id;
-          } else {
-            prodId = await addProduct({ name: name.slice(0, 200), category, purchasePrice: priceVal, supplier, retailPrice: 0, condition: "Verificado", warrantyMonths: 0, description: "", specifications: "", photoUrls: [] });
-          }
+          const prodId = await addProduct({ name: name.slice(0, 200), category, purchasePrice: priceVal, supplier, retailPrice: 0, condition: "Verificado", warrantyMonths: 0, description: "", specifications: "", photoUrls: [] });
           await addPurchase({ productId: prodId, quantity: qty, price: priceVal, date: dateVal });
           count++;
         }
@@ -342,61 +343,35 @@ export default function Purchases() {
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
             <DialogHeader><DialogTitle>{editingPurchase ? "Editar Compra" : "Registar Compra"}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-2">
               <div>
                 <Label>Nome do Produto *</Label>
-                <Input placeholder="Ex: iPhone 15, Camiseta..." value={productName} onChange={e => setProductName(e.target.value)} list="product-suggestions" />
-                <datalist id="product-suggestions">
-                  {products.map(p => <option key={p.id} value={p.name} />)}
-                </datalist>
+                <Input placeholder="Ex: iPhone 15, Camiseta..." value={productName} onChange={e => setProductName(e.target.value)} />
+                {!editingPurchase && <p className="mt-1 text-xs text-muted-foreground">Cada compra recebe um registo próprio, mesmo quando o nome já existe.</p>}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Categoria</Label>
-                  <Select value={productCategory} onValueChange={setProductCategory}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div><Label>Preço *</Label><Input type="number" min={0} step={0.01} value={price} onChange={e => setPrice(e.target.value)} /></div>
+              <div>
+                <Label>Categoria</Label>
+                <Select value={productCategory} onValueChange={setProductCategory}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Preço de venda</Label><Input type="number" min={0} step={0.01} placeholder="Ex: 449" value={retailPrice} onChange={e => setRetailPrice(e.target.value)} /></div>
-                <div><Label>Garantia (meses)</Label><Input type="number" min={0} max={120} value={warrantyMonths} onChange={e => setWarrantyMonths(e.target.value)} /></div>
+              <div><Label>Preço de Compra *</Label><Input type="number" min={0} step={0.01} inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} /></div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div><Label>Data de Compra *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+                <div><Label>Data de Receção</Label><Input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} /></div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Condição do artigo</Label><Input placeholder="Ex: Como novo" value={condition} onChange={e => setCondition(e.target.value)} /></div>
-                <div><Label>Fornecedor</Label><Input placeholder="Opcional" value={productSupplier} onChange={e => setProductSupplier(e.target.value)} /></div>
-              </div>
-              <div><Label>Descrição para a página do produto</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado estético, funcionamento, acessórios incluídos e qualquer defeito a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-              <div><Label>Especificações</Label><textarea value={specifications} onChange={e => setSpecifications(e.target.value)} maxLength={3000} rows={3} placeholder="Ex: 256 GB · 12 GB RAM · bateria 92% · caixa e carregador incluídos" className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-              <p className="text-xs leading-5 text-muted-foreground">As fotos são adicionadas na ficha do produto depois de receberes e testares o equipamento.</p>
-              <div><Label>Estado</Label><Input readOnly value={editingPurchase ? commercialStatus(editingPurchase.productId) : "Ativo"} /><p className="mt-1 text-xs text-muted-foreground">Calculado a partir das compras e vendas registadas.</p></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Data da compra</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
-                <div><Label>Data de entrega da encomenda</Label><Input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} /></div>
-              </div>
-              <p className="-mt-2 text-xs text-muted-foreground">Indica a data prevista ou a data em que a encomenda foi entregue.</p>
-              <div className="space-y-3 rounded-md border border-border p-3">
-                <div>
-                  <Label>Estado da encomenda</Label>
-                  <p className="mb-2 mt-1 text-xs text-muted-foreground">Acompanha a encomenda. É informação privada; não aparece no anúncio público.</p>
-                  <Select value={orderReceiptStatus(orderStatus)} onValueChange={v => setOrderStatus(v === "received" ? "received_verified" : "ordered")}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ORDER_RECEIPT_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>
-                </div>
-                <div><Label>Referência da encomenda (opcional)</Label><Input maxLength={200} value={orderReference} onChange={e => setOrderReference(e.target.value)} placeholder="Referência Vinted" /></div>
-                <p className="text-xs leading-5 text-muted-foreground">A referência é privada e não aparece na loja pública.</p>
-              </div>
-              <Button onClick={save}>{editingPurchase ? "Guardar" : "Registar"}</Button>
+              <div><Label>Descrição para anúncio</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado, características, acessórios e defeitos a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
+              <Button className="min-h-11" onClick={save} disabled={saving}>{saving ? "A guardar…" : editingPurchase ? "Guardar compra" : "Registar compra"}</Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
+        {selectedRecord && <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm"><span>Compra selecionada a partir do dashboard</span><Button size="sm" variant="outline" onClick={() => setSearchParams({})}>Ver todas</Button></div>}
         <Input className="sm:max-w-xs" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
         <Select value={issueFilter} onValueChange={v=>{setIssueFilter(v);setPage(1);}}><SelectTrigger className="w-full sm:w-56" aria-label="Dados a confirmar"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos os registos</SelectItem><SelectItem value="undated">Sem data</SelectItem><SelectItem value="cost">Custo por confirmar</SelectItem></SelectContent></Select>
         <p className="text-sm text-muted-foreground">{filtered.length} registos</p>
@@ -415,7 +390,7 @@ export default function Purchases() {
           {visible.map(p => {
             const product = getProduct(p.productId);
             const photoUrl = product?.photoUrls?.[0] || getCatalogPresentation(product?.name ?? "").photos[0];
-            const stockQuantity = productStock.get(p.productId) ?? 0;
+            const stockQuantity = productStock.get(p.id) ?? 0;
             const stockState = stockQuantity > 0 ? "Ativo" : "Vendido";
             return (
               <Card key={p.id} className="group overflow-hidden">
@@ -425,7 +400,7 @@ export default function Purchases() {
                 </div>
                 <CardContent className="space-y-3 p-4">
                   <div className="flex gap-3">
-                    <div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{product?.name ?? "Produto removido"}</h2><p className="mt-0.5 text-sm text-muted-foreground">{product?.category ?? "Sem categoria"} · {product?.condition || "Estado por confirmar"}</p></div>
+                  <div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{product?.name ?? "Produto removido"}</h2><p className="mt-0.5 text-sm text-muted-foreground">{product?.category ?? "Sem categoria"} · Ref. {p.id.slice(0, 8)}</p></div>
                     <div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} aria-label={`Editar ${product?.name ?? "compra"}`}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }} aria-label={`Remover ${product?.name ?? "compra"}`}><Trash2 className="h-4 w-4" /></Button></div>
                   </div>
                   <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Compra: {formatDate(p.date)}</p>{p.deliveryDate && <p>Entrega: {formatDate(p.deliveryDate)}</p>}</div></div>
@@ -438,7 +413,7 @@ export default function Purchases() {
         </div>
       ) : <>
       {/* Mobile: card list; Desktop: table */}
-      <div className="block sm:hidden space-y-3">
+      <div className="block space-y-3 lg:hidden">
         {filtered.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</p>
         ) : visible.map(p => (
@@ -460,7 +435,7 @@ export default function Purchases() {
                 <p className="font-semibold">{fmt(p.price)}</p>
               </div>
               <p className="text-xs text-muted-foreground">Compra: {formatDate(p.date)}</p>
-              <p className="text-xs text-muted-foreground">Estado: {commercialStatus(p.productId)}</p>
+              <p className="text-xs text-muted-foreground">Estado: {commercialStatus(p.id)} · Ref. {p.id.slice(0, 8)}</p>
               {p.deliveryDate && <p className="text-xs text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}
               <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
             </CardContent>
@@ -468,7 +443,7 @@ export default function Purchases() {
         ))}
       </div>
 
-      <Card className="hidden sm:block">
+      <Card className="hidden lg:block">
         <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
@@ -490,7 +465,7 @@ export default function Purchases() {
                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : visible.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p.productId)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}</p>{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}</TableCell>
+                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p.id)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}</p>{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>

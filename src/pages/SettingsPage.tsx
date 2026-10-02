@@ -86,7 +86,7 @@ export default function SettingsPage() {
       <Card>
         <CardHeader><CardTitle className="text-base">Categorias</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-2">
+          <div className="flex min-w-0 gap-2">
             <Input placeholder="Nova categoria..." value={newCat} onChange={e => setNewCat(e.target.value)} onKeyDown={e => e.key === "Enter" && addCat()} />
             <Button onClick={addCat}><Plus className="h-4 w-4" /></Button>
           </div>
@@ -135,7 +135,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {expenses.length > 0 && <Card><CardHeader><CardTitle className="text-base">Despesas operacionais</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Descrição</TableHead><TableHead>Categoria</TableHead><TableHead>Valor</TableHead><TableHead>Data</TableHead></TableRow></TableHeader><TableBody>{expenses.map(e=><TableRow key={e.id}><TableCell>{e.description}</TableCell><TableCell>{e.category}</TableCell><TableCell>{money(e.amount)}</TableCell><TableCell>{displayDate(e.date)}</TableCell></TableRow>)}</TableBody></Table></CardContent></Card>}
+      {expenses.length > 0 && <Card><CardHeader><CardTitle className="text-base">Despesas operacionais</CardTitle></CardHeader><CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Descrição</TableHead><TableHead>Categoria</TableHead><TableHead>Valor</TableHead><TableHead>Data</TableHead></TableRow></TableHeader><TableBody>{expenses.map(e=><TableRow key={e.id}><TableCell>{e.description}</TableCell><TableCell>{e.category}</TableCell><TableCell>{money(e.amount)}</TableCell><TableCell>{displayDate(e.date)}</TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>}
       {/* Export */}
       <Card>
         <CardHeader><CardTitle className="text-base">Exportar Dados (CSV)</CardTitle></CardHeader>

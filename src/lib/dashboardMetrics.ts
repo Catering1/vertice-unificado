@@ -1,5 +1,5 @@
 import type { Expense, Product, Purchase, Sale } from "@/types";
-import { isPurchaseStockEligible } from "@/lib/inventory";
+import { isPurchaseStockEligible, remainingByPurchase } from "@/lib/inventory";
 
 export const money = (v: number | null) => v == null ? "Por confirmar" : v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 export const displayDate = (date: string) => date ? new Date(`${date}T12:00:00`).toLocaleDateString("pt-PT") : "Sem data";
@@ -18,16 +18,17 @@ export function computeDashboard(purchases: Purchase[], sales: Sale[], products:
   const knownRevenue = knownSales.reduce((sum, s) => sum + s.salePrice * s.quantity, 0);
   const cogs = knownRevenue - totalProfit;
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const purchased = new Map<string, number>();
-  const sold = new Map<string, number>();
-  purchases.filter(isPurchaseStockEligible).forEach(p => purchased.set(p.productId, (purchased.get(p.productId) ?? 0) + p.quantity));
-  sales.forEach(s => sold.set(s.productId, (sold.get(s.productId) ?? 0) + s.quantity));
+  const remaining = remainingByPurchase(purchases, sales);
   let stockValue = 0, productsInStock = 0, stockUnits = 0, personalValue = 0, personalUnits = 0;
-  products.forEach(p => {
-    const qty = Math.max(0, (purchased.get(p.id) ?? 0) - (sold.get(p.id) ?? 0));
-    if (p.inventoryUse === "personal") { personalUnits += qty; personalValue += qty * (p.purchasePrice ?? 0); }
-    else { stockUnits += qty; stockValue += qty * (p.purchasePrice ?? 0); if (qty) productsInStock++; }
+  const activeProductIds = new Set<string>();
+  purchases.filter(isPurchaseStockEligible).forEach(purchase => {
+    const qty = remaining.get(purchase.id) ?? 0;
+    const product = byId.get(purchase.productId);
+    const value = qty * (purchase.price ?? 0);
+    if (product?.inventoryUse === "personal") { personalUnits += qty; personalValue += value; }
+    else { stockUnits += qty; stockValue += value; if (qty) activeProductIds.add(purchase.productId); }
   });
+  productsInStock = activeProductIds.size;
   const purchaseDates = new Map<string, string>();
   purchases.filter(p => p.date).forEach(p => {
     if (!purchaseDates.has(p.productId) || p.date < purchaseDates.get(p.productId)!) purchaseDates.set(p.productId, p.date);

@@ -1,6 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, ShoppingCart, TrendingUp, Settings, Menu, X, LogOut, Package } from "lucide-react";
-import { useState } from "react";
+import { LayoutDashboard, ShoppingCart, TrendingUp, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -16,24 +15,15 @@ const navItems = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
-  const [open, setOpen] = useState(false);
   const { signOut, user } = useAuth();
 
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "U";
 
   return (
-    <div className="flex min-h-screen w-full">
-      {/* Mobile overlay */}
-      {open && (
-        <div className="fixed inset-0 z-40 bg-foreground/40 md:hidden" onClick={() => setOpen(false)} />
-      )}
-
+    <div className="flex min-h-dvh w-full min-w-0">
       {/* Sidebar */}
       <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-sidebar text-sidebar-foreground transition-transform md:static md:translate-x-0",
-          open ? "translate-x-0" : "-translate-x-full"
-        )}
+        className="hidden w-72 shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex"
       >
         {/* Profile section */}
         <div className="px-5 pt-6 pb-4">
@@ -69,7 +59,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Link
                 key={path}
                 to={path}
-                onClick={() => setOpen(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
                   active
@@ -93,19 +82,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-card px-4 md:px-6">
-          <button onClick={() => setOpen(!open)} className="md:hidden text-foreground">
-            {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
           <h1 className="text-lg font-semibold">
             {navItems.find(n => n.path === pathname)?.label ?? ""}
           </h1>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="ml-auto md:hidden" aria-label="Conta"><Avatar className="h-8 w-8"><AvatarFallback className="text-xs">{initials}</AvatarFallback></Avatar></Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end"><div className="max-w-56 truncate px-2 py-1.5 text-xs text-muted-foreground">{user?.email}</div><DropdownMenuItem onClick={signOut}><LogOut className="mr-2 h-4 w-4" />Sair</DropdownMenuItem></DropdownMenuContent>
+          </DropdownMenu>
         </header>
-        <main className="flex-1 overflow-auto p-4 md:p-8">
+        <main className="min-w-0 flex-1 overflow-x-hidden px-4 pb-24 pt-5 md:p-8">
           {children}
         </main>
       </div>
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(0,0,0,0.06)] backdrop-blur md:hidden" aria-label="Navegação principal">
+        {navItems.map(({ label, path, icon: Icon }) => <Link key={path} to={path} aria-current={pathname === path ? "page" : undefined} className={cn("flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium", pathname === path ? "text-primary" : "text-muted-foreground")}><Icon className="h-5 w-5" aria-hidden="true" /><span>{label}</span></Link>)}
+      </nav>
     </div>
   );
 }

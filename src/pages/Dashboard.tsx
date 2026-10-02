@@ -4,7 +4,7 @@ import { usePersistedState } from "@/hooks/usePersistedState";
 import { categoryData, computeDashboard, money } from "@/lib/dashboardMetrics";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, Clock, Calculator, RefreshCw } from "lucide-react";
+import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, Clock, Calculator, RefreshCw, ArrowRight } from "lucide-react";
 import KpiCard from "@/components/dashboard/KpiCard";
 import ProfitOverTimeChart from "@/components/dashboard/ProfitOverTimeChart";
 import TopProductsChart from "@/components/dashboard/TopProductsChart";
@@ -32,11 +32,34 @@ export default function Dashboard() {
   }).filter(c => c.productCount || c.totalExpenses), [categories,store.products,store.purchases,store.sales,store.expenses]);
   const fmt = money;
   const partial = d.missingCosts > 0;
+  const recordsToReview = useMemo(() => {
+    const byId = new Map(data.products.map(product => [product.id, product]));
+    const purchaseDates = new Map<string, string>();
+    data.purchases.forEach(purchase => {
+      if (purchase.date && (!purchaseDates.has(purchase.productId) || purchase.date < purchaseDates.get(purchase.productId)!)) purchaseDates.set(purchase.productId, purchase.date);
+    });
+    const items: { key: string; name: string; detail: string; href: string }[] = [];
+    data.purchases.forEach(purchase => {
+      const name = byId.get(purchase.productId)?.name ?? "Produto removido";
+      const href = `/admin/compras?registo=${encodeURIComponent(purchase.id)}`;
+      if (purchase.price == null) items.push({ key: `${purchase.id}-price`, name, detail: `Compra ${purchase.date || "sem data"} · preço de compra em falta`, href });
+      if (!purchase.date) items.push({ key: `${purchase.id}-date`, name, detail: "Compra sem data", href });
+    });
+    data.sales.forEach(sale => {
+      const name = byId.get(sale.productId)?.name ?? "Produto removido";
+      const href = `/admin/vendas?registo=${encodeURIComponent(sale.id)}`;
+      if (sale.profit == null) items.push({ key: `${sale.id}-cost`, name, detail: `Venda ${sale.date || "sem data"} · custo em falta`, href });
+      if (!sale.date) items.push({ key: `${sale.id}-date`, name, detail: "Venda sem data", href });
+      const purchaseDate = purchaseDates.get(sale.productId);
+      if (sale.date && purchaseDate && sale.date < purchaseDate) items.push({ key: `${sale.id}-sequence`, name, detail: `Venda ${sale.date} anterior à compra ${purchaseDate}`, href });
+    });
+    return items;
+  }, [data]);
   const kpis = [
     {label: "Total de vendas", value: fmt(d.totalSales), icon: DollarSign, iconBg:"bg-blue-100", iconColor:"text-blue-700", valueClassName:"text-blue-700", accentClassName:"border-blue-100"},
     {label: partial ? "Lucro apurado (parcial)" : "Lucro das vendas", value: fmt(d.totalProfit), icon: TrendingUp, iconBg:"bg-emerald-100", iconColor:"text-emerald-700", valueClassName:"text-emerald-700", accentClassName:"border-emerald-100"},
-    {label: "Compras registadas", value: fmt(d.totalPurchases), icon: ShoppingCart, iconBg:"bg-amber-100", iconColor:"text-amber-700", valueClassName:"text-amber-700", accentClassName:"border-amber-100"},
-    {label: "Stock disponível", value: fmt(d.stockValue), icon: Warehouse, iconBg:"bg-indigo-100", iconColor:"text-indigo-700", valueClassName:"text-indigo-700", accentClassName:"border-indigo-100"},
+    {label: "Compras em stock ativo", value: fmt(d.stockValue), icon: ShoppingCart, iconBg:"bg-amber-100", iconColor:"text-amber-700", valueClassName:"text-amber-700", accentClassName:"border-amber-100"},
+    {label: "Compras no histórico", value: fmt(d.totalPurchases), icon: Warehouse, iconBg:"bg-indigo-100", iconColor:"text-indigo-700", valueClassName:"text-indigo-700", accentClassName:"border-indigo-100"},
     {label: "Unidades vendidas", value: String(d.unitsSold), icon: Package, iconBg:"bg-violet-100", iconColor:"text-violet-700", valueClassName:"text-violet-700", accentClassName:"border-violet-100"},
     {label: "Despesas operacionais", value: fmt(d.totalExpenses), icon: Calculator, iconBg:"bg-rose-100", iconColor:"text-rose-700", valueClassName:"text-rose-700", accentClassName:"border-rose-100"},
     {label: partial ? "Resultado após despesas (parcial)" : "Resultado após despesas", value: fmt(d.netProfit), icon: TrendingUp, iconBg:d.netProfit >= 0 ? "bg-green-100" : "bg-red-100", iconColor:d.netProfit >= 0 ? "text-green-700" : "text-red-700", valueClassName:d.netProfit >= 0 ? "text-green-700" : "text-red-700", accentClassName:d.netProfit >= 0 ? "border-green-100" : "border-red-100"},
@@ -67,23 +90,21 @@ export default function Dashboard() {
         </div>
         <AnalyzeDialog dashboardData={analyzeData} />
       </div>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar por categoria">
-        {["all",...categories].map(c => <Button key={c} aria-pressed={activeCategory===c} variant={activeCategory===c ? "default" : "outline"} onClick={() => setCategory(c)}>{c === "all" ? "Todas as categorias" : c}</Button>)}
+      <div className="flex gap-2 overflow-x-auto pb-2" role="group" aria-label="Filtrar por categoria">
+        {["all",...categories].map(c => <Button key={c} className="shrink-0 whitespace-nowrap" aria-pressed={activeCategory===c} variant={activeCategory===c ? "default" : "outline"} onClick={() => setCategory(c)}>{c === "all" ? "Todas as categorias" : c}</Button>)}
       </div>
-      {(partial || d.undatedSales > 0 || d.undatedPurchases > 0 || d.inconsistentDates > 0) && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950" role="note">
-        <p className="font-semibold">Dados a confirmar</p>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
-          {partial && <li>{d.missingCosts} vendas ({fmt(d.missingCostRevenue)}) sem custo de compra. As receitas estão incluídas; o lucro, a margem e o ROI usam apenas vendas com custo conhecido.</li>}
-          {(d.undatedSales > 0 || d.undatedPurchases > 0) && <li>{d.undatedSales} vendas ({fmt(d.undatedRevenue)}) e {d.undatedPurchases} compras sem data válida: incluídas nos totais, excluídas dos gráficos mensais.</li>}
-          {d.inconsistentDates > 0 && <li>{d.inconsistentDates} vendas anteriores à compra: datas originais preservadas e excluídas do tempo médio de venda.</li>}
-        </ul>
-      </div>}
+      {recordsToReview.length > 0 && <section className="rounded-xl border bg-card p-4 sm:p-5" aria-labelledby="review-heading">
+        <div className="mb-3 flex items-center justify-between gap-3"><div><h2 id="review-heading" className="font-semibold">Registos por corrigir</h2><p className="text-xs text-muted-foreground">Abre o registo específico para completar os dados.</p></div><span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900">{recordsToReview.length}</span></div>
+        <div className="max-h-56 divide-y overflow-y-auto">
+          {recordsToReview.map(item => <Link key={item.key} to={item.href} className="flex min-h-12 items-center justify-between gap-3 py-2 text-sm hover:text-primary"><span className="min-w-0"><strong className="block truncate">{item.name}</strong><span className="text-xs text-muted-foreground">{item.detail}</span></span><ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" /></Link>)}
+        </div>
+      </section>}
       {d.personalUnits > 0 && <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-muted/30 px-5 py-4 text-sm">
         <span><strong>{d.personalUnits} livros em leitura</strong> · custo {fmt(d.personalValue)} · fora do stock disponível</span>
         <Link className="font-medium underline underline-offset-4" to="/admin/compras">Consultar compras</Link>
       </div>}
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-5">
         {kpis.map((kpi) => (
           <KpiCard key={kpi.label} {...kpi} />
         ))}

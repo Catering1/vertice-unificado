@@ -1,11 +1,12 @@
 # Memória do projeto Vendig Machine Store
 
-Atualizado em 2 de outubro de 2026.
+Atualizado em 3 de outubro de 2026.
 
 ## Regra de continuidade
 
 - Sempre que forem discutidas ou implementadas alterações importantes — funcionamento do negócio, arquitetura, dados, integrações, publicação ou decisões de produto — atualizar este ficheiro automaticamente.
 - Uma alteração funcional só é considerada concluída depois de estar aplicada no serviço necessário (por exemplo, base de dados), validada e publicada no site público quando for relevante.
+- Sempre que forem feitas alterações ao projeto, depois de validadas devem ser automaticamente incluídas num commit, enviadas para o repositório canónico e colocadas em produção no site público, sem ser necessário pedir uma instrução adicional. Confirmar o sucesso da publicação e indicar o URL live. Se a publicação estiver bloqueada por credenciais, conflitos, falha de testes ou indisponibilidade do serviço, não declarar a tarefa concluída: comunicar o bloqueio concreto e preservar o commit pronto para publicar.
 
 ## Objetivo
 

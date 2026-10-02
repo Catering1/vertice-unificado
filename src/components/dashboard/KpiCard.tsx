@@ -22,7 +22,7 @@ export default function KpiCard({ label, value, icon: Icon, iconBg, iconColor, v
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-xs">{label}</p>
-          <p className={cn("mt-1 text-lg font-extrabold tracking-tight sm:text-2xl", valueClassName)}>{value}</p>
+          <p className={cn("mt-1 break-words text-base font-extrabold tabular-nums tracking-tight sm:text-2xl", valueClassName)}>{value}</p>
         </div>
       </CardContent>
     </Card>
