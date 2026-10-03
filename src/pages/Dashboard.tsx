@@ -4,13 +4,25 @@ import { usePersistedState } from "@/hooks/usePersistedState";
 import { categoryData, computeDashboard, money } from "@/lib/dashboardMetrics";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, Clock, Calculator, RefreshCw, ArrowRight } from "lucide-react";
+import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, Clock, Calculator, RefreshCw, ArrowRight, AlertTriangle } from "lucide-react";
 import KpiCard from "@/components/dashboard/KpiCard";
 import ProfitOverTimeChart from "@/components/dashboard/ProfitOverTimeChart";
 import TopProductsChart from "@/components/dashboard/TopProductsChart";
 import ProfitByProductChart from "@/components/dashboard/ProfitByProductChart";
 import PurchasesVsSalesChart from "@/components/dashboard/PurchasesVsSalesChart";
 import AnalyzeDialog from "@/components/dashboard/AnalyzeDialog";
+
+function pickupDeadline(deliveryDate: string) {
+  const [year, month, day] = deliveryDate.split("-").map(Number);
+  const deadline = new Date(Date.UTC(year, month - 1, day));
+  deadline.setUTCDate(deadline.getUTCDate() + 7);
+  return deadline;
+}
+
+function utcToday() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+}
 
 export default function Dashboard() {
   const store = useStore();
@@ -54,6 +66,22 @@ export default function Dashboard() {
       if (sale.date && purchaseDate && sale.date < purchaseDate) items.push({ key: `${sale.id}-sequence`, name, detail: `Venda ${sale.date} anterior à compra ${purchaseDate}`, href });
     });
     return items;
+  }, [data]);
+  const pickupAlerts = useMemo(() => {
+    const productsById = new Map(data.products.map(product => [product.id, product]));
+    const today = utcToday();
+    return data.purchases.flatMap(purchase => {
+      if (!purchase.deliveryDate || purchase.orderStatus !== "delivered") return [];
+      const deadline = pickupDeadline(purchase.deliveryDate);
+      const daysRemaining = Math.round((deadline.getTime() - today.getTime()) / 86_400_000);
+      if (daysRemaining > 2) return [];
+      return [{
+        id: purchase.id,
+        name: productsById.get(purchase.productId)?.name ?? "Produto removido",
+        deadline: deadline.toISOString().slice(0, 10),
+        daysRemaining,
+      }];
+    }).sort((a, b) => a.daysRemaining - b.daysRemaining);
   }, [data]);
   const kpis = [
     {label: "Total de vendas", value: fmt(d.totalSales), icon: DollarSign, iconBg:"bg-blue-100", iconColor:"text-blue-700", valueClassName:"text-blue-700", accentClassName:"border-blue-100"},
@@ -101,6 +129,12 @@ export default function Dashboard() {
         <div className="mb-3 flex items-center justify-between gap-3"><div><h2 id="review-heading" className="font-semibold">Registos por corrigir</h2><p className="text-xs text-muted-foreground">Abre o registo específico para completar os dados.</p></div><span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900">{recordsToReview.length}</span></div>
         <div className="max-h-56 divide-y overflow-y-auto">
           {recordsToReview.map(item => <Link key={item.key} to={item.href} className="flex min-h-12 items-center justify-between gap-3 py-2 text-sm hover:text-primary"><span className="min-w-0"><strong className="block truncate">{item.name}</strong><span className="text-xs text-muted-foreground">{item.detail}</span></span><ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" /></Link>)}
+        </div>
+      </section>}
+      {pickupAlerts.length > 0 && <section className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 sm:p-5" aria-labelledby="pickup-alerts-heading">
+        <div className="mb-3 flex items-start gap-3"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" /><div><h2 id="pickup-alerts-heading" className="font-semibold">Encomendas para levantar</h2><p className="text-sm text-amber-900">{pickupAlerts.length} {pickupAlerts.length === 1 ? "encomenda aproxima-se" : "encomendas aproximam-se"} da data limite.</p></div></div>
+        <div className="divide-y divide-amber-200">
+          {pickupAlerts.map(alert => <Link key={alert.id} to={`/admin/compras?registo=${encodeURIComponent(alert.id)}`} className="flex min-h-12 items-center justify-between gap-3 py-2 text-sm hover:underline"><span className="min-w-0"><strong className="block truncate">{alert.name}</strong><span className="text-xs text-amber-900">Levantar até {new Intl.DateTimeFormat("pt-PT").format(new Date(`${alert.deadline}T00:00:00`))}</span></span><span className="shrink-0 rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold">{alert.daysRemaining < 0 ? `${Math.abs(alert.daysRemaining)} d em atraso` : alert.daysRemaining === 0 ? "Termina hoje" : `${alert.daysRemaining} d restantes`}</span></Link>)}
         </div>
       </section>}
       {d.personalUnits > 0 && <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-muted/30 px-5 py-4 text-sm">
