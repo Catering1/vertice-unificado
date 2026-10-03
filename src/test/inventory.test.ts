@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeUnitsByPurchase, isPurchaseStockEligible } from "@/lib/inventory";
+import { activeUnitsByPurchase, isPurchaseStockEligible, purchaseCommercialStatus, purchaseReceiptStatus } from "@/lib/inventory";
 import { computeDashboard } from "@/lib/dashboardMetrics";
 import type { Product, Purchase, Sale, VintedOrderStatus } from "@/types";
 
@@ -13,11 +13,11 @@ const purchase = (orderStatus: VintedOrderStatus): Purchase => ({
 });
 
 describe("sellable stock eligibility", () => {
-  it.each(["not_tracked", "received_verified"] as VintedOrderStatus[])("counts %s as available", status => {
+  it.each(["not_tracked", "delivered", "received_verified"] as VintedOrderStatus[])("counts %s as available", status => {
     expect(isPurchaseStockEligible(purchase(status))).toBe(true);
   });
 
-  it.each(["ordered", "shipped", "electronic_verification", "delivered", "return_in_progress", "refund_partial", "refunded", "cancelled"] as VintedOrderStatus[])("excludes %s from available stock", status => {
+  it.each(["ordered", "shipped", "electronic_verification", "return_in_progress", "refund_partial", "refunded", "cancelled"] as VintedOrderStatus[])("excludes %s from available stock", status => {
     expect(isPurchaseStockEligible(purchase(status))).toBe(false);
   });
 });
@@ -70,5 +70,21 @@ describe("purchase identity and active stock value", () => {
     expect(dashboard.pendingStockValue).toBe(0);
     expect(dashboard.receivedStockUnits).toBe(1);
     expect(dashboard.receivedStockValue).toBe(80);
+  });
+
+  it.each(["return_in_progress", "refund_partial", "refunded", "cancelled"] as VintedOrderStatus[])("excludes %s from every stock calculation", orderStatus => {
+    const excluded = [{ ...purchases[0], orderStatus }];
+    const dashboard = computeDashboard(excluded, [], products);
+    expect(activeUnitsByPurchase(excluded, [])).toEqual(new Map([["a", 0]]));
+    expect(dashboard.stockUnits).toBe(0);
+    expect(dashboard.stockValue).toBe(0);
+    expect(dashboard.pendingStockUnits).toBe(0);
+    expect(dashboard.receivedStockUnits).toBe(0);
+    expect(purchaseReceiptStatus(excluded[0])).toBe("excluded");
+  });
+
+  it("shows a return as a return rather than a sale", () => {
+    const returning = { ...purchases[0], orderStatus: "return_in_progress" as const };
+    expect(purchaseCommercialStatus(returning, [])).toBe("returning");
   });
 });

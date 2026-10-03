@@ -1,7 +1,7 @@
 import { money, displayDate as formatDate } from "@/lib/dashboardMetrics";
 import { useState, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { activeUnitsByPurchase, purchaseReceiptStatus, PurchaseReceiptStatus } from "@/lib/inventory";
+import { activeUnitsByPurchase, purchaseCommercialStatus, purchaseReceiptStatus, PurchaseReceiptStatus } from "@/lib/inventory";
 import { useStore } from "@/lib/store";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { Purchase, VintedOrderStatus } from "@/types";
@@ -27,8 +27,14 @@ const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov
 const ORDER_RECEIPT_STATUSES: { value: PurchaseReceiptStatus; label: string }[] = [
   { value: "pending", label: "Por receber" },
   { value: "received", label: "Recebido" },
+  { value: "excluded", label: "Devolução / fora do stock" },
 ];
-const orderStatusLabel = (status?: VintedOrderStatus) => purchaseReceiptStatus({ orderStatus: status }) === "received" ? "Recebido" : "Por receber";
+const orderStatusLabel = (status?: VintedOrderStatus) => {
+  if (status === "return_in_progress") return "Em devolução";
+  const receiptStatus = purchaseReceiptStatus({ orderStatus: status });
+  if (receiptStatus === "excluded") return "Fora do stock";
+  return receiptStatus === "received" ? "Recebido" : "Por receber";
+};
 
 function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const now = new Date();
@@ -145,7 +151,7 @@ export default function Purchases() {
     if (priceParsed != null && (!Number.isFinite(priceParsed) || priceParsed < 0)) { toast.error("Preço inválido"); return; }
     const retailPriceParsed = retailPrice ? Number(retailPrice) : 0;
     const warrantyMonthsParsed = Number(warrantyMonths || 0);
-    const orderStatus: VintedOrderStatus = deliveryDate ? "received_verified" : editingPurchase?.orderStatus === "not_tracked" ? "not_tracked" : "ordered";
+    const orderStatus: VintedOrderStatus = deliveryDate ? "delivered" : editingPurchase?.orderStatus === "not_tracked" ? "not_tracked" : "ordered";
     if (Number.isNaN(retailPriceParsed) || Number.isNaN(warrantyMonthsParsed) || warrantyMonthsParsed < 0) {
       toast.error("Verifique o preço de venda e a garantia");
       return;
@@ -180,7 +186,12 @@ export default function Purchases() {
   const productStock = useMemo(() => {
     return activeUnitsByPurchase(purchases, sales);
   }, [purchases, sales]);
-  const commercialStatus = (purchaseId: string) => (productStock.get(purchaseId) ?? 0) > 0 ? "Ativo" : "Vendido";
+  const commercialStatus = (purchase: Purchase) => {
+    const status = purchaseCommercialStatus(purchase, sales);
+    if (status === "returning") return "Em devolução";
+    if (status === "excluded") return "Fora do stock";
+    return status === "active" ? "Ativo" : "Vendido";
+  };
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -206,8 +217,9 @@ export default function Purchases() {
       if (issueFilter === "cost" && p.price != null) return false;
       if (catFilter !== "all" && prod?.category !== catFilter) return false;
       if (searchDate && !p.date.includes(searchDate)) return false;
-      if ((stockFilter === "active" || stockFilter === "reading") && (productStock.get(p.id) ?? 0) <= 0) return false;
-      if (stockFilter === "sold" && (productStock.get(p.id) ?? 0) > 0) return false;
+      const status = purchaseCommercialStatus(p, sales);
+      if ((stockFilter === "active" || stockFilter === "reading") && status !== "active") return false;
+      if (stockFilter === "sold" && status !== "sold") return false;
       if (orderStatusFilter !== "all" && purchaseReceiptStatus(p) !== orderStatusFilter) return false;
       return true;
     });
@@ -225,7 +237,7 @@ export default function Purchases() {
     }
 
     return result;
-  }, [purchases, selectedRecord, search, issueFilter, catFilter, searchDate, stockFilter, orderStatusFilter, productStock, sortField, sortDir, getProduct]);
+  }, [purchases, sales, selectedRecord, search, issueFilter, catFilter, searchDate, stockFilter, orderStatusFilter, sortField, sortDir, getProduct]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / 50));
   const currentPage = Math.min(page, pages);
@@ -309,7 +321,7 @@ export default function Purchases() {
               <SelectItem value="sold">Vendidos</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={orderStatusFilter === "all" || orderStatusFilter === "pending" || orderStatusFilter === "received" ? orderStatusFilter : "all"} onValueChange={v => { setOrderStatusFilter(v as PurchaseReceiptStatus | "all"); setPage(1); }}>
+          <Select value={orderStatusFilter === "all" || orderStatusFilter === "pending" || orderStatusFilter === "received" || orderStatusFilter === "excluded" ? orderStatusFilter : "all"} onValueChange={v => { setOrderStatusFilter(v as PurchaseReceiptStatus | "all"); setPage(1); }}>
             <SelectTrigger className="w-full sm:flex-none sm:w-[240px]">
               <span className="truncate">{orderStatusFilter === "all" ? "Estado da encomenda: Todos" : orderStatusFilter === "received" ? "Encomenda: Recebido" : "Encomenda: Por receber"}</span>
             </SelectTrigger>
@@ -387,8 +399,7 @@ export default function Purchases() {
           {visible.map(p => {
             const product = getProduct(p.productId);
             const photoUrl = product?.photoUrls?.[0] || getCatalogPresentation(product?.name ?? "").photos[0];
-            const stockQuantity = productStock.get(p.id) ?? 0;
-            const stockState = stockQuantity > 0 ? "Ativo" : "Vendido";
+            const stockState = commercialStatus(p);
             return (
               <Card key={p.id} className="group overflow-hidden">
                 <div className="relative aspect-[16/10] bg-secondary">
@@ -432,7 +443,7 @@ export default function Purchases() {
                 <p className="font-semibold">{fmt(p.price)}</p>
               </div>
               <p className="text-xs text-muted-foreground">Compra: {formatDate(p.date)}</p>
-              <p className="text-xs text-muted-foreground">Estado: {commercialStatus(p.id)} · Ref. {p.id.slice(0, 8)}</p>
+              <p className="text-xs text-muted-foreground">Estado: {commercialStatus(p)} · Ref. {p.id.slice(0, 8)}</p>
               {p.deliveryDate && <p className="text-xs text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}
               <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
             </CardContent>
@@ -462,7 +473,7 @@ export default function Purchases() {
                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : visible.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p.id)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}</p>{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}</TableCell>
+                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}</p>{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>

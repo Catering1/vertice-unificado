@@ -25,7 +25,7 @@ O repositório ativo da loja pública e do dashboard é `Catering1/vertice-unifi
 
 ## Dados e stock
 
-- No dashboard administrativo, o estado comercial de uma compra é automático: `Ativo` quando não existe qualquer venda associada ao `product_id`; `Vendido` assim que existe pelo menos uma venda desse produto. O cartão `Compras em stock ativo` soma o preço de compra (vezes a quantidade) das compras comerciais ativas. O estado logístico da encomenda é uma dimensão separada e não altera este cálculo.
+- No dashboard administrativo, o estado comercial de uma compra é automático: `Ativo` quando não existe qualquer venda associada ao `product_id` e a compra não está em devolução, reembolso ou cancelamento; `Vendido` assim que existe pelo menos uma venda desse produto. Compras em devolução aparecem como `Em devolução`, não como vendidas, e ficam excluídas de todos os cálculos de unidades e valor de stock. O estado de verificação deixa de ser uma dimensão de gestão: a data de receção é suficiente para classificar a compra como recebida.
 - O dashboard divide o stock comercial ativo em `Por receber` e `Recebido`, usando o estado logístico mostrado na página de compras. Deve apresentar seis indicadores coerentes: unidades e valor por receber; unidades e valor total; unidades e valor recebido. Em cada grupo, o valor é `preço de compra × quantidade`, e `total = por receber + recebido`.
 - A montra pública usa a função Supabase `get_public_store_products()`.
 - A função só expõe campos seguros para visitantes e calcula o stock como compras menos vendas.
