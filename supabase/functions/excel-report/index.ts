@@ -75,7 +75,7 @@ Deno.serve(async (request) => {
   try {
     const [products, purchases, sales, expenses] = await Promise.all([
       fetchRows("products", "id,name,category,purchase_price,retail_price,condition,inventory_use", userId, key, supabaseUrl),
-      fetchRows("purchases", "id,product_id,quantity,price,date,delivery_date,order_status", userId, key, supabaseUrl),
+      fetchRows("purchases", "id,product_id,quantity,price,date,estimated_delivery_date,delivery_date,order_status", userId, key, supabaseUrl),
       fetchRows("sales", "id,product_id,quantity,sale_price,profit,date", userId, key, supabaseUrl),
       fetchRows("expenses", "id,category,description,amount,date", userId, key, supabaseUrl),
     ]);
@@ -91,6 +91,7 @@ Deno.serve(async (request) => {
         preco_compra_unitario: number(purchase.price),
         valor_compra: number(purchase.price) * number(purchase.quantity),
         data_compra: purchase.date ?? null,
+        data_estimada_entrega: purchase.estimated_delivery_date ?? null,
         data_rececao: purchase.delivery_date ?? null,
         estado_stock: purchaseState(purchase, salesByProduct),
         estado_rececao: receiptState(purchase),

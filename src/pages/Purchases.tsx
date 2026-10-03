@@ -97,6 +97,7 @@ export default function Purchases() {
   const [specifications, setSpecifications] = useState("");
   const [price, setPrice] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
   const [orderReference, setOrderReference] = useState("");
   const [orderStatusNote, setOrderStatusNote] = useState("");
@@ -116,7 +117,7 @@ export default function Purchases() {
     setEditingPurchase(null);
     setInventoryUse("business");
     setProductName(""); setProductCategory("Outros"); setProductSupplier(""); setRetailPrice(""); setCondition("Verificado"); setWarrantyMonths("0"); setDescription(""); setSpecifications("");
-    setPrice(""); setDate(new Date().toISOString().slice(0, 10)); setDeliveryDate("");
+    setPrice(""); setDate(new Date().toISOString().slice(0, 10)); setEstimatedDeliveryDate(""); setDeliveryDate("");
     setOrderReference(""); setOrderStatusNote("");
     setDialogOpen(true);
   };
@@ -135,6 +136,7 @@ export default function Purchases() {
     setInventoryUse(prod?.inventoryUse ?? "business");
     setPrice(p.price == null ? "" : String(p.price));
     setDate(p.date);
+    setEstimatedDeliveryDate(p.estimatedDeliveryDate ?? "");
     setDeliveryDate(p.deliveryDate ?? "");
     setOrderReference(p.orderReference ?? "");
     setOrderStatusNote(p.orderStatusNote ?? "");
@@ -168,10 +170,10 @@ export default function Purchases() {
         productId = await addProduct({name:productName.trim(),category:productCategory,purchasePrice:priceParsed,supplier:productSupplier,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,photoUrls:[],inventoryUse,storeVisible:productCategory !== "Livros" && inventoryUse !== "personal"});
       }
       if (editingPurchase) {
-        await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, deliveryDate: deliveryDate || null, orderStatus, orderReference, orderStatusNote });
+        await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, orderStatus, orderReference, orderStatusNote });
         toast.success("Compra atualizada");
       } else {
-        await addPurchase({ productId, quantity: 1, price: priceParsed, date, deliveryDate: deliveryDate || null, orderStatus, orderReference, orderStatusNote });
+        await addPurchase({ productId, quantity: 1, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, orderStatus, orderReference, orderStatusNote });
         toast.success("Compra registada");
       }
       setDialogOpen(false);
@@ -368,8 +370,9 @@ export default function Purchases() {
                 </Select>
               </div>
               <div><Label>Preço de Compra *</Label><Input type="number" min={0} step={0.01} inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} /></div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div><Label>Data de Compra *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+                <div><Label>Data Estimada de Entrega</Label><Input type="date" value={estimatedDeliveryDate} onChange={e => setEstimatedDeliveryDate(e.target.value)} /></div>
                 <div><Label>Data de Receção</Label><Input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} /></div>
               </div>
               <div><Label>Descrição para anúncio</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado, características, acessórios e defeitos a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
@@ -411,7 +414,7 @@ export default function Purchases() {
                   <div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{product?.name ?? "Produto removido"}</h2><p className="mt-0.5 text-sm text-muted-foreground">{product?.category ?? "Sem categoria"} · Ref. {p.id.slice(0, 8)}</p></div>
                     <div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} aria-label={`Editar ${product?.name ?? "compra"}`}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }} aria-label={`Remover ${product?.name ?? "compra"}`}><Trash2 className="h-4 w-4" /></Button></div>
                   </div>
-                  <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Compra: {formatDate(p.date)}</p>{p.deliveryDate && <p>Entrega: {formatDate(p.deliveryDate)}</p>}</div></div>
+                  <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Compra: {formatDate(p.date)}</p>{p.estimatedDeliveryDate && <p>Estimativa: {formatDate(p.estimatedDeliveryDate)}</p>}{p.deliveryDate && <p>Receção: {formatDate(p.deliveryDate)}</p>}</div></div>
                   <p className="border-t pt-3 text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
                 </CardContent>
               </Card>
@@ -444,7 +447,8 @@ export default function Purchases() {
               </div>
               <p className="text-xs text-muted-foreground">Compra: {formatDate(p.date)}</p>
               <p className="text-xs text-muted-foreground">Estado: {commercialStatus(p)} · Ref. {p.id.slice(0, 8)}</p>
-              {p.deliveryDate && <p className="text-xs text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}
+              {p.estimatedDeliveryDate && <p className="text-xs text-muted-foreground">Data estimada de entrega: {formatDate(p.estimatedDeliveryDate)}</p>}
+              {p.deliveryDate && <p className="text-xs text-muted-foreground">Data de receção: {formatDate(p.deliveryDate)}</p>}
               <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
             </CardContent>
           </Card>
@@ -473,7 +477,7 @@ export default function Purchases() {
                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : visible.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}</p>{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Entrega: {formatDate(p.deliveryDate)}</p>}</TableCell>
+                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}</p>{p.estimatedDeliveryDate && <p className="text-xs font-normal text-muted-foreground">Data estimada de entrega: {formatDate(p.estimatedDeliveryDate)}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Data de receção: {formatDate(p.deliveryDate)}</p>}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>

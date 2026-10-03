@@ -156,6 +156,7 @@ export type Database = {
           created_at: string
           date: string | null
           delivery_date: string | null
+          estimated_delivery_date: string | null
           id: string
           price: number | null
           product_id: string
@@ -171,6 +172,7 @@ export type Database = {
           created_at?: string
           date?: string | null
           delivery_date?: string | null
+          estimated_delivery_date?: string | null
           id?: string
           price?: number | null
           product_id: string
@@ -186,6 +188,7 @@ export type Database = {
           created_at?: string
           date?: string | null
           delivery_date?: string | null
+          estimated_delivery_date?: string | null
           id?: string
           price?: number | null
           product_id?: string
