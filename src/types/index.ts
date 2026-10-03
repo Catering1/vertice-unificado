@@ -24,6 +24,7 @@ export interface Purchase {
   date: string;
   estimatedDeliveryDate?: string | null;
   deliveryDate?: string | null;
+  collectionDate?: string | null;
   orderStatus?: VintedOrderStatus;
   orderReference?: string | null;
   orderStatusNote?: string | null;

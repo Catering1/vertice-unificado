@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -109,7 +108,7 @@ export default function Purchases() {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
-  const [collectionConfirmed, setCollectionConfirmed] = useState(false);
+  const [collectionDate, setCollectionDate] = useState("");
   const [orderReference, setOrderReference] = useState("");
   const [orderStatusNote, setOrderStatusNote] = useState("");
 
@@ -129,7 +128,7 @@ export default function Purchases() {
     setInventoryUse("business");
     setProductName(""); setProductCategory("Outros"); setProductSupplier(""); setRetailPrice(""); setCondition("Verificado"); setWarrantyMonths("0"); setDescription(""); setSpecifications("");
     setPrice(""); setDate(new Date().toISOString().slice(0, 10)); setEstimatedDeliveryDate(""); setDeliveryDate("");
-    setCollectionConfirmed(false);
+    setCollectionDate("");
     setOrderReference(""); setOrderStatusNote("");
     setDialogOpen(true);
   };
@@ -150,7 +149,7 @@ export default function Purchases() {
     setDate(p.date);
     setEstimatedDeliveryDate(p.estimatedDeliveryDate ?? "");
     setDeliveryDate(p.deliveryDate ?? "");
-    setCollectionConfirmed(p.orderStatus === "received_verified");
+    setCollectionDate(p.collectionDate ?? "");
     setOrderReference(p.orderReference ?? "");
     setOrderStatusNote(p.orderStatusNote ?? "");
     setDialogOpen(true);
@@ -166,8 +165,9 @@ export default function Purchases() {
     if (priceParsed != null && (!Number.isFinite(priceParsed) || priceParsed < 0)) { toast.error("Preço inválido"); return; }
     const retailPriceParsed = retailPrice ? Number(retailPrice) : 0;
     const warrantyMonthsParsed = Number(warrantyMonths || 0);
+    if (collectionDate && !deliveryDate) { toast.error("Indique a data de entrega antes da data de levantamento"); return; }
     const orderStatus: VintedOrderStatus = deliveryDate
-      ? (collectionConfirmed ? "received_verified" : "delivered")
+      ? (collectionDate ? "received_verified" : "delivered")
       : editingPurchase?.orderStatus === "not_tracked" ? "not_tracked" : "ordered";
     if (Number.isNaN(retailPriceParsed) || Number.isNaN(warrantyMonthsParsed) || warrantyMonthsParsed < 0) {
       toast.error("Verifique o preço de venda e a garantia");
@@ -185,10 +185,10 @@ export default function Purchases() {
         productId = await addProduct({name:productName.trim(),category:productCategory,purchasePrice:priceParsed,supplier:productSupplier,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,photoUrls:[],inventoryUse,storeVisible:productCategory !== "Livros" && inventoryUse !== "personal"});
       }
       if (editingPurchase) {
-        await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, orderStatus, orderReference, orderStatusNote });
+        await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderReference, orderStatusNote });
         toast.success("Compra atualizada");
       } else {
-        await addPurchase({ productId, quantity: 1, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, orderStatus, orderReference, orderStatusNote });
+        await addPurchase({ productId, quantity: 1, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderReference, orderStatusNote });
         toast.success("Compra registada");
       }
       setDialogOpen(false);
@@ -242,6 +242,7 @@ export default function Purchases() {
       if ((stockFilter === "active" || stockFilter === "reading") && status !== "active") return false;
       if (stockFilter === "sold" && status !== "sold") return false;
       if (orderStatusFilter !== "all" && purchaseReceiptStatus(p) !== orderStatusFilter) return false;
+      if (orderStatusFilter === "pending" && status === "sold") return false;
       return true;
     });
 
@@ -390,12 +391,11 @@ export default function Purchases() {
               </div>
               <div><Label>Preço de Compra *</Label><Input type="number" min={0} step={0.01} inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} /></div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div><Label>Data de Compra *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
-                <div><Label>Entrega prevista</Label><Input aria-label="Data estimada de entrega" type="date" value={estimatedDeliveryDate} onChange={e => setEstimatedDeliveryDate(e.target.value)} /></div>
-                <div><Label>Data de entrega</Label><Input aria-label="Data de entrega" type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} /></div>
-                <div><Label>Data limite para levantar</Label><Input aria-label="Data limite para levantar a encomenda" type="date" value={pickupDeadline} readOnly disabled={!pickupDeadline} /></div>
+                <div><Label>Data de compra *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+                <div><Label>Data de Entrega</Label><Input aria-label="Data de entrega" type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} /></div>
+                <div><Label>Data Limite levantamento</Label><Input aria-label="Data limite para levantar a encomenda" type="date" value={pickupDeadline} readOnly disabled={!pickupDeadline} /></div>
+                <div><Label>Data Levantamento</Label><Input aria-label="Data de levantamento" type="date" value={collectionDate} disabled={!deliveryDate} onChange={e => setCollectionDate(e.target.value)} /></div>
               </div>
-              {deliveryDate && <label className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"><Checkbox checked={collectionConfirmed} onCheckedChange={checked => setCollectionConfirmed(checked === true)} /><span>Encomenda recolhida</span></label>}
               <div><Label>Descrição para anúncio</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado, características, acessórios e defeitos a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
               <Button className="min-h-11" onClick={save} disabled={saving}>{saving ? "A guardar…" : editingPurchase ? "Guardar compra" : "Registar compra"}</Button>
             </div>
@@ -435,7 +435,7 @@ export default function Purchases() {
                   <div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{product?.name ?? "Produto removido"}</h2><p className="mt-0.5 text-sm text-muted-foreground">{product?.category ?? "Sem categoria"} · Ref. {p.id.slice(0, 8)}</p></div>
                     <div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} aria-label={`Editar ${product?.name ?? "compra"}`}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }} aria-label={`Remover ${product?.name ?? "compra"}`}><Trash2 className="h-4 w-4" /></Button></div>
                   </div>
-                  <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Compra: {formatDate(p.date)}</p>{p.estimatedDeliveryDate && <p>Estimativa: {formatDate(p.estimatedDeliveryDate)}</p>}{p.deliveryDate && <p>Entrega: {formatDate(p.deliveryDate)}</p>}{p.deliveryDate && p.orderStatus !== "received_verified" && <p>Levantar até: {formatDate(collectionDeadline(p.deliveryDate))}</p>}</div></div>
+                  <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Data de compra: {formatDate(p.date)}</p>{p.deliveryDate && <p>Data de Entrega: {formatDate(p.deliveryDate)}</p>}{p.deliveryDate && <p>Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}{p.collectionDate && <p>Data Levantamento: {formatDate(p.collectionDate)}</p>}</div></div>
                   <p className="border-t pt-3 text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
                   {stockState === "Ativo" && <Button variant="outline" className="w-full" onClick={() => openSale(p)}>Registar venda</Button>}
                 </CardContent>
@@ -470,8 +470,10 @@ export default function Purchases() {
               <p className="text-xs text-muted-foreground">Compra: {formatDate(p.date)}</p>
               <p className="text-xs text-muted-foreground">Estado: {commercialStatus(p)} · Ref. {p.id.slice(0, 8)}</p>
               {p.estimatedDeliveryDate && <p className="text-xs text-muted-foreground">Data estimada de entrega: {formatDate(p.estimatedDeliveryDate)}</p>}
-              {p.deliveryDate && <p className="text-xs text-muted-foreground">Data de entrega: {formatDate(p.deliveryDate)}</p>}
-              {p.deliveryDate && p.orderStatus !== "received_verified" && <p className="text-xs font-medium text-amber-700">Levantar até: {formatDate(collectionDeadline(p.deliveryDate))}</p>}
+              <p className="text-xs text-muted-foreground">Data de compra: {formatDate(p.date)}</p>
+              {p.deliveryDate && <p className="text-xs text-muted-foreground">Data de Entrega: {formatDate(p.deliveryDate)}</p>}
+              {p.deliveryDate && <p className="text-xs text-muted-foreground">Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}
+              {p.collectionDate && <p className="text-xs text-muted-foreground">Data Levantamento: {formatDate(p.collectionDate)}</p>}
               <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
               {commercialStatus(p) === "Ativo" && <Button variant="outline" className="mt-2 w-full" onClick={() => openSale(p)}>Registar venda</Button>}
             </CardContent>
@@ -501,7 +503,7 @@ export default function Purchases() {
                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : visible.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}</p>{p.estimatedDeliveryDate && <p className="text-xs font-normal text-muted-foreground">Data estimada de entrega: {formatDate(p.estimatedDeliveryDate)}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Data de entrega: {formatDate(p.deliveryDate)}</p>}{p.deliveryDate && p.orderStatus !== "received_verified" && <p className="text-xs font-normal text-amber-700">Levantar até: {formatDate(collectionDeadline(p.deliveryDate))}</p>}</TableCell>
+                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}</p><p className="text-xs font-normal text-muted-foreground">Data de compra: {formatDate(p.date)}</p>{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Data de Entrega: {formatDate(p.deliveryDate)}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}{p.collectionDate && <p className="text-xs font-normal text-muted-foreground">Data Levantamento: {formatDate(p.collectionDate)}</p>}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>

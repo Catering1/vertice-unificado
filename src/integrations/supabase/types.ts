@@ -154,6 +154,7 @@ export type Database = {
           order_status_updated_at: string | null
           source_ref: string | null
           created_at: string
+          collection_date: string | null
           date: string | null
           delivery_date: string | null
           estimated_delivery_date: string | null
@@ -170,6 +171,7 @@ export type Database = {
           order_status_updated_at?: string | null
           source_ref?: string | null
           created_at?: string
+          collection_date?: string | null
           date?: string | null
           delivery_date?: string | null
           estimated_delivery_date?: string | null
@@ -186,6 +188,7 @@ export type Database = {
           order_status_updated_at?: string | null
           source_ref?: string | null
           created_at?: string
+          collection_date?: string | null
           date?: string | null
           delivery_date?: string | null
           estimated_delivery_date?: string | null

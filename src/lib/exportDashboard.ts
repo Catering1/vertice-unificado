@@ -102,6 +102,7 @@ export async function exportDashboardXlsx(
     { header: "Data da compra", key: "date", width: 16 },
     { header: "Data estimada de entrega", key: "estimatedDeliveryDate", width: 24 },
     { header: "Data de receção", key: "deliveryDate", width: 18 },
+    { header: "Data de levantamento", key: "collectionDate", width: 22 },
   ];
   wsC.getRow(1).font = { bold: true };
   purchases
@@ -115,6 +116,7 @@ export async function exportDashboardXlsx(
         date: p.date,
         estimatedDeliveryDate: p.estimatedDeliveryDate ?? "",
         deliveryDate: p.deliveryDate ?? "",
+        collectionDate: p.collectionDate ?? "",
       });
       row.getCell("price").numFmt = EUR;
     });
