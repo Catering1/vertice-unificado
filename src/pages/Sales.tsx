@@ -1,8 +1,8 @@
 import { money, displayDate as formatDate } from "@/lib/dashboardMetrics";
-import { useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { usePersistedState } from "@/hooks/usePersistedState";
-import { Sale } from "@/types";
+import { Purchase, Sale } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,12 +13,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Plus, Trash2, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
-import { isPurchaseStockEligible } from "@/lib/inventory";
+import { isPurchaseStockEligible, purchaseCommercialStatus } from "@/lib/inventory";
 import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 type SortField = "product" | "salePrice" | "profit" | "margin" | "date";
 type SortDir = "asc" | "desc";
+type SalesView = "sales" | "active";
 
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
@@ -65,6 +66,8 @@ export default function Sales() {
   const { sales, purchases, products, categories, addSale, updateSale, deleteSale, getProduct, updateProduct, updatePurchase } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedRecord = searchParams.get("registo");
+  const targetProductId = searchParams.get("produto");
+  const targetPurchaseId = searchParams.get("compra");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -74,6 +77,7 @@ export default function Sales() {
   const [salePrice, setSalePrice] = useState("");
   const [purchasePriceOverride, setPurchasePriceOverride] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [salesView, setSalesView] = useState<SalesView>("sales");
 
   const [searchDate, setSearchDate] = usePersistedState("sales-searchDate", "");
   const [catFilter, setCatFilter] = usePersistedState("sales-catFilter", "all");
@@ -99,6 +103,14 @@ export default function Sales() {
     }
     return map;
   }, [purchases]);
+  const activePurchases = useMemo(() => purchases.filter(purchase => {
+    const product = getProduct(purchase.productId);
+    if (!product || product.inventoryUse === "personal") return false;
+    if (!isPurchaseStockEligible(purchase)) return false;
+    if (purchaseCommercialStatus(purchase, sales) !== "active") return false;
+    if (search && !product.name.toLocaleLowerCase("pt-PT").includes(search.toLocaleLowerCase("pt-PT"))) return false;
+    return catFilter === "all" || product.category === catFilter;
+  }), [purchases, sales, search, catFilter, getProduct]);
 
   // Preview margin/profit
   const preview = useMemo(() => {
@@ -118,6 +130,23 @@ export default function Sales() {
     setProductId(""); setSalePrice(""); setPurchasePriceOverride(""); setDate(new Date().toISOString().slice(0, 10));
     setDialogOpen(true);
   };
+  const openNewForPurchase = useCallback((purchase: Purchase) => {
+    setEditingSale(null);
+    setProductId(purchase.productId);
+    setSalePrice("");
+    setPurchasePriceOverride(purchase.price == null ? "" : String(purchase.price));
+    setDate(new Date().toISOString().slice(0, 10));
+    setDialogOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (!targetProductId) return;
+    const purchase = purchases.find(p => p.productId === targetProductId && (!targetPurchaseId || p.id === targetPurchaseId));
+    if (!purchase || purchaseCommercialStatus(purchase, sales) !== "active") return;
+    setSalesView("active");
+    openNewForPurchase(purchase);
+    setSearchParams({}, { replace: true });
+  }, [targetProductId, targetPurchaseId, purchases, sales, setSearchParams, openNewForPurchase]);
 
   const openEdit = (s: Sale) => {
     setEditingSale(s);
@@ -242,6 +271,13 @@ export default function Sales() {
               {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Select value={salesView} onValueChange={value => { setSalesView(value as SalesView); setPage(1); }}>
+            <SelectTrigger className="flex-1 sm:flex-none sm:w-[220px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sales">Vendas registadas</SelectItem>
+              <SelectItem value="active">Produtos ativos para vender</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="hidden sm:block sm:flex-1" />
@@ -311,8 +347,17 @@ export default function Sales() {
         {selectedRecord && <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm"><span>Venda selecionada a partir do dashboard</span><Button size="sm" variant="outline" onClick={() => setSearchParams({})}>Ver todas</Button></div>}
         <Input className="sm:max-w-xs" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
         <Select value={issueFilter} onValueChange={v=>{setIssueFilter(v);setPage(1);}}><SelectTrigger className="w-full sm:w-56" aria-label="Dados a confirmar"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos os registos</SelectItem><SelectItem value="undated">Sem data</SelectItem><SelectItem value="cost">Custo por confirmar</SelectItem></SelectContent></Select>
-        <p className="text-sm text-muted-foreground">{filtered.length} registos</p>
+        <p className="text-sm text-muted-foreground">{salesView === "active" ? activePurchases.length : filtered.length} {salesView === "active" ? "produtos ativos" : "registos"}</p>
       </div>
+      {salesView === "active" ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {activePurchases.map(purchase => {
+            const product = getProduct(purchase.productId);
+            return <Card key={purchase.id}><CardContent className="space-y-3 p-4"><div><h2 className="font-semibold">{product?.name}</h2><p className="text-sm text-muted-foreground">{product?.category} · Compra: {formatDate(purchase.date)}</p></div><div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(purchase.price)}</p></div><p className="text-xs text-muted-foreground">Ref. {purchase.id.slice(0, 8)}</p></div><Button className="w-full" onClick={() => openNewForPurchase(purchase)}>Registar venda</Button></CardContent></Card>;
+          })}
+          {activePurchases.length === 0 && <p className="col-span-full py-8 text-center text-muted-foreground">Não existem produtos ativos com estes filtros</p>}
+        </div>
+      ) : <>
       <div className="flex items-center justify-end gap-3 text-sm"><Button variant="outline" size="sm" disabled={currentPage===1} onClick={()=>setPage(currentPage-1)}>Anterior</Button><span>Página {currentPage} de {pages}</span><Button variant="outline" size="sm" disabled={currentPage===pages} onClick={()=>setPage(currentPage+1)}>Seguinte</Button></div>
       {/* Mobile: card list; Desktop: table */}
       <div className="block space-y-3 lg:hidden">
@@ -407,6 +452,7 @@ export default function Sales() {
           </Table>
         </CardContent>
       </Card>
+      </>}
     </div>
   );
 }

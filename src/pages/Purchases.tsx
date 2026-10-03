@@ -1,6 +1,6 @@
 import { money, displayDate as formatDate } from "@/lib/dashboardMetrics";
 import { useState, useMemo, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { activeUnitsByPurchase, purchaseCommercialStatus, purchaseReceiptStatus, PurchaseReceiptStatus } from "@/lib/inventory";
 import { useStore } from "@/lib/store";
 import { usePersistedState } from "@/hooks/usePersistedState";
@@ -78,6 +78,7 @@ function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: str
 export default function Purchases() {
   const { purchases, sales, categories, addPurchase, updatePurchase, deletePurchase, getProduct, addProduct, updateProduct } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const selectedRecord = searchParams.get("registo");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -193,6 +194,9 @@ export default function Purchases() {
     if (status === "returning") return "Em devolução";
     if (status === "excluded") return "Fora do stock";
     return status === "active" ? "Ativo" : "Vendido";
+  };
+  const openSale = (purchase: Purchase) => {
+    navigate(`/admin/vendas?produto=${encodeURIComponent(purchase.productId)}&compra=${encodeURIComponent(purchase.id)}`);
   };
 
   const toggleSort = (field: SortField) => {
@@ -370,10 +374,10 @@ export default function Purchases() {
                 </Select>
               </div>
               <div><Label>Preço de Compra *</Label><Input type="number" min={0} step={0.01} inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} /></div>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div><Label>Data de Compra *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
-                <div><Label>Data Estimada de Entrega</Label><Input type="date" value={estimatedDeliveryDate} onChange={e => setEstimatedDeliveryDate(e.target.value)} /></div>
-                <div><Label>Data de Receção</Label><Input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} /></div>
+                <div><Label>Entrega prevista</Label><Input aria-label="Data estimada de entrega" type="date" value={estimatedDeliveryDate} onChange={e => setEstimatedDeliveryDate(e.target.value)} /></div>
+                <div><Label>Receção confirmada</Label><Input aria-label="Data de receção" type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} /></div>
               </div>
               <div><Label>Descrição para anúncio</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado, características, acessórios e defeitos a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
               <Button className="min-h-11" onClick={save} disabled={saving}>{saving ? "A guardar…" : editingPurchase ? "Guardar compra" : "Registar compra"}</Button>
@@ -416,6 +420,7 @@ export default function Purchases() {
                   </div>
                   <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Compra: {formatDate(p.date)}</p>{p.estimatedDeliveryDate && <p>Estimativa: {formatDate(p.estimatedDeliveryDate)}</p>}{p.deliveryDate && <p>Receção: {formatDate(p.deliveryDate)}</p>}</div></div>
                   <p className="border-t pt-3 text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
+                  {stockState === "Ativo" && <Button variant="outline" className="w-full" onClick={() => openSale(p)}>Registar venda</Button>}
                 </CardContent>
               </Card>
             );
@@ -450,6 +455,7 @@ export default function Purchases() {
               {p.estimatedDeliveryDate && <p className="text-xs text-muted-foreground">Data estimada de entrega: {formatDate(p.estimatedDeliveryDate)}</p>}
               {p.deliveryDate && <p className="text-xs text-muted-foreground">Data de receção: {formatDate(p.deliveryDate)}</p>}
               <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
+              {commercialStatus(p) === "Ativo" && <Button variant="outline" className="mt-2 w-full" onClick={() => openSale(p)}>Registar venda</Button>}
             </CardContent>
           </Card>
         ))}
@@ -482,6 +488,7 @@ export default function Purchases() {
                   <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
+                      {commercialStatus(p) === "Ativo" && <Button variant="outline" size="sm" onClick={() => openSale(p)}>Registar venda</Button>}
                       <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
                         <Pencil className="h-4 w-4 text-muted-foreground" />
                       </Button>
