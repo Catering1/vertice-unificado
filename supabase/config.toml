@@ -5,3 +5,8 @@ verify_jwt = false
 
 [functions.analyze-dashboard]
 verify_jwt = true
+
+# Power Query authenticates this read-only endpoint with its own API key.
+# It must never receive a Supabase service-role credential.
+[functions.excel-report]
+verify_jwt = false
