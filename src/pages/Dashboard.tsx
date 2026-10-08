@@ -118,8 +118,9 @@ export default function Dashboard() {
   const analyzeData = {
     category: activeCategory === "all" ? "Todas as categorias" : activeCategory,
     totalPurchases:d.totalPurchases.toFixed(2), totalSales:d.totalSales.toFixed(2),totalProfit:d.totalProfit.toFixed(2),
-    avgMargin:(d.avgMargin*100).toFixed(1),roiRealized:(d.roiRealized*100).toFixed(1),stockTurnover:d.stockTurnover.toFixed(2),
+    avgMargin:(d.avgMargin*100).toFixed(1),roiRealized:(d.roiRealized*100).toFixed(1),
     stockValue:d.stockValue.toFixed(2),avgVelocity:d.avgVelocity.toFixed(0),avgProfitPerSale:d.avgProfitPerSale.toFixed(2),
+    operationalExpenses:d.totalExpenses.toFixed(2),netProfit:d.netProfit.toFixed(2),
     productCount:d.productCount,topProducts:topProductCosts.join("; "),
     unitsPurchased:data.purchases.reduce((total, purchase) => total + purchase.quantity, 0),
     unitsSold:d.unitsSold,stockUnits:d.stockUnits,receivedStockUnits:d.receivedStockUnits,pendingStockUnits:d.pendingStockUnits,
