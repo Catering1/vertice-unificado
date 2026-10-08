@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles, Loader2, X } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -30,17 +30,19 @@ export default function AnalyzeDialog({ dashboardData }: AnalyzeDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [insights, setInsights] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const analyze = async () => {
     setLoading(true);
     setInsights("");
+    setErrorMessage("");
 
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-dashboard`;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast.error("Inicia sessão para analisar o dashboard.");
+        setErrorMessage("Inicia sessão para analisar o dashboard.");
         setLoading(false);
         return;
       }
@@ -57,11 +59,17 @@ export default function AnalyzeDialog({ dashboardData }: AnalyzeDialogProps) {
 
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({ error: "Erro desconhecido" }));
-        toast.error(err.error || `Erro ${resp.status}`);
+        setErrorMessage(err.error || `Erro ${resp.status}`);
         setLoading(false);
         return;
       }
 
+      if (resp.headers.get("content-type")?.includes("application/json")) {
+        const result = await resp.json();
+        if (!result.text) throw new Error("Resposta vazia");
+        setInsights(result.text);
+        return;
+      }
       if (!resp.body) throw new Error("No response body");
 
       const reader = resp.body.getReader();
@@ -98,6 +106,7 @@ export default function AnalyzeDialog({ dashboardData }: AnalyzeDialogProps) {
       }
     } catch (e) {
       console.error(e);
+      setErrorMessage("Erro ao analisar o dashboard. Tenta novamente.");
       toast.error("Erro ao analisar dashboard");
     } finally {
       setLoading(false);
@@ -138,8 +147,9 @@ export default function AnalyzeDialog({ dashboardData }: AnalyzeDialogProps) {
               <ReactMarkdown>{insights}</ReactMarkdown>
             </div>
           )}
+          {errorMessage && <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">{errorMessage}</div>}
         </ScrollArea>
-        {!loading && insights && (
+        {!loading && (insights || errorMessage) && (
           <div className="flex justify-end pt-2">
             <Button variant="outline" size="sm" onClick={analyze} className="gap-2">
               <Sparkles className="h-3 w-3" />

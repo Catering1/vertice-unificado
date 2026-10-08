@@ -17,6 +17,7 @@ import { Plus, Trash2, Upload, Pencil, ArrowUpDown, ArrowUp, ArrowDown, Calendar
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getCatalogPresentation } from "@/lib/catalog";
+import CategoryFilter from "@/components/CategoryFilter";
 
 
 type SortField = "product" | "price" | "date";
@@ -92,7 +93,6 @@ export default function Purchases() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [issueFilter, setIssueFilter] = useState("all");
   const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
 
   const [productName, setProductName] = useState("");
@@ -237,8 +237,6 @@ export default function Purchases() {
       if (selectedRecord && p.id !== selectedRecord) return false;
       if (selectedRecord) return true;
       if (search && !prod?.name.toLocaleLowerCase("pt-PT").includes(search.toLocaleLowerCase("pt-PT"))) return false;
-      if (issueFilter === "undated" && p.date) return false;
-      if (issueFilter === "cost" && p.price != null) return false;
       if (catFilter !== "all" && prod?.category !== catFilter) return false;
       if (searchDate && !p.date.includes(searchDate)) return false;
       const status = purchaseCommercialStatus(p, sales);
@@ -262,7 +260,7 @@ export default function Purchases() {
     }
 
     return result;
-  }, [purchases, sales, selectedRecord, search, issueFilter, catFilter, searchDate, stockFilter, orderStatusFilter, sortField, sortDir, getProduct]);
+  }, [purchases, sales, selectedRecord, search, catFilter, searchDate, stockFilter, orderStatusFilter, sortField, sortDir, getProduct]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / 50));
   const currentPage = Math.min(page, pages);
@@ -323,19 +321,8 @@ export default function Purchases() {
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="flex flex-wrap items-center gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className={cn("flex-1 sm:flex-none sm:w-[180px] justify-start text-left font-normal", !searchDate && "text-muted-foreground")}>
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {searchDate ? displayDate : "Filtrar por mês"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-              <MonthYearPicker value={searchDate} onChange={setSearchDate} />
-            </PopoverContent>
-          </Popover>
-
+        <div className="flex w-full flex-wrap items-center gap-2">
+          <div className="w-full"><CategoryFilter categories={categories} value={catFilter} onChange={value => { setCatFilter(value); setPage(1); }} /></div>
           <Select value={stockFilter === "reading" ? "active" : stockFilter} onValueChange={v => { setStockFilter(v); setPage(1); }}>
             <SelectTrigger className="flex-1 sm:flex-none sm:w-[180px]">
               <span className="truncate">{stockFilter === "all" ? "Estado: Todos" : stockFilter === "sold" ? "Estado: Vendidos" : "Estado: Ativos"}</span>
@@ -348,22 +335,15 @@ export default function Purchases() {
           </Select>
           <Select value={orderStatusFilter === "all" || orderStatusFilter === "pending" || orderStatusFilter === "received" || orderStatusFilter === "excluded" ? orderStatusFilter : "all"} onValueChange={v => { setOrderStatusFilter(v as PurchaseReceiptStatus | "all"); setPage(1); }}>
             <SelectTrigger className="w-full sm:flex-none sm:w-[240px]">
-              <span className="truncate">{orderStatusFilter === "all" ? "Estado da encomenda: Todos" : orderStatusFilter === "received" ? "Encomenda: Recebido" : "Encomenda: Por receber"}</span>
+              <span className="truncate">{orderStatusFilter === "all" ? "Estado da encomenda: Todos" : orderStatusFilter === "received" ? "Encomenda: Recebido" : orderStatusFilter === "excluded" ? "Encomenda: Fora do stock" : "Encomenda: Por receber"}</span>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os estados da encomenda</SelectItem>
               {ORDER_RECEIPT_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={catFilter} onValueChange={setCatFilter}>
-            <SelectTrigger className="w-full sm:flex-none sm:w-[200px]">
-              <span className="truncate">{catFilter === "all" ? "Categoria: Todas" : `Categoria: ${catFilter}`}</span>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Input className="w-full sm:w-64" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
+          <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start sm:w-[180px]", !searchDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{searchDate ? displayDate : "Filtrar por mês"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><MonthYearPicker value={searchDate} onChange={value => { setSearchDate(value); setPage(1); }} /></PopoverContent></Popover>
         </div>
 
         <div className="hidden sm:block sm:flex-1" />
@@ -420,8 +400,6 @@ export default function Purchases() {
 
       <div className="flex flex-wrap items-center gap-3">
         {selectedRecord && <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm"><span>Compra selecionada a partir do dashboard</span><Button size="sm" variant="outline" onClick={() => setSearchParams({})}>Ver todas</Button></div>}
-        <Input className="sm:max-w-xs" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
-        <Select value={issueFilter} onValueChange={v=>{setIssueFilter(v);setPage(1);}}><SelectTrigger className="w-full sm:w-56" aria-label="Dados a confirmar"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos os registos</SelectItem><SelectItem value="undated">Sem data</SelectItem><SelectItem value="cost">Custo por confirmar</SelectItem></SelectContent></Select>
         <p className="text-sm text-muted-foreground">{filtered.length} registos</p>
         <div className="ml-auto flex items-center rounded-md border bg-background p-0.5" aria-label="Modo de visualização">
           <Button variant={viewMode === "table" ? "secondary" : "ghost"} size="sm" className="h-8 gap-1.5" onClick={() => setViewMode("table")} aria-pressed={viewMode === "table"}>

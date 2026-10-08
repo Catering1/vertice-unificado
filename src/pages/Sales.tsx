@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { isPurchaseStockEligible, purchaseCommercialStatus } from "@/lib/inventory";
 import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import CategoryFilter from "@/components/CategoryFilter";
 
 type SortField = "product" | "salePrice" | "profit" | "margin" | "date";
 type SortDir = "asc" | "desc";
@@ -71,7 +72,6 @@ export default function Sales() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [issueFilter, setIssueFilter] = useState("all");
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [productId, setProductId] = useState("");
   const [salePrice, setSalePrice] = useState("");
@@ -109,8 +109,9 @@ export default function Sales() {
     if (!isPurchaseStockEligible(purchase)) return false;
     if (purchaseCommercialStatus(purchase, sales) !== "active") return false;
     if (search && !product.name.toLocaleLowerCase("pt-PT").includes(search.toLocaleLowerCase("pt-PT"))) return false;
+    if (searchDate && !purchase.date.includes(searchDate)) return false;
     return catFilter === "all" || product.category === catFilter;
-  }), [purchases, sales, search, catFilter, getProduct]);
+  }), [purchases, sales, search, searchDate, catFilter, getProduct]);
 
   // Preview margin/profit
   const preview = useMemo(() => {
@@ -211,8 +212,6 @@ export default function Sales() {
       if (selectedRecord && s.id !== selectedRecord) return false;
       if (selectedRecord) return true;
       if (search && !prod?.name.toLocaleLowerCase("pt-PT").includes(search.toLocaleLowerCase("pt-PT"))) return false;
-      if (issueFilter === "undated" && s.date) return false;
-      if (issueFilter === "cost" && s.profit != null) return false;
       if (catFilter !== "all" && prod?.category !== catFilter) return false;
       if (searchDate && !s.date.includes(searchDate)) return false;
       return true;
@@ -238,7 +237,7 @@ export default function Sales() {
     }
 
     return result;
-  }, [sales, selectedRecord, search, issueFilter, catFilter, searchDate, sortField, sortDir, getProduct]);
+  }, [sales, selectedRecord, search, catFilter, searchDate, sortField, sortDir, getProduct]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / 50));
   const currentPage = Math.min(page, pages);
@@ -249,28 +248,8 @@ export default function Sales() {
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="flex flex-wrap items-center gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className={cn("flex-1 sm:flex-none sm:w-[180px] justify-start text-left font-normal", !searchDate && "text-muted-foreground")}>
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {searchDate ? displayDate : "Filtrar por mês"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-              <MonthYearPicker value={searchDate} onChange={setSearchDate} />
-            </PopoverContent>
-          </Popover>
-
-          <Select value={catFilter} onValueChange={setCatFilter}>
-            <SelectTrigger className="flex-1 sm:flex-none sm:w-[200px]">
-              <span className="truncate">{catFilter === "all" ? "Categoria: Todas" : `Categoria: ${catFilter}`}</span>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
+        <div className="flex w-full flex-wrap items-center gap-2">
+          <div className="w-full"><CategoryFilter categories={categories} value={catFilter} onChange={value => { setCatFilter(value); setPage(1); }} /></div>
           <Select value={salesView} onValueChange={value => { setSalesView(value as SalesView); setPage(1); }}>
             <SelectTrigger className="flex-1 sm:flex-none sm:w-[220px]"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -278,6 +257,8 @@ export default function Sales() {
               <SelectItem value="active">Produtos ativos para vender</SelectItem>
             </SelectContent>
           </Select>
+          <Input className="w-full sm:w-64" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
+          <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start sm:w-[180px]", !searchDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{searchDate ? displayDate : "Filtrar por mês"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><MonthYearPicker value={searchDate} onChange={value => { setSearchDate(value); setPage(1); }} /></PopoverContent></Popover>
         </div>
 
         <div className="hidden sm:block sm:flex-1" />
@@ -345,8 +326,6 @@ export default function Sales() {
 
       <div className="flex flex-wrap items-center gap-3">
         {selectedRecord && <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm"><span>Venda selecionada a partir do dashboard</span><Button size="sm" variant="outline" onClick={() => setSearchParams({})}>Ver todas</Button></div>}
-        <Input className="sm:max-w-xs" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
-        <Select value={issueFilter} onValueChange={v=>{setIssueFilter(v);setPage(1);}}><SelectTrigger className="w-full sm:w-56" aria-label="Dados a confirmar"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos os registos</SelectItem><SelectItem value="undated">Sem data</SelectItem><SelectItem value="cost">Custo por confirmar</SelectItem></SelectContent></Select>
         <p className="text-sm text-muted-foreground">{salesView === "active" ? activePurchases.length : filtered.length} {salesView === "active" ? "produtos ativos" : "registos"}</p>
       </div>
       {salesView === "active" ? (

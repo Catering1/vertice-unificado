@@ -86,15 +86,16 @@ export default function Dashboard() {
   }, [data]);
   const kpis = [
     {label: "Total de vendas", value: fmt(d.totalSales), icon: DollarSign, iconBg:"bg-blue-100", iconColor:"text-blue-700", valueClassName:"text-blue-700", accentClassName:"border-blue-100"},
-    {label: partial ? "Lucro apurado (parcial)" : "Lucro das vendas", value: fmt(d.totalProfit), icon: TrendingUp, iconBg:"bg-emerald-100", iconColor:"text-emerald-700", valueClassName:"text-emerald-700", accentClassName:"border-emerald-100"},
-    {label: "Unidades de stock por receber", value: String(d.pendingStockUnits), icon: Package, iconBg:"bg-amber-100", iconColor:"text-amber-700", valueClassName:"text-amber-700", accentClassName:"border-amber-100"},
-    {label: "Valor das compras por receber", value: fmt(d.pendingStockValue), icon: ShoppingCart, iconBg:"bg-amber-100", iconColor:"text-amber-700", valueClassName:"text-amber-700", accentClassName:"border-amber-100"},
-    {label: "Unidades de stock total", value: String(d.stockUnits), icon: Package, iconBg:"bg-indigo-100", iconColor:"text-indigo-700", valueClassName:"text-indigo-700", accentClassName:"border-indigo-100"},
-    {label: "Valor das compras em stock total", value: fmt(d.stockValue), icon: Warehouse, iconBg:"bg-indigo-100", iconColor:"text-indigo-700", valueClassName:"text-indigo-700", accentClassName:"border-indigo-100"},
-    {label: "Unidades de stock recebido", value: String(d.receivedStockUnits), icon: Package, iconBg:"bg-cyan-100", iconColor:"text-cyan-700", valueClassName:"text-cyan-700", accentClassName:"border-cyan-100"},
-    {label: "Valor do stock recebido", value: fmt(d.receivedStockValue), icon: Warehouse, iconBg:"bg-cyan-100", iconColor:"text-cyan-700", valueClassName:"text-cyan-700", accentClassName:"border-cyan-100"},
-    {label: "Compras no histórico", value: fmt(d.totalPurchases), icon: Warehouse, iconBg:"bg-indigo-100", iconColor:"text-indigo-700", valueClassName:"text-indigo-700", accentClassName:"border-indigo-100"},
+    {label: "Total das compras", value: fmt(d.totalPurchases), icon: ShoppingCart, iconBg:"bg-indigo-100", iconColor:"text-indigo-700", valueClassName:"text-indigo-700", accentClassName:"border-indigo-100"},
+    {label: "Unidades compradas", value: String(data.purchases.reduce((total, purchase) => total + purchase.quantity, 0)), icon: Package, iconBg:"bg-indigo-100", iconColor:"text-indigo-700", valueClassName:"text-indigo-700", accentClassName:"border-indigo-100"},
     {label: "Unidades vendidas", value: String(d.unitsSold), icon: Package, iconBg:"bg-violet-100", iconColor:"text-violet-700", valueClassName:"text-violet-700", accentClassName:"border-violet-100"},
+    {label: "Unidades para vender (stock + por receber)", value: String(d.stockUnits), icon: Package, iconBg:"bg-indigo-100", iconColor:"text-indigo-700", valueClassName:"text-indigo-700", accentClassName:"border-indigo-100"},
+    {label: partial ? "Lucro apurado (parcial)" : "Lucro das vendas", value: fmt(d.totalProfit), icon: TrendingUp, iconBg:"bg-emerald-100", iconColor:"text-emerald-700", valueClassName:"text-emerald-700", accentClassName:"border-emerald-100"},
+    {label: "Valor das compras em stock", value: fmt(d.stockValue), icon: Warehouse, iconBg:"bg-indigo-100", iconColor:"text-indigo-700", valueClassName:"text-indigo-700", accentClassName:"border-indigo-100"},
+    {label: "Unidades em stock (recebido)", value: String(d.receivedStockUnits), icon: Package, iconBg:"bg-cyan-100", iconColor:"text-cyan-700", valueClassName:"text-cyan-700", accentClassName:"border-cyan-100"},
+    {label: "Valor do stock recebido", value: fmt(d.receivedStockValue), icon: Warehouse, iconBg:"bg-cyan-100", iconColor:"text-cyan-700", valueClassName:"text-cyan-700", accentClassName:"border-cyan-100"},
+    {label: "Unidades por receber", value: String(d.pendingStockUnits), icon: Package, iconBg:"bg-amber-100", iconColor:"text-amber-700", valueClassName:"text-amber-700", accentClassName:"border-amber-100"},
+    {label: "Valor das unidades por receber", value: fmt(d.pendingStockValue), icon: ShoppingCart, iconBg:"bg-amber-100", iconColor:"text-amber-700", valueClassName:"text-amber-700", accentClassName:"border-amber-100"},
     {label: "Despesas operacionais", value: fmt(d.totalExpenses), icon: Calculator, iconBg:"bg-rose-100", iconColor:"text-rose-700", valueClassName:"text-rose-700", accentClassName:"border-rose-100"},
     {label: partial ? "Resultado após despesas (parcial)" : "Resultado após despesas", value: fmt(d.netProfit), icon: TrendingUp, iconBg:d.netProfit >= 0 ? "bg-green-100" : "bg-red-100", iconColor:d.netProfit >= 0 ? "text-green-700" : "text-red-700", valueClassName:d.netProfit >= 0 ? "text-green-700" : "text-red-700", accentClassName:d.netProfit >= 0 ? "border-green-100" : "border-red-100"},
     {label: partial ? "Margem das vendas com custo" : "Margem das vendas", value: `${(d.avgMargin*100).toFixed(1)}%`, icon: Percent, iconBg:"bg-teal-100", iconColor:"text-teal-700", valueClassName:"text-teal-700", accentClassName:"border-teal-100"},
@@ -137,15 +138,11 @@ export default function Dashboard() {
           {pickupAlerts.map(alert => <Link key={alert.id} to={`/admin/compras?registo=${encodeURIComponent(alert.id)}`} className="flex min-h-12 items-center justify-between gap-3 py-2 text-sm hover:underline"><span className="min-w-0"><strong className="block truncate">{alert.name}</strong><span className="text-xs text-amber-900">Levantar até {new Intl.DateTimeFormat("pt-PT").format(new Date(`${alert.deadline}T00:00:00`))}</span></span><span className="shrink-0 rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold">{alert.daysRemaining < 0 ? `${Math.abs(alert.daysRemaining)} d em atraso` : alert.daysRemaining === 0 ? "Termina hoje" : `${alert.daysRemaining} d restantes`}</span></Link>)}
         </div>
       </section>}
-      {d.personalUnits > 0 && <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-muted/30 px-5 py-4 text-sm">
-        <span><strong>{d.personalUnits} livros em leitura</strong> · custo {fmt(d.personalValue)} · fora do stock disponível</span>
-        <Link className="font-medium underline underline-offset-4" to="/admin/compras">Consultar compras</Link>
-      </div>}
       {/* KPIs */}
-      <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-5">
-        {kpis.map((kpi) => (
-          <KpiCard key={kpi.label} {...kpi} />
-        ))}
+      <div className="space-y-3 sm:space-y-5">
+        <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-5">{kpis.slice(0, 5).map(kpi => <KpiCard key={kpi.label} {...kpi} />)}</div>
+        <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-6">{kpis.slice(5, 11).map(kpi => <KpiCard key={kpi.label} {...kpi} />)}</div>
+        <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-5">{kpis.slice(11).map(kpi => <KpiCard key={kpi.label} {...kpi} />)}</div>
       </div>
 
       {activeCategory === "all" && summaries.length > 0 && <section className="overflow-hidden rounded-xl border bg-card">
