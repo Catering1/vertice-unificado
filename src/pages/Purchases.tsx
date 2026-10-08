@@ -122,6 +122,9 @@ export default function Purchases() {
   const [viewMode, setViewMode] = usePersistedState<ViewMode>("purchases-viewMode", "table");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const relatedSales = editingPurchase
+    ? sales.filter(sale => sale.productId === editingPurchase.productId)
+    : [];
 
   const openNew = () => {
     setEditingPurchase(null);
@@ -377,6 +380,10 @@ export default function Purchases() {
           <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
             <DialogHeader><DialogTitle>{editingPurchase ? "Editar Compra" : "Registar Compra"}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-2">
+              {editingPurchase && <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+                <p><span className="font-medium">ID do produto:</span> <span className="break-all font-mono text-xs">{editingPurchase.productId}</span></p>
+                <p><span className="font-medium">ID da compra:</span> <span className="break-all font-mono text-xs">{editingPurchase.id}</span></p>
+              </div>}
               <div>
                 <Label>Nome do Produto *</Label>
                 <Input placeholder="Ex: iPhone 15, Camiseta..." value={productName} onChange={e => setProductName(e.target.value)} />
@@ -397,6 +404,14 @@ export default function Purchases() {
                 <div><Label>Data Levantamento</Label><Input aria-label="Data de levantamento" type="date" value={collectionDate} disabled={!deliveryDate} onChange={e => setCollectionDate(e.target.value)} /></div>
               </div>
               <div><Label>Descrição para anúncio</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado, características, acessórios e defeitos a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
+              {relatedSales.length > 0 && <section className="space-y-2 rounded-md border p-3" aria-label="Vendas do produto">
+                <h3 className="text-sm font-semibold">Vendas deste produto</h3>
+                {relatedSales.map(sale => <div key={sale.id} className="border-t pt-2 text-sm first:border-0 first:pt-0">
+                  <p>Data: {formatDate(sale.date)} · Quantidade: {sale.quantity}</p>
+                  <p>Preço de venda: {money(sale.salePrice)} · Lucro: {money(sale.profit)}</p>
+                  <p className="break-all font-mono text-xs text-muted-foreground">ID da venda: {sale.id}</p>
+                </div>)}
+              </section>}
               <Button className="min-h-11" onClick={save} disabled={saving}>{saving ? "A guardar…" : editingPurchase ? "Guardar compra" : "Registar compra"}</Button>
             </div>
           </DialogContent>
