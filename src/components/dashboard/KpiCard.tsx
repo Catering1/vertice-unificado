@@ -21,8 +21,8 @@ export default function KpiCard({ label, shortLabel, value, icon: Icon, iconBg, 
         <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset ring-black/5 sm:h-8 sm:w-8", iconBg)} aria-hidden="true">
           <Icon className={cn("h-4 w-4", iconColor)} />
         </span>
-        <p className="mt-2 w-full truncate whitespace-nowrap text-[11px] font-semibold uppercase leading-none text-muted-foreground sm:text-xs" aria-label={label}>{shortLabel}</p>
-        <p className={cn("mt-auto w-full truncate whitespace-nowrap text-base font-extrabold tabular-nums leading-tight tracking-tight sm:text-xl", valueClassName)}>{value}</p>
+        <p className="mt-1.5 w-full truncate whitespace-nowrap text-[13px] font-medium leading-5 text-muted-foreground sm:text-sm" aria-label={label}>{shortLabel}</p>
+        <p className={cn("mt-auto w-full truncate whitespace-nowrap text-lg font-semibold tabular-nums leading-tight tracking-tight sm:text-xl", valueClassName)}>{value}</p>
       </CardContent>
     </Card>
   );
