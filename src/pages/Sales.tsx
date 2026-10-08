@@ -273,7 +273,7 @@ export default function Sales() {
           </Select>
         </div>
         <div className="grid w-full grid-cols-[minmax(0,160px)_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[180px_minmax(0,320px)]">
-          <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full min-w-0 justify-start overflow-hidden text-ellipsis whitespace-nowrap", !searchDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4 shrink-0" /><span className="truncate">{searchDate ? displayDate : "Filtrar por mês"}</span></Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><MonthYearPicker value={searchDate} onChange={value => { setSearchDate(value); setPage(1); }} /></PopoverContent></Popover>
+          <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full min-w-0 justify-start overflow-hidden text-ellipsis whitespace-nowrap", !searchDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4 shrink-0" /><span className="truncate">{searchDate ? displayDate : <><span className="sm:hidden">Mês</span><span className="hidden sm:inline">Filtrar por mês</span></>}</span></Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><MonthYearPicker value={searchDate} onChange={value => { setSearchDate(value); setPage(1); }} /></PopoverContent></Popover>
           <Input className="min-w-0" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
         </div>
 
