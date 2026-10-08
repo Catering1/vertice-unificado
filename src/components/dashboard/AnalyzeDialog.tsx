@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
 
 interface DashboardData {
+  category: string;
   totalPurchases: string;
   totalSales: string;
   totalProfit: string;
@@ -31,85 +33,72 @@ export default function AnalyzeDialog({ dashboardData }: AnalyzeDialogProps) {
   const [loading, setLoading] = useState(false);
   const [insights, setInsights] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [question, setQuestion] = useState("");
+  const [asking, setAsking] = useState(false);
+  const [followUps, setFollowUps] = useState<{ question: string; answer: string }[]>([]);
+
+  const requestAnalysis = async (followUpQuestion?: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Inicia sessão para analisar o dashboard.");
+    const history = followUpQuestion ? [
+      { role: "model", text: insights },
+      ...followUps.slice(-5).flatMap(turn => [{ role: "user", text: turn.question }, { role: "model", text: turn.answer }]),
+    ] : [];
+    const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-dashboard`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ dashboardData, question: followUpQuestion, history }),
+    });
+    if (!resp.ok) {
+      const result = await resp.json().catch(() => ({}));
+      throw new Error(result.error || `Erro ${resp.status}`);
+    }
+    if (resp.headers.get("content-type")?.includes("application/json")) {
+      const result = await resp.json();
+      if (!result.text) throw new Error("Resposta vazia");
+      return result.text as string;
+    }
+    if (!resp.body) throw new Error("Resposta vazia");
+    const stream = await resp.text();
+    const answer = stream.split("\n").filter(line => line.startsWith("data: ")).map(line => {
+      try { return JSON.parse(line.slice(6)).choices?.[0]?.delta?.content ?? ""; } catch { return ""; }
+    }).join("");
+    if (!answer) throw new Error("Resposta vazia");
+    return answer;
+  };
 
   const analyze = async () => {
     setLoading(true);
     setInsights("");
     setErrorMessage("");
-
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-dashboard`;
+    setFollowUps([]);
+    setQuestion("");
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setErrorMessage("Inicia sessão para analisar o dashboard.");
-        setLoading(false);
-        return;
-      }
-
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ dashboardData }),
-      });
-
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: "Erro desconhecido" }));
-        setErrorMessage(err.error || `Erro ${resp.status}`);
-        setLoading(false);
-        return;
-      }
-
-      if (resp.headers.get("content-type")?.includes("application/json")) {
-        const result = await resp.json();
-        if (!result.text) throw new Error("Resposta vazia");
-        setInsights(result.text);
-        return;
-      }
-      if (!resp.body) throw new Error("No response body");
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let fullText = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let newlineIndex: number;
-        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
-          let line = buffer.slice(0, newlineIndex);
-          buffer = buffer.slice(newlineIndex + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (line.startsWith(":") || line.trim() === "") continue;
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") break;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              fullText += content;
-              setInsights(fullText);
-            }
-          } catch {
-            buffer = line + "\n" + buffer;
-            break;
-          }
-        }
-      }
+      setInsights(await requestAnalysis());
     } catch (e) {
-      console.error(e);
-      setErrorMessage("Erro ao analisar o dashboard. Tenta novamente.");
-      toast.error("Erro ao analisar dashboard");
+      setErrorMessage(e instanceof Error ? e.message : "Erro ao analisar o dashboard. Tenta novamente.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const ask = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const asked = question.trim();
+    if (!asked || !insights || asking) return;
+    setQuestion("");
+    setAsking(true);
+    setErrorMessage("");
+    try {
+      const answer = await requestAnalysis(asked);
+      setFollowUps(current => [...current, { question: asked, answer }]);
+    } catch (error) {
+      setQuestion(asked);
+      setErrorMessage(error instanceof Error ? error.message : "Não foi possível responder. Tenta novamente.");
+      toast.error("Erro ao perguntar à IA");
+    } finally {
+      setAsking(false);
     }
   };
 
@@ -132,7 +121,7 @@ export default function AnalyzeDialog({ dashboardData }: AnalyzeDialogProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            Análise Inteligente do Dashboard
+            Análise de {dashboardData.category}
           </DialogTitle>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] pr-4">
@@ -147,8 +136,11 @@ export default function AnalyzeDialog({ dashboardData }: AnalyzeDialogProps) {
               <ReactMarkdown>{insights}</ReactMarkdown>
             </div>
           )}
+          {followUps.map((turn, index) => <div key={index} className="mt-5 space-y-2 border-t pt-4"><p className="font-medium">{turn.question}</p><div className="prose prose-sm dark:prose-invert max-w-none"><ReactMarkdown>{turn.answer}</ReactMarkdown></div></div>)}
+          {asking && <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />A responder…</p>}
           {errorMessage && <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">{errorMessage}</div>}
         </ScrollArea>
+        {insights && <form onSubmit={ask} className="flex gap-2 border-t pt-3"><Input aria-label="Perguntar à IA" placeholder={`Pergunta sobre ${dashboardData.category.toLocaleLowerCase("pt-PT")}…`} value={question} onChange={event => setQuestion(event.target.value)} maxLength={1000} disabled={asking} /><Button type="submit" size="icon" aria-label="Enviar pergunta" disabled={!question.trim() || asking}><Send className="h-4 w-4" /></Button></form>}
         {!loading && (insights || errorMessage) && (
           <div className="flex justify-end pt-2">
             <Button variant="outline" size="sm" onClick={analyze} className="gap-2">

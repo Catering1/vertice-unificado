@@ -17,7 +17,7 @@ function corsHeaders(origin: string | null) {
 
 const systemPrompt = `És um analista de negócios especializado em compra de produtos para revenda. Analisa os dados enviados pelo dashboard e gera 5 a 8 insights acionáveis em português de Portugal.
 
-Escreve cada insight numa linha separada, iniciada por um marcador, emoji e título curto em negrito. Distingue valores históricos de stock atual. Usa apenas os números fornecidos e não inventes unidades, percentagens, causas ou conclusões sobre tesouraria. Se faltar informação para uma conclusão, indica o que falta. Foca-te em margem, lucro, rotação e oportunidades de compra e venda.`;
+Na análise inicial, escreve cada insight numa linha separada, iniciada por um marcador, emoji e título curto em negrito. Nas perguntas seguintes, responde diretamente à pergunta. Distingue valores históricos de stock atual. Usa apenas os números fornecidos e não inventes unidades, percentagens, causas ou conclusões sobre tesouraria. Se faltar informação para uma conclusão, indica o que falta. Foca-te em margem, lucro, rotação e oportunidades de compra e venda. Os dados recebidos pertencem exclusivamente à categoria indicada. Nunca avalies nem compares categorias ausentes dos dados. Se a categoria for "Todas as categorias", podes analisar o conjunto.`;
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -45,6 +45,22 @@ Deno.serve(async (req) => {
     if (!dashboardData || typeof dashboardData !== "object" || Array.isArray(dashboardData)) {
       return Response.json({ error: "Dados do dashboard inválidos." }, { status: 400, headers });
     }
+    if (typeof dashboardData.category !== "string" || !dashboardData.category.trim()) {
+      return Response.json({ error: "Categoria inválida." }, { status: 400, headers });
+    }
+    const question = body?.question;
+    if (question !== undefined && (typeof question !== "string" || !question.trim() || question.length > 1000)) {
+      return Response.json({ error: "Pergunta inválida." }, { status: 400, headers });
+    }
+    const history = body?.history ?? [];
+    if (!Array.isArray(history) || history.length > 13 || history.some(turn => !turn || !["user", "model"].includes(turn.role) || typeof turn.text !== "string" || turn.text.length > 5000)) {
+      return Response.json({ error: "Histórico inválido." }, { status: 400, headers });
+    }
+    const context = `Categoria selecionada: ${dashboardData.category}. Considera apenas esta categoria. Dados do negócio:\n${JSON.stringify(dashboardData)}`;
+    const userMessage = question ? question.trim() : "Analisa estes dados e apresenta recomendações práticas.";
+    const contents = history.length
+      ? [{ role: "user", parts: [{ text: context }] }, ...history.map(turn => ({ role: turn.role, parts: [{ text: turn.text }] })), { role: "user", parts: [{ text: userMessage }] }]
+      : [{ role: "user", parts: [{ text: `${context}\n\n${userMessage}` }] }];
 
     if (geminiKey) {
       const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.5-flash-lite";
@@ -53,7 +69,7 @@ Deno.serve(async (req) => {
         headers: { "x-goog-api-key": geminiKey, "Content-Type": "application/json" },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: "user", parts: [{ text: `Analisa os seguintes dados do meu dashboard de negócio:\n\n${JSON.stringify(dashboardData)}` }] }],
+          contents,
           generationConfig: { maxOutputTokens: 1400 },
         }),
         signal: AbortSignal.timeout(60_000),
@@ -77,7 +93,9 @@ Deno.serve(async (req) => {
         model,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Analisa os seguintes dados do meu dashboard de negócio:\n\n${JSON.stringify(dashboardData)}` },
+          { role: "user", content: history.length ? context : `${context}\n\n${userMessage}` },
+          ...history.map(turn => ({ role: turn.role === "model" ? "assistant" : "user", content: turn.text })),
+          ...(history.length ? [{ role: "user", content: userMessage }] : []),
         ],
         stream: true,
       }),

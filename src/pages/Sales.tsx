@@ -1,5 +1,5 @@
 import { money, displayDate as formatDate } from "@/lib/dashboardMetrics";
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { useStore } from "@/lib/store";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { Purchase, Sale } from "@/types";
@@ -11,16 +11,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Trash2, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon } from "lucide-react";
+import { Plus, Trash2, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, Grid2X2, List, Package } from "lucide-react";
 import { toast } from "sonner";
 import { isPurchaseStockEligible, purchaseCommercialStatus } from "@/lib/inventory";
 import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import CategoryFilter from "@/components/CategoryFilter";
+import { getCatalogPresentation } from "@/lib/catalog";
 
 type SortField = "product" | "salePrice" | "profit" | "margin" | "date";
 type SortDir = "asc" | "desc";
 type SalesView = "sales" | "active";
+type ViewMode = "table" | "gallery";
 
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
@@ -78,6 +80,7 @@ export default function Sales() {
   const [purchasePriceOverride, setPurchasePriceOverride] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [salesView, setSalesView] = useState<SalesView>("sales");
+  const [viewMode, setViewMode] = usePersistedState<ViewMode>("sales-viewMode", "table");
 
   const [searchDate, setSearchDate] = usePersistedState("sales-searchDate", "");
   const [catFilter, setCatFilter] = usePersistedState("sales-catFilter", "all");
@@ -239,17 +242,28 @@ export default function Sales() {
     return result;
   }, [sales, selectedRecord, search, catFilter, searchDate, sortField, sortDir, getProduct]);
 
-  const pages = Math.max(1, Math.ceil(filtered.length / 50));
-  const currentPage = Math.min(page, pages);
-  const visible = filtered.slice((currentPage-1)*50,currentPage*50);
+  const visible = filtered.slice(0, page * 10);
+  const visibleActive = activePurchases.slice(0, page * 10);
+  const totalVisible = salesView === "active" ? visibleActive.length : visible.length;
+  const totalRecords = salesView === "active" ? activePurchases.length : filtered.length;
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || totalVisible >= totalRecords) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0]?.isIntersecting) setPage(current => current + 1);
+    }, { rootMargin: "160px" });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [totalVisible, totalRecords]);
   const fmt = money;
   const displayDate = searchDate ? `${MONTHS[parseInt(searchDate.slice(5, 7)) - 1]} ${searchDate.slice(0, 4)}` : "";
 
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="w-full"><CategoryFilter categories={categories} value={catFilter} onChange={value => { setCatFilter(value); setPage(1); }} /></div>
         <div className="flex w-full flex-wrap items-center gap-2">
-          <div className="w-full"><CategoryFilter categories={categories} value={catFilter} onChange={value => { setCatFilter(value); setPage(1); }} /></div>
           <Select value={salesView} onValueChange={value => { setSalesView(value as SalesView); setPage(1); }}>
             <SelectTrigger className="flex-1 sm:flex-none sm:w-[220px]"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -257,8 +271,10 @@ export default function Sales() {
               <SelectItem value="active">Produtos ativos para vender</SelectItem>
             </SelectContent>
           </Select>
-          <Input className="w-full sm:w-64" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
+        </div>
+        <div className="flex w-full flex-wrap items-center gap-2">
           <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start sm:w-[180px]", !searchDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{searchDate ? displayDate : "Filtrar por mês"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><MonthYearPicker value={searchDate} onChange={value => { setSearchDate(value); setPage(1); }} /></PopoverContent></Popover>
+          <Input className="w-full sm:w-64" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
         </div>
 
         <div className="hidden sm:block sm:flex-1" />
@@ -326,18 +342,36 @@ export default function Sales() {
 
       <div className="flex flex-wrap items-center gap-3">
         {selectedRecord && <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm"><span>Venda selecionada a partir do dashboard</span><Button size="sm" variant="outline" onClick={() => setSearchParams({})}>Ver todas</Button></div>}
-        <p className="text-sm text-muted-foreground">{salesView === "active" ? activePurchases.length : filtered.length} {salesView === "active" ? "produtos ativos" : "registos"}</p>
+        <p className="text-sm text-muted-foreground">A mostrar {totalVisible} de {totalRecords} {salesView === "active" ? "produtos ativos" : "registos"}</p>
+        {salesView === "sales" && <div className="ml-auto flex items-center rounded-md border bg-background p-0.5" aria-label="Modo de visualização">
+          <Button variant={viewMode === "table" ? "secondary" : "ghost"} size="sm" className="h-8 gap-1.5" onClick={() => setViewMode("table")} aria-pressed={viewMode === "table"}><List className="h-4 w-4" /><span className="hidden sm:inline">Lista</span></Button>
+          <Button variant={viewMode === "gallery" ? "secondary" : "ghost"} size="sm" className="h-8 gap-1.5" onClick={() => setViewMode("gallery")} aria-pressed={viewMode === "gallery"}><Grid2X2 className="h-4 w-4" /><span className="hidden sm:inline">Galeria</span></Button>
+        </div>}
       </div>
       {salesView === "active" ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {activePurchases.map(purchase => {
+          {visibleActive.map(purchase => {
             const product = getProduct(purchase.productId);
             return <Card key={purchase.id}><CardContent className="space-y-3 p-4"><div><h2 className="font-semibold">{product?.name}</h2><p className="text-sm text-muted-foreground">{product?.category} · Compra: {formatDate(purchase.date)}</p></div><div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(purchase.price)}</p></div><p className="text-xs text-muted-foreground">Ref. {purchase.id.slice(0, 8)}</p></div><Button className="w-full" onClick={() => openNewForPurchase(purchase)}>Registar venda</Button></CardContent></Card>;
           })}
           {activePurchases.length === 0 && <p className="col-span-full py-8 text-center text-muted-foreground">Não existem produtos ativos com estes filtros</p>}
         </div>
       ) : <>
-      <div className="flex items-center justify-end gap-3 text-sm"><Button variant="outline" size="sm" disabled={currentPage===1} onClick={()=>setPage(currentPage-1)}>Anterior</Button><span>Página {currentPage} de {pages}</span><Button variant="outline" size="sm" disabled={currentPage===pages} onClick={()=>setPage(currentPage+1)}>Seguinte</Button></div>
+      {viewMode === "gallery" ? <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {visible.map(sale => {
+          const product = getProduct(sale.productId);
+          const photoUrl = product?.photoUrls?.[0] || getCatalogPresentation(product?.name ?? "").photos[0];
+          const margin = sale.profit == null || sale.salePrice <= 0 ? null : sale.profit / sale.salePrice * 100;
+          return <Card key={sale.id} className="overflow-hidden">
+            <div className="aspect-[16/10] bg-secondary">{photoUrl ? <img src={photoUrl} alt={product?.name ?? "Produto"} className="h-full w-full object-cover" /> : <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground"><Package className="h-9 w-9" /><span className="text-sm">Sem fotografia</span></div>}</div>
+            <CardContent className="space-y-3 p-4"><div><h2 className="font-semibold">{product?.name ?? "Produto removido"}</h2><p className="text-sm text-muted-foreground">{product?.category} · {formatDate(sale.date)}</p></div>
+              <div className="grid grid-cols-3 gap-2 border-t pt-3 text-sm"><div><p className="text-xs text-muted-foreground">Venda</p><p className="font-semibold">{fmt(sale.salePrice)}</p></div><div><p className="text-xs text-muted-foreground">Lucro</p><p className="font-semibold">{fmt(sale.profit)}</p></div><div><p className="text-xs text-muted-foreground">Margem</p><p className="font-semibold">{margin == null ? "Por confirmar" : `${margin.toFixed(1)}%`}</p></div></div>
+              <div className="flex items-center justify-between"><p className="text-xs text-muted-foreground">Ref. {sale.id.slice(0, 8)}</p><div className="flex gap-1"><Button variant="ghost" size="icon" aria-label={`Editar venda de ${product?.name ?? "produto"}`} onClick={() => openEdit(sale)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" aria-label={`Remover venda de ${product?.name ?? "produto"}`} onClick={async () => { await deleteSale(sale.id); toast.success("Venda removida"); }}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></div>
+            </CardContent>
+          </Card>;
+        })}
+        {filtered.length === 0 && <p className="col-span-full py-8 text-center text-muted-foreground">Nenhuma venda encontrada</p>}
+      </div> : <>
       {/* Mobile: card list; Desktop: table */}
       <div className="block space-y-3 lg:hidden">
         {filtered.length === 0 ? (
@@ -432,6 +466,8 @@ export default function Sales() {
         </CardContent>
       </Card>
       </>}
+      </>}
+      {totalVisible < totalRecords && <div ref={loadMoreRef} className="py-4 text-center text-sm text-muted-foreground" role="status">A carregar mais {salesView === "active" ? "produtos" : "vendas"}…</div>}
     </div>
   );
 }

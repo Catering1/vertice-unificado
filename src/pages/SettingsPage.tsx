@@ -1,11 +1,10 @@
 import BookImport from "@/components/BookImport";
-import { money, displayDate } from "@/lib/dashboardMetrics";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Download, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { exportDashboardXlsx } from "@/lib/exportDashboard";
@@ -135,7 +134,6 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {expenses.length > 0 && <Card><CardHeader><CardTitle className="text-base">Despesas operacionais</CardTitle></CardHeader><CardContent><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Descrição</TableHead><TableHead>Categoria</TableHead><TableHead>Valor</TableHead><TableHead>Data</TableHead></TableRow></TableHeader><TableBody>{expenses.map(e=><TableRow key={e.id}><TableCell>{e.description}</TableCell><TableCell>{e.category}</TableCell><TableCell>{money(e.amount)}</TableCell><TableCell>{displayDate(e.date)}</TableCell></TableRow>)}</TableBody></Table></div></CardContent></Card>}
       {/* Export */}
       <Card>
         <CardHeader><CardTitle className="text-base">Exportar Dados (CSV)</CardTitle></CardHeader>

@@ -124,7 +124,7 @@ export default function Dashboard() {
           <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{activeCategory === "all" ? "Todas as categorias" : activeCategory}</h1>
           <p className="mt-2 text-sm text-muted-foreground">Receitas, resultados e inventário · todo o histórico</p>
         </div>
-        <AnalyzeDialog dashboardData={analyzeData} />
+        <AnalyzeDialog key={activeCategory} dashboardData={analyzeData} />
       </div>
       <div className="flex gap-2 overflow-x-auto pb-2" role="group" aria-label="Filtrar por categoria">
         {["all",...categories].map(c => <Button key={c} className="shrink-0 whitespace-nowrap" aria-pressed={activeCategory===c} variant={activeCategory===c ? "default" : "outline"} onClick={() => setCategory(c)}>{c === "all" ? "Todas as categorias" : c}</Button>)}

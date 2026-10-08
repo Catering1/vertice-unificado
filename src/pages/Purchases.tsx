@@ -1,5 +1,5 @@
 import { money, displayDate as formatDate } from "@/lib/dashboardMetrics";
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { activeUnitsByPurchase, purchaseCommercialStatus, purchaseReceiptStatus, PurchaseReceiptStatus } from "@/lib/inventory";
 import { useStore } from "@/lib/store";
@@ -262,9 +262,17 @@ export default function Purchases() {
     return result;
   }, [purchases, sales, selectedRecord, search, catFilter, searchDate, stockFilter, orderStatusFilter, sortField, sortDir, getProduct]);
 
-  const pages = Math.max(1, Math.ceil(filtered.length / 50));
-  const currentPage = Math.min(page, pages);
-  const visible = filtered.slice((currentPage-1)*50,currentPage*50);
+  const visible = filtered.slice(0, page * 10);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || visible.length >= filtered.length) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0]?.isIntersecting) setPage(current => current + 1);
+    }, { rootMargin: "160px" });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [visible.length, filtered.length]);
   const fmt = money;
 
   const parseCSV = (text: string): Record<string, string>[] => {
@@ -321,8 +329,8 @@ export default function Purchases() {
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="w-full"><CategoryFilter categories={categories} value={catFilter} onChange={value => { setCatFilter(value); setPage(1); }} /></div>
         <div className="flex w-full flex-wrap items-center gap-2">
-          <div className="w-full"><CategoryFilter categories={categories} value={catFilter} onChange={value => { setCatFilter(value); setPage(1); }} /></div>
           <Select value={stockFilter === "reading" ? "active" : stockFilter} onValueChange={v => { setStockFilter(v); setPage(1); }}>
             <SelectTrigger className="flex-1 sm:flex-none sm:w-[180px]">
               <span className="truncate">{stockFilter === "all" ? "Estado: Todos" : stockFilter === "sold" ? "Estado: Vendidos" : "Estado: Ativos"}</span>
@@ -342,8 +350,10 @@ export default function Purchases() {
               {ORDER_RECEIPT_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Input className="w-full sm:w-64" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
+        </div>
+        <div className="flex w-full flex-wrap items-center gap-2">
           <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start sm:w-[180px]", !searchDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{searchDate ? displayDate : "Filtrar por mês"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><MonthYearPicker value={searchDate} onChange={value => { setSearchDate(value); setPage(1); }} /></PopoverContent></Popover>
+          <Input className="w-full sm:w-64" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
         </div>
 
         <div className="hidden sm:block sm:flex-1" />
@@ -400,7 +410,7 @@ export default function Purchases() {
 
       <div className="flex flex-wrap items-center gap-3">
         {selectedRecord && <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm"><span>Compra selecionada a partir do dashboard</span><Button size="sm" variant="outline" onClick={() => setSearchParams({})}>Ver todas</Button></div>}
-        <p className="text-sm text-muted-foreground">{filtered.length} registos</p>
+        <p className="text-sm text-muted-foreground">A mostrar {visible.length} de {filtered.length} registos</p>
         <div className="ml-auto flex items-center rounded-md border bg-background p-0.5" aria-label="Modo de visualização">
           <Button variant={viewMode === "table" ? "secondary" : "ghost"} size="sm" className="h-8 gap-1.5" onClick={() => setViewMode("table")} aria-pressed={viewMode === "table"}>
             <List className="h-4 w-4" /> <span className="hidden sm:inline">Lista</span>
@@ -410,7 +420,6 @@ export default function Purchases() {
           </Button>
         </div>
       </div>
-      <div className="flex items-center justify-end gap-3 text-sm"><Button variant="outline" size="sm" disabled={currentPage===1} onClick={()=>setPage(currentPage-1)}>Anterior</Button><span>Página {currentPage} de {pages}</span><Button variant="outline" size="sm" disabled={currentPage===pages} onClick={()=>setPage(currentPage+1)}>Seguinte</Button></div>
       {viewMode === "gallery" ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map(p => {
@@ -517,6 +526,7 @@ export default function Purchases() {
         </CardContent>
       </Card>
       </>}
+      {visible.length < filtered.length && <div ref={loadMoreRef} className="py-4 text-center text-sm text-muted-foreground" role="status">A carregar mais compras…</div>}
     </div>
   );
 }

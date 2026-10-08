@@ -9,6 +9,7 @@ import AppLayout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import Purchases from "@/pages/Purchases";
 import Sales from "@/pages/Sales";
+import Expenses from "@/pages/Expenses";
 import SettingsPage from "@/pages/SettingsPage";
 import AuthPage from "@/pages/AuthPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
@@ -29,6 +30,7 @@ function ProtectedRoutes() {
           <Route index element={<Dashboard />} />
           <Route path="compras" element={<Purchases />} />
           <Route path="vendas" element={<Sales />} />
+          <Route path="despesas" element={<Expenses />} />
           <Route path="configuracoes" element={<SettingsPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,17 +1,17 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, ShoppingCart, TrendingUp, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, TrendingUp, Settings, LogOut, ReceiptText, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
   { label: "Compras", path: "/admin/compras", icon: ShoppingCart },
   { label: "Vendas", path: "/admin/vendas", icon: TrendingUp },
+  { label: "Despesas", path: "/admin/despesas", icon: ReceiptText },
   { label: "Configurações", path: "/admin/configuracoes", icon: Settings },
 ];
 
@@ -29,11 +29,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {mobileSidebarOpen && <button className="fixed inset-0 z-40 bg-black/50 md:hidden" aria-label="Fechar menu lateral" onClick={() => setMobileSidebarOpen(false)} />}
       {/* Sidebar */}
       <aside
-        className={cn("hidden w-72 shrink-0 flex-col bg-sidebar text-sidebar-foreground", mobileSidebarOpen && "fixed inset-y-0 left-0 z-50 flex md:static md:z-auto", sidebarVisible ? "md:flex" : "md:hidden")}
+        className={cn("relative hidden w-72 shrink-0 flex-col bg-sidebar text-sidebar-foreground", mobileSidebarOpen && "fixed inset-y-0 left-0 z-50 flex md:relative md:z-auto", sidebarVisible ? "md:flex" : "md:hidden")}
       >
-        <Button variant="ghost" size="icon" className="absolute right-2 top-2 text-sidebar-foreground md:hidden" onClick={() => setMobileSidebarOpen(false)} aria-label="Esconder barra lateral"><PanelLeftClose className="h-5 w-5" /></Button>
+        <Button variant="ghost" size="icon" className="absolute right-2 top-2 text-sidebar-foreground" onClick={() => { setMobileSidebarOpen(false); if (window.innerWidth >= 768) toggleSidebar(); }} aria-label="Esconder barra lateral"><Menu className="h-5 w-5" /></Button>
         {/* Profile section */}
-        <div className="px-5 pt-6 pb-4">
+        <div className="pb-4 pl-5 pr-11 pt-6">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors hover:bg-sidebar-accent/40">
@@ -92,8 +92,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-card px-4 md:px-6">
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileSidebarOpen(value => !value)} aria-label={mobileSidebarOpen ? "Esconder barra lateral" : "Mostrar barra lateral"}>{mobileSidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}</Button>
-          <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={toggleSidebar} aria-label={sidebarVisible ? "Esconder barra lateral" : "Mostrar barra lateral"}>{sidebarVisible ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}</Button>
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileSidebarOpen(true)} aria-label="Mostrar barra lateral"><Menu className="h-5 w-5" /></Button>
+          {!sidebarVisible && <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={toggleSidebar} aria-label="Mostrar barra lateral"><Menu className="h-5 w-5" /></Button>}
           <h1 className="text-lg font-semibold">
             {navItems.find(n => n.path === pathname)?.label ?? ""}
           </h1>
@@ -106,8 +106,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(0,0,0,0.06)] backdrop-blur md:hidden" aria-label="Navegação principal">
-        {navItems.map(({ label, path, icon: Icon }) => <Link key={path} to={path} aria-current={pathname === path ? "page" : undefined} className={cn("flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium", pathname === path ? "text-primary" : "text-muted-foreground")}><Icon className="h-5 w-5" aria-hidden="true" /><span>{label}</span></Link>)}
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(0,0,0,0.06)] backdrop-blur md:hidden" aria-label="Navegação principal">
+        {navItems.map(({ label, path, icon: Icon }) => <Link key={path} to={path} aria-current={pathname === path ? "page" : undefined} className={cn("flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-[10px] font-medium sm:text-[11px]", pathname === path ? "text-primary" : "text-muted-foreground")}><Icon className="h-5 w-5" aria-hidden="true" /><span>{label}</span></Link>)}
       </nav>
     </div>
   );
