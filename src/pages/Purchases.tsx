@@ -370,9 +370,6 @@ export default function Purchases() {
           <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
             <DialogHeader><DialogTitle>{editingPurchase ? "Editar Compra" : "Registar Compra"}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-2">
-              {editingPurchase && <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
-                <p><span className="font-medium">ID do produto:</span> <span className="break-all font-mono text-xs">{editingPurchase.productId}</span></p>
-              </div>}
               <div>
                 <Label>Nome do Produto *</Label>
                 <Input placeholder="Ex: iPhone 15, Camiseta..." value={productName} onChange={e => setProductName(e.target.value)} />

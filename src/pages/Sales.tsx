@@ -299,7 +299,7 @@ export default function Sales() {
                   <SelectContent>
                     {(editingSale ? products : availableProducts).map(p => {
                       const purchase = purchaseForProduct.get(p.id);
-                      return <SelectItem key={p.id} value={p.id}>{p.name} · {p.category} · {purchase?.date || "sem data"} · {p.id.slice(0, 8)}</SelectItem>;
+                      return <SelectItem key={p.id} value={p.id}>{p.name} · {p.category} · Compra: {purchase?.date || "sem data"} · Custo: {purchase?.price == null ? "por confirmar" : fmt(purchase.price)}</SelectItem>;
                     })}
                   </SelectContent>
                 </Select>

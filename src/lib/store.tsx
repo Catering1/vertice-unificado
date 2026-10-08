@@ -64,6 +64,8 @@ interface StoreContextType {
   updateSale: (s: Omit<Sale, "profit"> & { purchasePrice?: number }) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
   addExpense: (expense: Omit<Expense, "id">) => Promise<void>;
+  updateExpense: (expense: Expense) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
   addCategory: (c: string) => Promise<void>;
   updateCategory: (oldName: string, newName: string) => Promise<void>;
   deleteCategory: (c: string) => Promise<void>;
@@ -261,6 +263,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setExpenses(previous => [...previous, { id: data.id, category: data.category, description: data.description, amount: Number(data.amount), date: data.date ?? "" }]);
   };
 
+  const updateExpense = async (expense: Expense) => {
+    const validated = ExpenseSchema.extend({ date: z.union([ExpenseSchema.shape.date, z.literal("")]) }).parse(expense);
+    const { data, error } = await supabase.from("expenses").update({
+      category: validated.category, description: validated.description,
+      amount: validated.amount, date: validated.date || null,
+    }).eq("id", expense.id).eq("user_id", user!.id).select("id,category,description,amount,date").single();
+    if (error) throw error;
+    setExpenses(previous => previous.map(item => item.id === data.id
+      ? { id: data.id, category: data.category, description: data.description, amount: Number(data.amount), date: data.date ?? "" }
+      : item));
+  };
+
+  const deleteExpense = async (id: string) => {
+    const { error } = await supabase.from("expenses").delete().eq("id", id).eq("user_id", user!.id).select("id").single();
+    if (error) throw error;
+    setExpenses(previous => previous.filter(item => item.id !== id));
+  };
+
   const addCategory = async (c: string) => {
     if (categories.includes(c)) return;
     const { error } = await supabase.from("categories").insert({ user_id: user!.id, name: c } as any);
@@ -294,7 +314,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       products, purchases, sales, expenses, categories, loading, error,
       addProduct, updateProduct, deleteProduct,
       addPurchase, updatePurchase, deletePurchase,
-      addSale, updateSale, deleteSale, addExpense,
+      addSale, updateSale, deleteSale, addExpense, updateExpense, deleteExpense,
       addCategory, updateCategory, deleteCategory, getProduct,
     }}>
       {children}
