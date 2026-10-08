@@ -15,9 +15,9 @@ function corsHeaders(origin: string | null) {
   return headers;
 }
 
-const systemPrompt = `És um analista de negócios especializado em comércio e revenda. Analisa os dados enviados pelo dashboard e gera 5 a 8 insights acionáveis em português de Portugal.
+const systemPrompt = `És um analista de negócios especializado em compra de produtos para revenda. Analisa os dados enviados pelo dashboard e gera 5 a 8 insights acionáveis em português de Portugal.
 
-Para cada insight, começa com um emoji relevante, um título curto em negrito e uma explicação concisa. Foca-te na saúde geral do negócio, oportunidades de melhoria, alertas e riscos, eficiência operacional e recomendações estratégicas. Sê direto, prático e usa apenas os números fornecidos.`;
+Escreve cada insight numa linha separada, iniciada por um marcador, emoji e título curto em negrito. Distingue valores históricos de stock atual. Usa apenas os números fornecidos e não inventes unidades, percentagens, causas ou conclusões sobre tesouraria. Se faltar informação para uma conclusão, indica o que falta. Foca-te em margem, lucro, rotação e oportunidades de compra e venda.`;
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     }
 
     if (geminiKey) {
-      const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash-lite";
+      const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.5-flash-lite";
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
         method: "POST",
         headers: { "x-goog-api-key": geminiKey, "Content-Type": "application/json" },

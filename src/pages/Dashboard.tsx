@@ -111,6 +111,8 @@ export default function Dashboard() {
     avgMargin:(d.avgMargin*100).toFixed(1),roiRealized:(d.roiRealized*100).toFixed(1),stockTurnover:d.stockTurnover.toFixed(2),
     stockValue:d.stockValue.toFixed(2),avgVelocity:d.avgVelocity.toFixed(0),avgProfitPerSale:d.avgProfitPerSale.toFixed(2),
     productCount:d.productCount,topProducts:topProducts.map(p => `${p.name} (${p.qty})`).join(", "),
+    unitsPurchased:data.purchases.reduce((total, purchase) => total + purchase.quantity, 0),
+    unitsSold:d.unitsSold,stockUnits:d.stockUnits,receivedStockUnits:d.receivedStockUnits,pendingStockUnits:d.pendingStockUnits,
     dataQuality: `${d.missingCosts} vendas sem custo; ${d.undatedSales} vendas sem data. Lucro parcial quando há custos em falta.`,
   };
   if (store.loading) return <p role="status" className="py-12 text-center text-muted-foreground">A carregar o dashboard…</p>;
