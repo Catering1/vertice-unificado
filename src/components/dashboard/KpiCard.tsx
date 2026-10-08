@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 interface KpiCardProps {
   label: string;
+  shortLabel: string;
   value: string;
   icon: LucideIcon;
   iconBg: string;
@@ -12,18 +13,16 @@ interface KpiCardProps {
   accentClassName?: string;
 }
 
-export default function KpiCard({ label, value, icon: Icon, iconBg, iconColor, valueClassName, accentClassName }: KpiCardProps) {
+export default function KpiCard({ label, shortLabel, value, icon: Icon, iconBg, iconColor, valueClassName, accentClassName }: KpiCardProps) {
   return (
-    <Card className={cn("relative h-full overflow-hidden border bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg", accentClassName)}>
+    <Card title={label} className={cn("relative h-28 min-w-0 overflow-hidden border bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg", accentClassName)}>
       <div className={cn("absolute inset-x-0 top-0 h-1", iconBg)} aria-hidden="true" />
-      <CardContent className="flex items-start gap-3 p-3 sm:gap-4 sm:p-5">
-        <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset ring-black/5 sm:h-11 sm:w-11", iconBg)} aria-hidden="true">
-          <Icon className={cn("h-4 w-4 sm:h-5 sm:w-5", iconColor)} />
+      <CardContent className="flex h-full min-w-0 flex-col p-3 sm:p-4">
+        <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset ring-black/5 sm:h-8 sm:w-8", iconBg)} aria-hidden="true">
+          <Icon className={cn("h-4 w-4", iconColor)} />
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-xs">{label}</p>
-          <p className={cn("mt-1 break-words text-base font-extrabold tabular-nums tracking-tight sm:text-2xl", valueClassName)}>{value}</p>
-        </div>
+        <p className="mt-2 w-full truncate whitespace-nowrap text-[11px] font-semibold uppercase leading-none text-muted-foreground sm:text-xs" aria-label={label}>{shortLabel}</p>
+        <p className={cn("mt-auto w-full truncate whitespace-nowrap text-base font-extrabold tabular-nums leading-tight tracking-tight sm:text-xl", valueClassName)}>{value}</p>
       </CardContent>
     </Card>
   );
