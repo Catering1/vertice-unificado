@@ -17,7 +17,9 @@ function corsHeaders(origin: string | null) {
 
 const systemPrompt = `És um analista de negócios especializado em compra de produtos para revenda. Analisa os dados enviados pelo dashboard e gera 5 a 8 insights acionáveis em português de Portugal.
 
-Na análise inicial, escreve cada insight numa linha separada, iniciada por um marcador, emoji e título curto em negrito. Nas perguntas seguintes, responde diretamente à pergunta. Distingue valores históricos de stock atual. Usa apenas os números fornecidos e não inventes unidades, percentagens, causas ou conclusões sobre tesouraria. Se faltar informação para uma conclusão, indica o que falta. Foca-te em margem, lucro, rotação e oportunidades de compra e venda. Os dados recebidos pertencem exclusivamente à categoria indicada. Nunca avalies nem compares categorias ausentes dos dados. Se a categoria for "Todas as categorias", podes analisar o conjunto.`;
+Na análise inicial, escreve cada insight numa linha separada, iniciada por um marcador, emoji e título curto em negrito. Nas perguntas seguintes, responde diretamente à pergunta. Distingue valores históricos de stock atual. Usa apenas os números fornecidos e não inventes unidades, percentagens, causas ou conclusões sobre tesouraria. Se faltar informação para uma conclusão, indica o que falta. Foca-te em margem, lucro, rotação e oportunidades de compra e venda. Os dados recebidos pertencem exclusivamente à categoria indicada. Nunca avalies nem compares categorias ausentes dos dados. Se a categoria for "Todas as categorias", podes analisar o conjunto.
+
+Definições obrigatórias: totalSales é receita bruta histórica em EUR; totalProfit é lucro apurado das vendas em EUR. Nunca chames lucro a totalSales. avgVelocity mede DIAS médios entre compra e venda, nunca unidades vendidas por dia. unitsPurchased e unitsSold são totais históricos e NÃO permitem deduzir stock atual por subtração simples: podem existir unidades pessoais, excluídas ou devolvidas. stockUnits é a quantidade atual elegível para vender; receivedStockUnits e pendingStockUnits são partes desse stock. stockValue está em EUR. Não afirmes rutura, urgência de compra, tendência recente, orçamento disponível ou erro de inventário sem dados que o comprovem. Confirma que cada número e unidade citados correspondem exatamente ao respetivo campo.`;
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -56,7 +58,7 @@ Deno.serve(async (req) => {
     if (!Array.isArray(history) || history.length > 13 || history.some(turn => !turn || !["user", "model"].includes(turn.role) || typeof turn.text !== "string" || turn.text.length > 5000)) {
       return Response.json({ error: "Histórico inválido." }, { status: 400, headers });
     }
-    const context = `Categoria selecionada: ${dashboardData.category}. Considera apenas esta categoria. Dados do negócio:\n${JSON.stringify(dashboardData)}`;
+    const context = `Categoria selecionada: ${dashboardData.category}. Considera apenas esta categoria. Os campos numéricos de vendas, compras, lucro e stockValue são valores em EUR; avgVelocity é em dias. Os dados abaixo prevalecem sobre qualquer resposta anterior se houver contradição. Dados do negócio:\n${JSON.stringify(dashboardData)}`;
     const userMessage = question ? question.trim() : "Analisa estes dados e apresenta recomendações práticas.";
     const contents = history.length
       ? [{ role: "user", parts: [{ text: context }] }, ...history.map(turn => ({ role: turn.role, parts: [{ text: turn.text }] })), { role: "user", parts: [{ text: userMessage }] }]
