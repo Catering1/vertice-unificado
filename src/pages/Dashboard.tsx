@@ -85,8 +85,8 @@ export default function Dashboard() {
     }).sort((a, b) => a.daysRemaining - b.daysRemaining);
   }, [data]);
   const kpis = [
-    {label: "Total das compras", value: fmt(d.totalPurchases), icon: ShoppingCart, iconBg:"bg-slate-100", iconColor:"text-slate-700", valueClassName:"text-slate-700", accentClassName:"border-slate-100"},
-    {label: "Unidades compradas", value: String(data.purchases.reduce((total, purchase) => total + purchase.quantity, 0)), icon: Package, iconBg:"bg-slate-100", iconColor:"text-slate-700", valueClassName:"text-slate-700", accentClassName:"border-slate-100"},
+    {label: "Total das compras", value: fmt(d.totalPurchases), icon: ShoppingCart, iconBg:"bg-orange-200", iconColor:"text-orange-800", valueClassName:"text-orange-800", accentClassName:"border-orange-200"},
+    {label: "Unidades compradas", value: String(data.purchases.reduce((total, purchase) => total + purchase.quantity, 0)), icon: Package, iconBg:"bg-orange-200", iconColor:"text-orange-800", valueClassName:"text-orange-800", accentClassName:"border-orange-200"},
     {label: "Total de vendas", value: fmt(d.totalSales), icon: DollarSign, iconBg:"bg-blue-100", iconColor:"text-blue-700", valueClassName:"text-blue-700", accentClassName:"border-blue-100"},
     {label: "Unidades vendidas", value: String(d.unitsSold), icon: Package, iconBg:"bg-violet-100", iconColor:"text-violet-700", valueClassName:"text-violet-700", accentClassName:"border-violet-100"},
     {label: "Unidades para vender (stock + por receber)", value: String(d.stockUnits), icon: Package, iconBg:"bg-indigo-100", iconColor:"text-indigo-700", valueClassName:"text-indigo-700", accentClassName:"border-indigo-100"},
