@@ -31,6 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <aside
         className={cn("hidden w-72 shrink-0 flex-col bg-sidebar text-sidebar-foreground", mobileSidebarOpen && "fixed inset-y-0 left-0 z-50 flex md:static md:z-auto", sidebarVisible ? "md:flex" : "md:hidden")}
       >
+        <Button variant="ghost" size="icon" className="absolute right-2 top-2 text-sidebar-foreground md:hidden" onClick={() => setMobileSidebarOpen(false)} aria-label="Esconder barra lateral"><PanelLeftClose className="h-5 w-5" /></Button>
         {/* Profile section */}
         <div className="px-5 pt-6 pb-4">
           <DropdownMenu>
