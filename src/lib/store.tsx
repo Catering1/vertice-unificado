@@ -39,6 +39,13 @@ const SaleSchema = z.object({
   date: z.string(),
 });
 
+const ExpenseSchema = z.object({
+  category: z.string().trim().min(1).max(100),
+  description: z.string().trim().min(1).max(500),
+  amount: z.number().finite().min(0.01).max(1000000),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
 interface StoreContextType {
   products: Product[];
   purchases: Purchase[];
@@ -56,6 +63,7 @@ interface StoreContextType {
   addSale: (s: Omit<Sale, "id" | "profit"> & { purchasePrice?: number }) => Promise<Sale>;
   updateSale: (s: Omit<Sale, "profit"> & { purchasePrice?: number }) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
+  addExpense: (expense: Omit<Expense, "id">) => Promise<void>;
   addCategory: (c: string) => Promise<void>;
   updateCategory: (oldName: string, newName: string) => Promise<void>;
   deleteCategory: (c: string) => Promise<void>;
@@ -243,6 +251,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setSales(prev => prev.filter(x => x.id !== id));
   };
 
+  const addExpense = async (expense: Omit<Expense, "id">) => {
+    const validated = ExpenseSchema.parse(expense);
+    const { data, error } = await supabase.from("expenses").insert({
+      user_id: user!.id, category: validated.category, description: validated.description,
+      amount: validated.amount, date: validated.date,
+    }).select("id,category,description,amount,date").single();
+    if (error) throw error;
+    setExpenses(previous => [...previous, { id: data.id, category: data.category, description: data.description, amount: Number(data.amount), date: data.date ?? "" }]);
+  };
+
   const addCategory = async (c: string) => {
     if (categories.includes(c)) return;
     const { error } = await supabase.from("categories").insert({ user_id: user!.id, name: c } as any);
@@ -276,7 +294,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       products, purchases, sales, expenses, categories, loading, error,
       addProduct, updateProduct, deleteProduct,
       addPurchase, updatePurchase, deletePurchase,
-      addSale, updateSale, deleteSale,
+      addSale, updateSale, deleteSale, addExpense,
       addCategory, updateCategory, deleteCategory, getProduct,
     }}>
       {children}

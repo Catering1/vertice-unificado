@@ -1,4 +1,3 @@
-import BookImport from "@/components/BookImport";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,7 +79,6 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl">
-      <BookImport />
       {/* Categories */}
       <Card>
         <CardHeader><CardTitle className="text-base">Categorias</CardTitle></CardHeader>

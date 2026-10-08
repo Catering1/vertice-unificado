@@ -36,6 +36,9 @@ export default function AnalyzeDialog({ dashboardData }: AnalyzeDialogProps) {
   const [question, setQuestion] = useState("");
   const [asking, setAsking] = useState(false);
   const [followUps, setFollowUps] = useState<{ question: string; answer: string }[]>([]);
+  const improvementsHeading = insights.match(/(?:^|\n)##\s*Melhorias e correções[^\n]*\n?/i);
+  const diagnosis = improvementsHeading?.index == null ? insights : insights.slice(0, improvementsHeading.index);
+  const improvements = improvementsHeading?.index == null ? "" : insights.slice(improvementsHeading.index + improvementsHeading[0].length).trim();
 
   const requestAnalysis = async (followUpQuestion?: string) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -112,7 +115,7 @@ export default function AnalyzeDialog({ dashboardData }: AnalyzeDialogProps) {
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
+        <Button className="min-h-10 gap-2 px-4">
           <Sparkles className="h-4 w-4" />
           Analisar
         </Button>
@@ -132,8 +135,9 @@ export default function AnalyzeDialog({ dashboardData }: AnalyzeDialogProps) {
             </div>
           )}
           {insights && (
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown>{insights}</ReactMarkdown>
+            <div className="space-y-4">
+              <div className="prose prose-sm dark:prose-invert max-w-none"><ReactMarkdown>{diagnosis}</ReactMarkdown></div>
+              {improvements && <section className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900 dark:bg-emerald-950/30" aria-label="Melhorias e correções"><h3 className="mb-2 font-semibold text-emerald-950 dark:text-emerald-100">Melhorias e correções</h3><div className="prose prose-sm dark:prose-invert max-w-none"><ReactMarkdown>{improvements}</ReactMarkdown></div></section>}
             </div>
           )}
           {followUps.map((turn, index) => <div key={index} className="mt-5 space-y-2 border-t pt-4"><p className="font-medium">{turn.question}</p><div className="prose prose-sm dark:prose-invert max-w-none"><ReactMarkdown>{turn.answer}</ReactMarkdown></div></div>)}

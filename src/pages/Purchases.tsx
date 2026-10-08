@@ -329,10 +329,10 @@ export default function Purchases() {
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="w-full"><CategoryFilter categories={categories} value={catFilter} onChange={value => { setCatFilter(value); setPage(1); }} /></div>
-        <div className="flex w-full flex-wrap items-center gap-2">
+        <div className="flex w-full items-center gap-2 overflow-x-auto pb-1">
+          <div className="shrink-0"><CategoryFilter categories={categories} value={catFilter} onChange={value => { setCatFilter(value); setPage(1); }} /></div>
           <Select value={stockFilter === "reading" ? "active" : stockFilter} onValueChange={v => { setStockFilter(v); setPage(1); }}>
-            <SelectTrigger className="flex-1 sm:flex-none sm:w-[180px]">
+            <SelectTrigger className="w-[180px] shrink-0">
               <span className="truncate">{stockFilter === "all" ? "Estado: Todos" : stockFilter === "sold" ? "Estado: Vendidos" : "Estado: Ativos"}</span>
             </SelectTrigger>
             <SelectContent>
@@ -342,7 +342,7 @@ export default function Purchases() {
             </SelectContent>
           </Select>
           <Select value={orderStatusFilter === "all" || orderStatusFilter === "pending" || orderStatusFilter === "received" || orderStatusFilter === "excluded" ? orderStatusFilter : "all"} onValueChange={v => { setOrderStatusFilter(v as PurchaseReceiptStatus | "all"); setPage(1); }}>
-            <SelectTrigger className="w-full sm:flex-none sm:w-[240px]">
+            <SelectTrigger className="w-[240px] shrink-0">
               <span className="truncate">{orderStatusFilter === "all" ? "Estado da encomenda: Todos" : orderStatusFilter === "received" ? "Encomenda: Recebido" : orderStatusFilter === "excluded" ? "Encomenda: Fora do stock" : "Encomenda: Por receber"}</span>
             </SelectTrigger>
             <SelectContent>
@@ -351,9 +351,9 @@ export default function Purchases() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2">
-          <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start sm:w-[180px]", !searchDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{searchDate ? displayDate : "Filtrar por mês"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><MonthYearPicker value={searchDate} onChange={value => { setSearchDate(value); setPage(1); }} /></PopoverContent></Popover>
-          <Input className="w-full sm:w-64" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
+        <div className="grid w-full grid-cols-[minmax(0,160px)_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[180px_minmax(0,320px)]">
+          <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full min-w-0 justify-start overflow-hidden text-ellipsis whitespace-nowrap", !searchDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4 shrink-0" /><span className="truncate">{searchDate ? displayDate : "Filtrar por mês"}</span></Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><MonthYearPicker value={searchDate} onChange={value => { setSearchDate(value); setPage(1); }} /></PopoverContent></Popover>
+          <Input className="min-w-0" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
         </div>
 
         <div className="hidden sm:block sm:flex-1" />
@@ -372,7 +372,6 @@ export default function Purchases() {
             <div className="grid gap-4 py-2">
               {editingPurchase && <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
                 <p><span className="font-medium">ID do produto:</span> <span className="break-all font-mono text-xs">{editingPurchase.productId}</span></p>
-                <p><span className="font-medium">ID da compra:</span> <span className="break-all font-mono text-xs">{editingPurchase.id}</span></p>
               </div>}
               <div>
                 <Label>Nome do Produto *</Label>
@@ -399,7 +398,6 @@ export default function Purchases() {
                 {relatedSales.map(sale => <div key={sale.id} className="border-t pt-2 text-sm first:border-0 first:pt-0">
                   <p>Data: {formatDate(sale.date)} · Quantidade: {sale.quantity}</p>
                   <p>Preço de venda: {money(sale.salePrice)} · Lucro: {money(sale.profit)}</p>
-                  <p className="break-all font-mono text-xs text-muted-foreground">ID da venda: {sale.id}</p>
                 </div>)}
               </section>}
               <Button className="min-h-11" onClick={save} disabled={saving}>{saving ? "A guardar…" : editingPurchase ? "Guardar compra" : "Registar compra"}</Button>
@@ -434,7 +432,7 @@ export default function Purchases() {
                 </div>
                 <CardContent className="space-y-3 p-4">
                   <div className="flex gap-3">
-                  <div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{product?.name ?? "Produto removido"}</h2><p className="mt-0.5 text-sm text-muted-foreground">{product?.category ?? "Sem categoria"} · Ref. {p.id.slice(0, 8)}</p></div>
+                  <div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{product?.name ?? "Produto removido"}</h2><p className="mt-0.5 text-sm text-muted-foreground">{product?.category ?? "Sem categoria"} · Compra: {formatDate(p.date)}</p></div>
                     <div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} aria-label={`Editar ${product?.name ?? "compra"}`}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }} aria-label={`Remover ${product?.name ?? "compra"}`}><Trash2 className="h-4 w-4" /></Button></div>
                   </div>
                   <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Data de compra: {formatDate(p.date)}</p>{p.deliveryDate && <p>Data de Entrega: {formatDate(p.deliveryDate)}</p>}{p.deliveryDate && <p>Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}{p.collectionDate && <p>Data Levantamento: {formatDate(p.collectionDate)}</p>}</div></div>
@@ -470,7 +468,7 @@ export default function Purchases() {
                 <p className="font-semibold">{fmt(p.price)}</p>
               </div>
               <p className="text-xs text-muted-foreground">Compra: {formatDate(p.date)}</p>
-              <p className="text-xs text-muted-foreground">Estado: {commercialStatus(p)} · Ref. {p.id.slice(0, 8)}</p>
+              <p className="text-xs text-muted-foreground">Estado: {commercialStatus(p)}</p>
               {p.estimatedDeliveryDate && <p className="text-xs text-muted-foreground">Data estimada de entrega: {formatDate(p.estimatedDeliveryDate)}</p>}
               <p className="text-xs text-muted-foreground">Data de compra: {formatDate(p.date)}</p>
               {p.deliveryDate && <p className="text-xs text-muted-foreground">Data de Entrega: {formatDate(p.deliveryDate)}</p>}

@@ -262,19 +262,19 @@ export default function Sales() {
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="w-full"><CategoryFilter categories={categories} value={catFilter} onChange={value => { setCatFilter(value); setPage(1); }} /></div>
-        <div className="flex w-full flex-wrap items-center gap-2">
+        <div className="flex w-full items-center gap-2 overflow-x-auto pb-1">
+          <div className="shrink-0"><CategoryFilter categories={categories} value={catFilter} onChange={value => { setCatFilter(value); setPage(1); }} /></div>
           <Select value={salesView} onValueChange={value => { setSalesView(value as SalesView); setPage(1); }}>
-            <SelectTrigger className="flex-1 sm:flex-none sm:w-[220px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[220px] shrink-0"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="sales">Vendas registadas</SelectItem>
               <SelectItem value="active">Produtos ativos para vender</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2">
-          <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start sm:w-[180px]", !searchDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{searchDate ? displayDate : "Filtrar por mês"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><MonthYearPicker value={searchDate} onChange={value => { setSearchDate(value); setPage(1); }} /></PopoverContent></Popover>
-          <Input className="w-full sm:w-64" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
+        <div className="grid w-full grid-cols-[minmax(0,160px)_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[180px_minmax(0,320px)]">
+          <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full min-w-0 justify-start overflow-hidden text-ellipsis whitespace-nowrap", !searchDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4 shrink-0" /><span className="truncate">{searchDate ? displayDate : "Filtrar por mês"}</span></Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><MonthYearPicker value={searchDate} onChange={value => { setSearchDate(value); setPage(1); }} /></PopoverContent></Popover>
+          <Input className="min-w-0" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
         </div>
 
         <div className="hidden sm:block sm:flex-1" />
@@ -352,7 +352,7 @@ export default function Sales() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {visibleActive.map(purchase => {
             const product = getProduct(purchase.productId);
-            return <Card key={purchase.id}><CardContent className="space-y-3 p-4"><div><h2 className="font-semibold">{product?.name}</h2><p className="text-sm text-muted-foreground">{product?.category} · Compra: {formatDate(purchase.date)}</p></div><div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(purchase.price)}</p></div><p className="text-xs text-muted-foreground">Ref. {purchase.id.slice(0, 8)}</p></div><Button className="w-full" onClick={() => openNewForPurchase(purchase)}>Registar venda</Button></CardContent></Card>;
+            return <Card key={purchase.id}><CardContent className="space-y-3 p-4"><div><h2 className="font-semibold">{product?.name}</h2><p className="text-sm text-muted-foreground">{product?.category} · Compra: {formatDate(purchase.date)}</p></div><div className="border-t pt-3"><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(purchase.price)}</p></div><Button className="w-full" onClick={() => openNewForPurchase(purchase)}>Registar venda</Button></CardContent></Card>;
           })}
           {activePurchases.length === 0 && <p className="col-span-full py-8 text-center text-muted-foreground">Não existem produtos ativos com estes filtros</p>}
         </div>
@@ -366,7 +366,7 @@ export default function Sales() {
             <div className="aspect-[16/10] bg-secondary">{photoUrl ? <img src={photoUrl} alt={product?.name ?? "Produto"} className="h-full w-full object-cover" /> : <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground"><Package className="h-9 w-9" /><span className="text-sm">Sem fotografia</span></div>}</div>
             <CardContent className="space-y-3 p-4"><div><h2 className="font-semibold">{product?.name ?? "Produto removido"}</h2><p className="text-sm text-muted-foreground">{product?.category} · {formatDate(sale.date)}</p></div>
               <div className="grid grid-cols-3 gap-2 border-t pt-3 text-sm"><div><p className="text-xs text-muted-foreground">Venda</p><p className="font-semibold">{fmt(sale.salePrice)}</p></div><div><p className="text-xs text-muted-foreground">Lucro</p><p className="font-semibold">{fmt(sale.profit)}</p></div><div><p className="text-xs text-muted-foreground">Margem</p><p className="font-semibold">{margin == null ? "Por confirmar" : `${margin.toFixed(1)}%`}</p></div></div>
-              <div className="flex items-center justify-between"><p className="text-xs text-muted-foreground">Ref. {sale.id.slice(0, 8)}</p><div className="flex gap-1"><Button variant="ghost" size="icon" aria-label={`Editar venda de ${product?.name ?? "produto"}`} onClick={() => openEdit(sale)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" aria-label={`Remover venda de ${product?.name ?? "produto"}`} onClick={async () => { await deleteSale(sale.id); toast.success("Venda removida"); }}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></div>
+              <div className="flex justify-end gap-1"><Button variant="ghost" size="icon" aria-label={`Editar venda de ${product?.name ?? "produto"}`} onClick={() => openEdit(sale)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" aria-label={`Remover venda de ${product?.name ?? "produto"}`} onClick={async () => { await deleteSale(sale.id); toast.success("Venda removida"); }}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
             </CardContent>
           </Card>;
         })}
@@ -406,7 +406,7 @@ export default function Sales() {
                     <p className={cn("font-semibold", margin >= 0 ? "text-success" : "text-destructive")}>{s.profit == null ? "Por confirmar" : `${margin.toFixed(1)}%`}</p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">{formatDate(s.date)} · Ref. {s.id.slice(0, 8)}</p>
+                <p className="text-xs text-muted-foreground">{formatDate(s.date)}</p>
               </CardContent>
             </Card>
           );

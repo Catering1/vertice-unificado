@@ -14,7 +14,7 @@ describe("category dashboard",()=>{
     const data=categoryData(products,purchases,sales,[{id:"e",category:"Livros",amount:2,date:"",description:"Packaging"}],"Livros");
     const d=computeDashboard(data.purchases,data.sales,data.products,data.expenses);
     expect(d.totalSales).toBe(18);expect(d.totalProfit).toBe(7);expect(d.netProfit).toBe(5);
-    expect(d.stockUnits).toBe(1);expect(d.stockValue).toBe(3);expect(d.personalUnits).toBe(1);
+    expect(d.stockUnits).toBe(1);expect(d.stockValue).toBe(3);expect(d.productCount).toBe(3);
     expect(d.missingCosts).toBe(1);expect(d.undatedRevenue).toBe(8);expect(d.avgMargin).toBe(.7);
     expect(d.purchasesVsSales.reduce((s,r)=>s+r.vendas,0)).toBe(10);
     expect(d.topProducts.some(([name])=>name==="phone")).toBe(false);
@@ -23,6 +23,25 @@ describe("category dashboard",()=>{
   it("calculates realized ROI from the cost actually sold, not every purchase of the title",()=>{
     const d=computeDashboard([{...purchases[0],quantity:10}],[sales[0]],[products[0]]);
     expect(d.cogs).toBe(3);expect(d.roiRealized).toBeCloseTo(7/3);
+  });
+  it("excludes returned and personal products from all business metrics",()=>{
+    const returned = product("returned");
+    const personal = product("personal","Livros",true);
+    const eligible = product("eligible");
+    const purchases:Purchase[] = [
+      {id:"r",productId:"returned",quantity:2,price:10,date:"2025-01-01",orderStatus:"refunded"},
+      {id:"p",productId:"personal",quantity:1,price:20,date:"2025-01-01"},
+      {id:"e",productId:"eligible",quantity:1,price:4,date:"2025-01-01"},
+    ];
+    const sales:Sale[] = [
+      {id:"rs",productId:"returned",quantity:1,salePrice:30,profit:20,date:"2025-02-01"},
+      {id:"ps",productId:"personal",quantity:1,salePrice:40,profit:20,date:"2025-02-01"},
+      {id:"es",productId:"eligible",quantity:1,salePrice:8,profit:4,date:"2025-02-01"},
+    ];
+    const filtered = categoryData([returned,personal,eligible],purchases,sales,[],"Livros");
+    expect(filtered.purchases.map(p => p.id)).toEqual(["e"]);
+    expect(filtered.sales.map(s => s.id)).toEqual(["es"]);
+    expect(computeDashboard(purchases,sales,[returned,personal,eligible])).toMatchObject({totalPurchases:4,totalSales:8,totalProfit:4,unitsSold:1,productCount:1,stockUnits:0});
   });
   it("keeps unknown dates out of the monthly series and excludes reversed dates from velocity",()=>{
     const d=computeDashboard(purchases,[{...sales[0],date:"2024-12-01"},sales[1]],products);

@@ -3,15 +3,45 @@ import { useStore } from "@/lib/store";
 import { money, displayDate } from "@/lib/dashboardMetrics";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Expenses() {
-  const { expenses, loading, error } = useStore();
+  const { expenses, categories, addExpense, loading, error } = useStore();
   const [search, setSearch] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(() => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Lisbon", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()));
   const filtered = useMemo(() => expenses.filter(expense =>
     `${expense.description} ${expense.category}`.toLocaleLowerCase("pt-PT").includes(search.toLocaleLowerCase("pt-PT"))
   ).sort((a, b) => b.date.localeCompare(a.date)), [expenses, search]);
   const total = filtered.reduce((sum, expense) => sum + expense.amount, 0);
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const value = Number(amount);
+    if (!description.trim() || !category || !Number.isFinite(value) || value <= 0 || !date) {
+      toast.error("Preenche a descrição, categoria, valor e data.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await addExpense({ description: description.trim(), category, amount: value, date });
+      setDialogOpen(false);
+      setDescription(""); setAmount("");
+      toast.success("Despesa registada");
+    } catch {
+      toast.error("Não foi possível registar a despesa.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) return <p role="status" className="py-12 text-center text-muted-foreground">A carregar despesas…</p>;
   if (error) return <p role="alert" className="rounded-xl border p-6 text-destructive">{error}</p>;
@@ -19,7 +49,18 @@ export default function Expenses() {
   return <div className="space-y-5 animate-fade-in">
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div><h1 className="text-2xl font-bold">Despesas operacionais</h1><p className="mt-1 text-sm text-muted-foreground">{filtered.length} registos · Total {money(total)}</p></div>
-      <Input className="w-full sm:w-72" aria-label="Pesquisar despesas" placeholder="Pesquisar descrição ou categoria…" value={search} onChange={event => setSearch(event.target.value)} />
+      <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+        <Input className="w-full sm:w-64" aria-label="Pesquisar despesas" placeholder="Pesquisar descrição ou categoria…" value={search} onChange={event => setSearch(event.target.value)} />
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}><DialogTrigger asChild><Button className="w-full gap-2 sm:w-auto" onClick={() => setCategory(current => current || categories[0] || "")}><Plus className="h-4 w-4" />Nova despesa</Button></DialogTrigger>
+          <DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Registar despesa</DialogTitle></DialogHeader>
+            <form onSubmit={save} className="space-y-4 pt-2">
+              <div className="space-y-1.5"><Label htmlFor="expense-description">Descrição</Label><Input id="expense-description" value={description} onChange={event => setDescription(event.target.value)} maxLength={500} required autoFocus /></div>
+              <div className="space-y-1.5"><Label htmlFor="expense-category">Categoria</Label><select id="expense-category" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={category} onChange={event => setCategory(event.target.value)} required><option value="">Seleciona uma categoria</option>{categories.map(name => <option key={name} value={name}>{name}</option>)}</select></div>
+              <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-1.5"><Label htmlFor="expense-amount">Valor (€)</Label><Input id="expense-amount" type="number" inputMode="decimal" min="0.01" step="0.01" value={amount} onChange={event => setAmount(event.target.value)} required /></div><div className="space-y-1.5"><Label htmlFor="expense-date">Data</Label><Input id="expense-date" type="date" value={date} onChange={event => setDate(event.target.value)} required /></div></div>
+              <Button type="submit" className="w-full" disabled={saving || categories.length === 0}>{saving ? "A guardar…" : "Guardar despesa"}</Button>
+            </form>
+          </DialogContent></Dialog>
+      </div>
     </div>
     <Card><CardContent className="overflow-x-auto p-0">
       <Table><TableHeader><TableRow><TableHead>Descrição</TableHead><TableHead>Categoria</TableHead><TableHead className="text-right">Valor</TableHead><TableHead>Data</TableHead></TableRow></TableHeader>

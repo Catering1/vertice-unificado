@@ -1,15 +1,22 @@
 import type { Expense, Product, Purchase, Sale } from "@/types";
-import { activeUnitsByPurchase, purchaseReceiptStatus } from "@/lib/inventory";
+import { activeUnitsByPurchase, isPurchaseExcludedFromStock, purchaseReceiptStatus } from "@/lib/inventory";
 
 export const money = (v: number | null) => v == null ? "Por confirmar" : v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 export const displayDate = (date: string) => date ? new Date(`${date}T12:00:00`).toLocaleDateString("pt-PT") : "Sem data";
 export function categoryData(products: Product[], purchases: Purchase[], sales: Sale[], expenses: Expense[], category = "all") {
-  const selected = products.filter(p => category === "all" || p.category === category);
+  const selected = products.filter(p => p.inventoryUse !== "personal" && (category === "all" || p.category === category));
   const ids = new Set(selected.map(p => p.id));
-  return { products: selected, purchases: purchases.filter(p => ids.has(p.productId)), sales: sales.filter(s => ids.has(s.productId)), expenses: expenses.filter(e => category === "all" || e.category === category) };
+  const eligiblePurchases = purchases.filter(p => ids.has(p.productId) && !isPurchaseExcludedFromStock(p));
+  const eligibleIds = new Set(eligiblePurchases.map(p => p.productId));
+  return { products: selected.filter(p => eligibleIds.has(p.id)), purchases: eligiblePurchases, sales: sales.filter(s => eligibleIds.has(s.productId)), expenses: expenses.filter(e => category === "all" || e.category === category) };
 }
 
-export function computeDashboard(purchases: Purchase[], sales: Sale[], products: Product[], expenses: Expense[] = []) {
+export function computeDashboard(allPurchases: Purchase[], allSales: Sale[], allProducts: Product[], expenses: Expense[] = []) {
+  const businessIds = new Set(allProducts.filter(p => p.inventoryUse !== "personal").map(p => p.id));
+  const purchases = allPurchases.filter(p => businessIds.has(p.productId) && !isPurchaseExcludedFromStock(p));
+  const eligibleIds = new Set(purchases.map(p => p.productId));
+  const sales = allSales.filter(s => eligibleIds.has(s.productId));
+  const products = allProducts.filter(p => eligibleIds.has(p.id));
   const byId = new Map(products.map(p => [p.id, p]));
   const totalPurchases = purchases.reduce((sum, p) => sum + (p.price ?? 0) * p.quantity, 0);
   const totalSales = sales.reduce((sum, s) => sum + s.salePrice * s.quantity, 0);
@@ -19,26 +26,22 @@ export function computeDashboard(purchases: Purchase[], sales: Sale[], products:
   const cogs = knownRevenue - totalProfit;
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const activeUnits = activeUnitsByPurchase(purchases, sales);
-  let stockValue = 0, productsInStock = 0, stockUnits = 0, personalValue = 0, personalUnits = 0;
+  let stockValue = 0, productsInStock = 0, stockUnits = 0;
   let pendingStockUnits = 0, pendingStockValue = 0, receivedStockUnits = 0, receivedStockValue = 0;
   const activeProductIds = new Set<string>();
   purchases.forEach(purchase => {
     const qty = activeUnits.get(purchase.id) ?? 0;
-    const product = byId.get(purchase.productId);
     const value = qty * (purchase.price ?? 0);
-    if (product?.inventoryUse === "personal") { personalUnits += qty; personalValue += value; }
-    else {
-      stockUnits += qty;
-      stockValue += value;
-      if (purchaseReceiptStatus(purchase) === "received") {
-        receivedStockUnits += qty;
-        receivedStockValue += value;
-      } else {
-        pendingStockUnits += qty;
-        pendingStockValue += value;
-      }
-      if (qty) activeProductIds.add(purchase.productId);
+    stockUnits += qty;
+    stockValue += value;
+    if (purchaseReceiptStatus(purchase) === "received") {
+      receivedStockUnits += qty;
+      receivedStockValue += value;
+    } else {
+      pendingStockUnits += qty;
+      pendingStockValue += value;
     }
+    if (qty) activeProductIds.add(purchase.productId);
   });
   productsInStock = activeProductIds.size;
   const purchaseDates = new Map<string, string>();
@@ -81,7 +84,7 @@ export function computeDashboard(purchases: Purchase[], sales: Sale[], products:
   return {
     totalPurchases, totalSales, totalProfit, totalExpenses, netProfit: totalProfit - totalExpenses,
     stockValue, productsInStock, stockUnits, pendingStockUnits, pendingStockValue,
-    receivedStockUnits, receivedStockValue, personalValue, personalUnits, cogs,
+    receivedStockUnits, receivedStockValue, cogs,
     productCount: products.length, unitsSold: sales.reduce((n, s) => n + s.quantity, 0),
     avgProfitPerSale: knownSales.length ? totalProfit / knownSales.length : 0,
     avgMargin: knownRevenue > 0 ? totalProfit / knownRevenue : 0,

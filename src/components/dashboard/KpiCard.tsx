@@ -12,18 +12,15 @@ interface KpiCardProps {
   accentClassName?: string;
 }
 
-export default function KpiCard({ label, value, icon: Icon, iconBg, iconColor, valueClassName, accentClassName }: KpiCardProps) {
+export default function KpiCard({ label, value, icon: Icon, iconBg, iconColor }: KpiCardProps) {
   return (
-    <Card className={cn("relative overflow-hidden border bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg", accentClassName)}>
-      <div className={cn("absolute inset-x-0 top-0 h-1", iconBg)} aria-hidden="true" />
-      <CardContent className="flex items-start gap-3 p-3 sm:gap-4 sm:p-5">
-        <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset ring-black/5 sm:h-11 sm:w-11", iconBg)}>
-          <Icon className={cn("h-4 w-4 sm:h-5 sm:w-5", iconColor)} />
+    <Card className="h-full min-h-32 border-border/70 bg-card shadow-sm">
+      <CardContent className="flex h-full flex-col justify-between p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <p className="max-w-[21ch] text-xs font-medium leading-snug text-muted-foreground sm:text-sm">{label}</p>
+          <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", iconBg)} aria-hidden="true"><Icon className={cn("h-4 w-4", iconColor)} /></span>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-xs">{label}</p>
-          <p className={cn("mt-1 break-words text-base font-extrabold tabular-nums tracking-tight sm:text-2xl", valueClassName)}>{value}</p>
-        </div>
+        <p className="mt-5 break-words text-xl font-semibold tabular-nums tracking-tight text-foreground sm:text-2xl">{value}</p>
       </CardContent>
     </Card>
   );

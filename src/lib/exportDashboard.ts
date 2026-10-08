@@ -38,7 +38,6 @@ export async function exportDashboardXlsx(
     ["Resultado após despesas", d.netProfit, EUR],
     ["Vendas sem custo", d.missingCosts],
     ["Vendas sem data", d.undatedSales],
-    ["Leitura / uso pessoal", d.personalValue, EUR],
     ["Valor em Stock", d.stockValue, EUR],
     ["Produtos", d.productCount],
     ["Margem Média", d.avgMargin, PCT],
