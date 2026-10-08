@@ -19,15 +19,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { signOut, user } = useAuth();
   const [sidebarVisible, setSidebarVisible] = useState(() => localStorage.getItem("admin-sidebar-visible") !== "false");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const toggleSidebar = () => setSidebarVisible(value => { localStorage.setItem("admin-sidebar-visible", String(!value)); return !value; });
 
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "U";
 
   return (
     <div className="flex min-h-dvh w-full min-w-0">
+      {mobileSidebarOpen && <button className="fixed inset-0 z-40 bg-black/50 md:hidden" aria-label="Fechar menu lateral" onClick={() => setMobileSidebarOpen(false)} />}
       {/* Sidebar */}
       <aside
-        className={cn("hidden w-72 shrink-0 flex-col bg-sidebar text-sidebar-foreground", sidebarVisible && "md:flex")}
+        className={cn("hidden w-72 shrink-0 flex-col bg-sidebar text-sidebar-foreground", mobileSidebarOpen && "fixed inset-y-0 left-0 z-50 flex md:static md:z-auto", sidebarVisible ? "md:flex" : "md:hidden")}
       >
         {/* Profile section */}
         <div className="px-5 pt-6 pb-4">
@@ -63,6 +65,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Link
                 key={path}
                 to={path}
+                onClick={() => setMobileSidebarOpen(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
                   active
@@ -88,7 +91,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-card px-4 md:px-6">
-          <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={toggleSidebar} aria-label={sidebarVisible ? "Esconder barra lateral" : "Mostrar barra lateral"} title={sidebarVisible ? "Esconder barra lateral" : "Mostrar barra lateral"}>{sidebarVisible ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}</Button>
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileSidebarOpen(value => !value)} aria-label={mobileSidebarOpen ? "Esconder barra lateral" : "Mostrar barra lateral"}>{mobileSidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}</Button>
+          <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={toggleSidebar} aria-label={sidebarVisible ? "Esconder barra lateral" : "Mostrar barra lateral"}>{sidebarVisible ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}</Button>
           <h1 className="text-lg font-semibold">
             {navItems.find(n => n.path === pathname)?.label ?? ""}
           </h1>
