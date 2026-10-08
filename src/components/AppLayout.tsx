@@ -5,6 +5,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useState } from "react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
@@ -16,6 +18,8 @@ const navItems = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { signOut, user } = useAuth();
+  const [sidebarVisible, setSidebarVisible] = useState(() => localStorage.getItem("admin-sidebar-visible") !== "false");
+  const toggleSidebar = () => setSidebarVisible(value => { localStorage.setItem("admin-sidebar-visible", String(!value)); return !value; });
 
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "U";
 
@@ -23,7 +27,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-dvh w-full min-w-0">
       {/* Sidebar */}
       <aside
-        className="hidden w-72 shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex"
+        className={cn("hidden w-72 shrink-0 flex-col bg-sidebar text-sidebar-foreground", sidebarVisible && "md:flex")}
       >
         {/* Profile section */}
         <div className="px-5 pt-6 pb-4">
@@ -84,6 +88,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-card px-4 md:px-6">
+          <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={toggleSidebar} aria-label={sidebarVisible ? "Esconder barra lateral" : "Mostrar barra lateral"} title={sidebarVisible ? "Esconder barra lateral" : "Mostrar barra lateral"}>{sidebarVisible ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}</Button>
           <h1 className="text-lg font-semibold">
             {navItems.find(n => n.path === pathname)?.label ?? ""}
           </h1>

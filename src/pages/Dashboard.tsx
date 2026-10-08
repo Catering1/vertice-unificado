@@ -1,10 +1,13 @@
 import { useStore } from "@/lib/store";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { categoryData, computeDashboard, money } from "@/lib/dashboardMetrics";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, Clock, Calculator, RefreshCw, ArrowRight, AlertTriangle } from "lucide-react";
+import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, Clock, Calculator, RefreshCw, AlertTriangle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { planDateRepairs } from "@/lib/repairDates";
+import { toast } from "sonner";
 import KpiCard from "@/components/dashboard/KpiCard";
 import ProfitOverTimeChart from "@/components/dashboard/ProfitOverTimeChart";
 import TopProductsChart from "@/components/dashboard/TopProductsChart";
@@ -26,6 +29,7 @@ function utcToday() {
 
 export default function Dashboard() {
   const store = useStore();
+  const [repairing, setRepairing] = useState(false);
   const [category, setCategory] = usePersistedState("dashboard-category", "all");
   const categories = useMemo(() => {
     const activeProductIds = new Set([
@@ -44,29 +48,26 @@ export default function Dashboard() {
   }).filter(c => c.productCount || c.totalExpenses), [categories,store.products,store.purchases,store.sales,store.expenses]);
   const fmt = money;
   const partial = d.missingCosts > 0;
-  const recordsToReview = useMemo(() => {
-    const byId = new Map(data.products.map(product => [product.id, product]));
-    const purchaseDates = new Map<string, string>();
-    data.purchases.forEach(purchase => {
-      if (purchase.date && (!purchaseDates.has(purchase.productId) || purchase.date < purchaseDates.get(purchase.productId)!)) purchaseDates.set(purchase.productId, purchase.date);
-    });
-    const items: { key: string; name: string; detail: string; href: string }[] = [];
-    data.purchases.forEach(purchase => {
-      const name = byId.get(purchase.productId)?.name ?? "Produto removido";
-      const href = `/admin/compras?registo=${encodeURIComponent(purchase.id)}`;
-      if (purchase.price == null) items.push({ key: `${purchase.id}-price`, name, detail: `Compra ${purchase.date || "sem data"} · preço de compra em falta`, href });
-      if (!purchase.date) items.push({ key: `${purchase.id}-date`, name, detail: "Compra sem data", href });
-    });
-    data.sales.forEach(sale => {
-      const name = byId.get(sale.productId)?.name ?? "Produto removido";
-      const href = `/admin/vendas?registo=${encodeURIComponent(sale.id)}`;
-      if (sale.profit == null) items.push({ key: `${sale.id}-cost`, name, detail: `Venda ${sale.date || "sem data"} · custo em falta`, href });
-      if (!sale.date) items.push({ key: `${sale.id}-date`, name, detail: "Venda sem data", href });
-      const purchaseDate = purchaseDates.get(sale.productId);
-      if (sale.date && purchaseDate && sale.date < purchaseDate) items.push({ key: `${sale.id}-sequence`, name, detail: `Venda ${sale.date} anterior à compra ${purchaseDate}`, href });
-    });
-    return items;
-  }, [data]);
+  const dateRepairs = useMemo(() => planDateRepairs(store.purchases, store.sales, new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Lisbon", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())), [store.purchases, store.sales]);
+  const repairDates = async () => {
+    if (repairing) return;
+    setRepairing(true);
+    try {
+      for (const update of dateRepairs.purchaseUpdates) {
+        const { data, error } = await supabase.from("purchases").update({ date: update.date }).eq("id", update.id).select("id,date").single();
+        if (error || data?.date !== update.date) throw error ?? new Error("Compra não atualizada");
+      }
+      for (const update of dateRepairs.saleUpdates) {
+        const { data, error } = await supabase.from("sales").update({ date: update.date }).eq("id", update.id).select("id,date").single();
+        if (error || data?.date !== update.date) throw error ?? new Error("Venda não atualizada");
+      }
+      toast.success(`${dateRepairs.purchaseUpdates.length} compras e ${dateRepairs.saleUpdates.length} vendas corrigidas`);
+      window.location.reload();
+    } catch {
+      toast.error("Não foi possível concluir a correção. Tente novamente; as datas já corrigidas não serão alteradas.");
+      setRepairing(false);
+    }
+  };
   const pickupAlerts = useMemo(() => {
     const productsById = new Map(data.products.map(product => [product.id, product]));
     const today = utcToday();
@@ -125,11 +126,10 @@ export default function Dashboard() {
       <div className="flex gap-2 overflow-x-auto pb-2" role="group" aria-label="Filtrar por categoria">
         {["all",...categories].map(c => <Button key={c} className="shrink-0 whitespace-nowrap" aria-pressed={activeCategory===c} variant={activeCategory===c ? "default" : "outline"} onClick={() => setCategory(c)}>{c === "all" ? "Todas as categorias" : c}</Button>)}
       </div>
-      {recordsToReview.length > 0 && <section className="rounded-xl border bg-card p-4 sm:p-5" aria-labelledby="review-heading">
-        <div className="mb-3 flex items-center justify-between gap-3"><div><h2 id="review-heading" className="font-semibold">Registos por corrigir</h2><p className="text-xs text-muted-foreground">Abre o registo específico para completar os dados.</p></div><span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900">{recordsToReview.length}</span></div>
-        <div className="max-h-56 divide-y overflow-y-auto">
-          {recordsToReview.map(item => <Link key={item.key} to={item.href} className="flex min-h-12 items-center justify-between gap-3 py-2 text-sm hover:text-primary"><span className="min-w-0"><strong className="block truncate">{item.name}</strong><span className="text-xs text-muted-foreground">{item.detail}</span></span><ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" /></Link>)}
-        </div>
+      {(dateRepairs.purchaseUpdates.length > 0 || dateRepairs.saleUpdates.length > 0) && <section className="rounded-xl border bg-card p-4 sm:p-5" aria-labelledby="repair-dates-heading">
+        <h2 id="repair-dates-heading" className="font-semibold">Corrigir datas do histórico</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{dateRepairs.purchaseUpdates.length} compras sem data e {dateRepairs.saleUpdates.length} vendas sem data ou anteriores à compra. Para compras sem data, usa a primeira venda conhecida, a data de entrega ou a data de hoje. Para vendas, usa a data da compra quando falta a data ou quando a venda é anterior.</p>
+        <Button className="mt-3" onClick={repairDates} disabled={repairing}>{repairing ? "A corrigir…" : "Corrigir datas agora"}</Button>
       </section>}
       {pickupAlerts.length > 0 && <section className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 sm:p-5" aria-labelledby="pickup-alerts-heading">
         <div className="mb-3 flex items-start gap-3"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" /><div><h2 id="pickup-alerts-heading" className="font-semibold">Encomendas para levantar</h2><p className="text-sm text-amber-900">{pickupAlerts.length} {pickupAlerts.length === 1 ? "encomenda aproxima-se" : "encomendas aproximam-se"} da data limite.</p></div></div>
