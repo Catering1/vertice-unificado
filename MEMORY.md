@@ -1,5 +1,18 @@
 # Memória do projeto Vendig Machine Store
 
+## Alteração 2026-10-08 — detalhes de compra
+- O diálogo de edição de compra mostra o UUID único do produto e o UUID da compra. Quando há vendas associadas ao `product_id`, mostra a data, quantidade, preço, lucro e ID de cada venda. A associação é pelo ID do produto, nunca pelo nome.
+
+## Alteração 2026-10-08 — correção de datas e navegação
+- O dashboard oferece uma ação única para preencher datas de compra em falta (primeira venda conhecida, entrega ou data atual em Lisboa), datas de venda em falta (data da compra ou data atual) e vendas anteriores à compra (data da compra). A aplicação confirma cada atualização no Supabase e recarrega os dados no fim. A secção antiga «Registos por corrigir» foi removida. A barra lateral administrativa pode ser escondida ou mostrada, com preferência guardada no navegador.
+- Correção aplicada diretamente no Supabase ativo `pxpxipewhwwsiogoyjov` em 08/10/2026: 6 compras sem data receberam datas estimadas com base na folha de origem e nos registos próximos (25/03/2025, 06/04/2025 ou 11/04/2025); vendas sem data ou anteriores à primeira compra do mesmo produto receberam a data dessa compra. Verificação final: 0 compras sem data, 0 vendas sem data, 0 vendas anteriores à primeira compra do produto. As datas estimadas não devem ser confundidas com datas confirmadas.
+
+## Alteração 2026-10-08 — filtros, cartões e análise
+- Compras e Vendas usam categorias de seleção direta; Compras mostra categoria, estado, estado da encomenda, pesquisa e mês; Vendas mostra categoria, vista, pesquisa e mês. O filtro de dados por confirmar foi retirado.
+- Os cartões do dashboard têm duas primeiras linhas com métricas de vendas, compras, unidades e stock na ordem pedida, iguais para Eletrónica e Livros. O aviso de livros em leitura foi retirado da interface.
+- A função `analyze-dashboard` aceita o domínio Vercel e usa Gemini 3.5 Flash-Lite quando `GEMINI_API_KEY` existe, guardada como secret no Supabase. A chave foi criada no Google AI Studio e configurada no projeto ativo. A API só é chamada ao clicar em Analisar ou Reanalisar; a função mantém JWT obrigatório. O prompt usa o contexto de compra para revenda e proíbe números inventados.
+- O botão da barra lateral está acessível também em ecrãs estreitos: abre um menu sobreposto, que fecha pelo botão interno, fundo ou uma opção de navegação. No desktop, esconde/mostra a barra lateral e guarda a escolha localmente.
+
 Atualizado em 3 de outubro de 2026.
 
 ## Regra de continuidade
