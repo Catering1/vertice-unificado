@@ -211,6 +211,11 @@ O repositório ativo da loja pública e do dashboard é `Catering1/vertice-unifi
 - Cada produto comercial `Ativo` e elegível para venda deve ter exatamente um anúncio publicado em `Ativos` em pelo menos uma das duas contas OLX. Um anúncio numa conta basta; não duplicar a mesma unidade na outra.
 - Antes de criar, reconciliar ambas as contas e todos os estados. Se existir apenas em `Por pagar`, `Pendentes`, `Para edição` ou `Terminados`, recuperar o anúncio existente sem pagar em vez de criar outro. Produtos ainda não elegíveis ficam pendentes; a inexistência de rascunho privado no OLX não autoriza publicação antecipada.
 
+## Pré-anúncios e resolução de lacunas OLX — 2026-10-09
+- “Por inspecionar” e “sem dados suficientes” deixam de ser bloqueios finais. Todos os produtos comerciais `Ativo` devem ter um anúncio numa das contas; artigos ainda não recebidos/inspecionados são publicados com disponibilidade e estado final sujeitos a confirmação antes da entrega, sem expor estados internos ou a Vinted.
+- Dados e imagens são procurados no anúncio original, encomenda/conversa, dashboard, identificação do modelo/SKU, fabricante e fontes técnicas fiáveis. Características desconhecidas são omitidas ou individualmente assinaladas como sujeitas a confirmação. Na ausência temporária de fotos reais, podem ser usadas imagens oficiais/ilustrativas permitidas e claramente identificadas, sendo substituídas antes da entrega.
+- Só ficam sem publicar unidades não identificáveis, sem custo que permita calcular preço, sem qualquer imagem utilizável legitimamente, ou quando ambas as contas exigirem pagamento. Nunca inventar informação nem pagar taxas.
+
 ## Execução manual 2026-10-09 14:14 +01:00 — reconciliação OLX e Vinted
 - Vinted autenticada: Todos, Em curso, Concluídos e Cancelados revistos. Mantêm-se seis pedidos em curso previamente registados; Fold8 (`25168549388`) e Fold7 (`25128585583`) aparecem como concluídos. Cancelados/reembolsados sem nova compra de revenda; nenhuma referência nova.
 - Dashboard autenticado: categoria Eletrónica mostra 8 produtos Ativos. Fold8 (`Z Fold 8 ultra`) está Vendido, com compra ainda `Por Receber` e entrega registada em 05/10; sem inspeção confirmada, mantido sem alteração à compra. Os restantes produtos ativos incluem quatro por receber, o Surface Laptop Studio recebido, Fold7 recebido e Surface Laptop GO 3 recebido.
