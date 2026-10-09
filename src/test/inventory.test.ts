@@ -32,7 +32,7 @@ describe("purchase identity and active stock value", () => {
     { ...purchase("not_tracked"), id: "a", productId: "first", price: 80 },
     { ...purchase("not_tracked"), id: "b", productId: "second", price: 120 },
   ];
-  const sales: Sale[] = [{ id: "sale", productId: "first", quantity: 1, salePrice: 150, profit: 70, date: "2026-09-30" }];
+  const sales: Sale[] = [{ id: "sale", productId: "first", purchaseId: "a", quantity: 1, salePrice: 150, profit: 70, date: "2026-09-30" }];
 
   it("keeps an identically named later purchase active after the first is sold", () => {
     expect(activeUnitsByPurchase(purchases, sales)).toEqual(new Map([["a", 0], ["b", 1]]));
@@ -56,10 +56,10 @@ describe("purchase identity and active stock value", () => {
     expect(dashboard.receivedStockUnits).toBe(0);
   });
 
-  it("marks every legacy purchase of a product as sold when that product has a sale", () => {
+  it("consumes only the specifically selected purchase when product rows repeat", () => {
     const legacy = purchases.map(p => ({ ...p, productId: "first" }));
-    expect(activeUnitsByPurchase(legacy, sales)).toEqual(new Map([["a", 0], ["b", 0]]));
-    expect(computeDashboard(legacy, sales, products).stockValue).toBe(0);
+    expect(activeUnitsByPurchase(legacy, sales)).toEqual(new Map([["a", 0], ["b", 1]]));
+    expect(computeDashboard(legacy, sales, products).stockValue).toBe(120);
   });
 
   it("counts an unsold order as incoming while keeping it ineligible for sale", () => {
@@ -98,7 +98,7 @@ describe("purchase identity and active stock value", () => {
   it("keeps refunded purchases in financial metrics until refund receipt is confirmed", () => {
     const waitingForRefund = [{ ...purchase("refunded"), id: "refund-pending", productId: "first" }];
     const confirmedRefund = [{ ...waitingForRefund[0], refundReceivedAt: "2026-10-09T10:00:00.000Z" }];
-    const refundSale: Sale[] = [{ id: "refund-sale", productId: "first", quantity: 1, salePrice: 150, date: "2026-10-01", profit: 50 }];
+    const refundSale: Sale[] = [{ id: "refund-sale", productId: "first", purchaseId: "refund-pending", quantity: 1, salePrice: 150, date: "2026-10-01", profit: 50 }];
     const awaiting = computeDashboard(waitingForRefund, refundSale, products);
     const confirmed = computeDashboard(confirmedRefund, refundSale, products);
 

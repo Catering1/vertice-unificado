@@ -17,6 +17,7 @@ interface DashboardData {
   
   roiRealized: string;
   stockValue: string;
+  exposureValue: string;
   avgVelocity: string;
   avgProfitPerSale: string;
   productCount: number;

@@ -10,9 +10,9 @@ describe("planDateRepairs", () => {
       { id: "p3", productId: "c", date: "" },
     ] as Purchase[];
     const sales = [
-      { id: "s1", productId: "a", date: "2023-02-01" },
-      { id: "s2", productId: "b", date: "2024-05-01" },
-      { id: "s3", productId: "b", date: "" },
+      { id: "s1", productId: "a", purchaseId: "p1", date: "2023-02-01" },
+      { id: "s2", productId: "b", purchaseId: "p2", date: "2024-05-01" },
+      { id: "s3", productId: "b", purchaseId: "p2", date: "" },
     ] as Sale[];
     expect(planDateRepairs(purchases, sales, "2026-10-08")).toEqual({
       purchaseUpdates: [{ id: "p1", date: "2023-02-01" }, { id: "p3", date: "2026-10-08" }],

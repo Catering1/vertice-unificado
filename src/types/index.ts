@@ -47,6 +47,7 @@ export type VintedOrderStatus =
 export interface Sale {
   id: string;
   productId: string;
+  purchaseId: string;
   quantity: number;
   salePrice: number;
   date: string;

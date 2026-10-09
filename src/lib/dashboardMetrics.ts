@@ -7,15 +7,17 @@ export function categoryData(products: Product[], purchases: Purchase[], sales: 
   const selected = products.filter(p => p.inventoryUse !== "personal" && (category === "all" || p.category === category));
   const ids = new Set(selected.map(p => p.id));
   const eligiblePurchases = purchases.filter(p => ids.has(p.productId) && !isPurchaseExcludedFromDashboard(p));
+  const eligiblePurchaseIds = new Set(eligiblePurchases.map(p => p.id));
   const eligibleIds = new Set(eligiblePurchases.map(p => p.productId));
-  return { products: selected.filter(p => eligibleIds.has(p.id)), purchases: eligiblePurchases, sales: sales.filter(s => eligibleIds.has(s.productId)), expenses: expenses.filter(e => category === "all" || e.category === category) };
+  return { products: selected.filter(p => eligibleIds.has(p.id)), purchases: eligiblePurchases, sales: sales.filter(s => s.purchaseId != null ? eligiblePurchaseIds.has(s.purchaseId) : eligibleIds.has(s.productId)), expenses: expenses.filter(e => category === "all" || e.category === category) };
 }
 
 export function computeDashboard(allPurchases: Purchase[], allSales: Sale[], allProducts: Product[], expenses: Expense[] = []) {
   const businessIds = new Set(allProducts.filter(p => p.inventoryUse !== "personal").map(p => p.id));
   const purchases = allPurchases.filter(p => businessIds.has(p.productId) && !isPurchaseExcludedFromDashboard(p));
+  const eligiblePurchaseIds = new Set(purchases.map(p => p.id));
   const eligibleIds = new Set(purchases.map(p => p.productId));
-  const sales = allSales.filter(s => eligibleIds.has(s.productId));
+  const sales = allSales.filter(s => s.purchaseId != null && eligiblePurchaseIds.has(s.purchaseId));
   const products = allProducts.filter(p => eligibleIds.has(p.id));
   const byId = new Map(products.map(p => [p.id, p]));
   const totalPurchases = purchases.reduce((sum, p) => sum + (p.price ?? 0) * p.quantity, 0);
@@ -44,13 +46,10 @@ export function computeDashboard(allPurchases: Purchase[], allSales: Sale[], all
     if (qty) activeProductIds.add(purchase.productId);
   });
   productsInStock = activeProductIds.size;
-  const purchaseDates = new Map<string, string>();
-  purchases.filter(p => p.date).forEach(p => {
-    if (!purchaseDates.has(p.productId) || p.date < purchaseDates.get(p.productId)!) purchaseDates.set(p.productId, p.date);
-  });
+  const purchaseDates = new Map(purchases.filter(p => p.date).map(p => [p.id, p.date]));
   let days = 0, datedSales = 0, inconsistentDates = 0;
   sales.forEach(s => {
-    const date = purchaseDates.get(s.productId);
+    const date = s.purchaseId ? purchaseDates.get(s.purchaseId) : undefined;
     if (!date || !s.date) return;
     const diff = (Date.parse(s.date) - Date.parse(date)) / 86400000;
     if (diff < 0) inconsistentDates++;
@@ -83,6 +82,7 @@ export function computeDashboard(allPurchases: Purchase[], allSales: Sale[], all
   }
   return {
     totalPurchases, totalSales, totalProfit, totalExpenses, netProfit: totalProfit - totalExpenses,
+    exposureValue: totalProfit - stockValue,
     stockValue, productsInStock, stockUnits, pendingStockUnits, pendingStockValue,
     receivedStockUnits, receivedStockValue, cogs,
     productCount: products.length, unitsSold: sales.reduce((n, s) => n + s.quantity, 0),
@@ -92,6 +92,7 @@ export function computeDashboard(allPurchases: Purchase[], allSales: Sale[], all
     stockTurnover: stockValue > 0 ? cogs / stockValue : 0,
     avgVelocity: datedSales ? days / datedSales : 0,
     missingCosts: sales.length - knownSales.length,
+    unlinkedSales: allSales.filter(s => businessIds.has(s.productId) && !s.purchaseId).length,
     missingPurchaseCosts: purchases.filter(p => p.price == null).length,
     missingCostRevenue: sales.filter(s => s.profit == null).reduce((n,s) => n + s.salePrice*s.quantity, 0),
     undatedSales: sales.filter(s => !s.date).length,

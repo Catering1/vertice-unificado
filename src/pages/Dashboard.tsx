@@ -92,6 +92,7 @@ export default function Dashboard() {
     {label: "Unidades para vender (stock + por receber)", shortLabel: "Unid. para vender", value: String(d.stockUnits), icon: Package, iconBg:"bg-indigo-100", iconColor:"text-indigo-700", valueClassName:"text-indigo-700", accentClassName:"border-indigo-100"},
     {label: "Valor das compras em stock", shortLabel: "Compras em stock", value: fmt(d.stockValue), icon: Warehouse, iconBg:"bg-indigo-100", iconColor:"text-indigo-700", valueClassName:"text-indigo-700", accentClassName:"border-indigo-100"},
     {label: partial ? "Lucro apurado (parcial)" : "Lucro das vendas", shortLabel: partial ? "Lucro parcial" : "Lucro vendas", value: fmt(d.totalProfit), icon: TrendingUp, iconBg:"bg-emerald-100", iconColor:"text-emerald-700", valueClassName:"text-emerald-700", accentClassName:"border-emerald-100"},
+    {label: "Valor exposição = lucro das vendas - compras em stock", shortLabel: "Exposição", value: fmt(d.exposureValue), icon: TrendingUp, iconBg:d.exposureValue >= 0 ? "bg-violet-100" : "bg-red-100", iconColor:d.exposureValue >= 0 ? "text-violet-700" : "text-red-700", valueClassName:d.exposureValue >= 0 ? "text-violet-700" : "text-red-700", accentClassName:d.exposureValue >= 0 ? "border-violet-100" : "border-red-100"},
     {label: "Valor do stock recebido", shortLabel: "Stock recebido", value: fmt(d.receivedStockValue), icon: Warehouse, iconBg:"bg-cyan-100", iconColor:"text-cyan-700", valueClassName:"text-cyan-700", accentClassName:"border-cyan-100"},
     {label: "Unidades em stock (recebido)", shortLabel: "Unid. em stock", value: String(d.receivedStockUnits), icon: Package, iconBg:"bg-cyan-100", iconColor:"text-cyan-700", valueClassName:"text-cyan-700", accentClassName:"border-cyan-100"},
     {label: "Unidades por receber", shortLabel: "Unid. por receber", value: String(d.pendingStockUnits), icon: Package, iconBg:"bg-amber-100", iconColor:"text-amber-700", valueClassName:"text-amber-700", accentClassName:"border-amber-100"},
@@ -119,7 +120,7 @@ export default function Dashboard() {
     category: activeCategory === "all" ? "Todas as categorias" : activeCategory,
     totalPurchases:d.totalPurchases.toFixed(2), totalSales:d.totalSales.toFixed(2),totalProfit:d.totalProfit.toFixed(2),
     avgMargin:(d.avgMargin*100).toFixed(1),roiRealized:(d.roiRealized*100).toFixed(1),
-    stockValue:d.stockValue.toFixed(2),avgVelocity:d.avgVelocity.toFixed(0),avgProfitPerSale:d.avgProfitPerSale.toFixed(2),
+    stockValue:d.stockValue.toFixed(2),exposureValue:d.exposureValue.toFixed(2),avgVelocity:d.avgVelocity.toFixed(0),avgProfitPerSale:d.avgProfitPerSale.toFixed(2),
     operationalExpenses:d.totalExpenses.toFixed(2),netProfit:d.netProfit.toFixed(2),
     productCount:d.productCount,topProducts:topProductCosts.join("; "),
     unitsPurchased:data.purchases.reduce((total, purchase) => total + purchase.quantity, 0),
@@ -127,7 +128,7 @@ export default function Dashboard() {
     avgPurchaseUnitCost:pricedUnits ? (pricedPurchases.reduce((total, purchase) => total + purchase.price! * purchase.quantity, 0) / pricedUnits).toFixed(2) : null,
     purchasesWithoutCost:d.missingPurchaseCosts,
     avgSoldUnitCost:soldUnitsWithKnownCost ? (d.cogs / soldUnitsWithKnownCost).toFixed(2) : null,
-    dataQuality: `${d.missingCosts} vendas sem custo; ${d.undatedSales} vendas sem data. Lucro parcial quando há custos em falta.`,
+    dataQuality: `${d.missingCosts} vendas sem custo; ${d.undatedSales} vendas sem data; ${d.unlinkedSales} vendas sem compra associada. Lucro parcial quando há custos em falta.`,
   };
   if (store.loading) return <p role="status" className="py-12 text-center text-muted-foreground">A carregar o dashboard…</p>;
   if (store.error) return <p role="alert" className="rounded-xl border p-6 text-destructive">{store.error}</p>;
@@ -163,8 +164,8 @@ export default function Dashboard() {
 
       {activeCategory === "all" && summaries.length > 0 && <section className="overflow-hidden rounded-xl border bg-card">
         <h2 className="px-5 pt-5 text-base font-semibold">Comparar categorias</h2>
-        <div className="overflow-x-auto p-5"><table className="w-full text-sm"><thead><tr className="border-b text-left text-muted-foreground"><th className="pb-3">Categoria</th><th className="pb-3 text-right">Vendas</th><th className="pb-3 text-right">Lucro apurado</th><th className="pb-3 text-right">Stock</th></tr></thead>
-        <tbody>{summaries.map(c => <tr key={c.name} className="border-b last:border-0"><td className="py-3"><button className="font-semibold text-primary underline-offset-4 hover:underline" onClick={() => setCategory(c.name)}>{c.name}</button></td><td className="text-right font-semibold text-blue-700">{fmt(c.totalSales)}</td><td className="text-right font-semibold text-emerald-700">{fmt(c.totalProfit)}{c.missingCosts > 0 ? " *" : ""}</td><td className="text-right font-semibold text-indigo-700">{fmt(c.stockValue)}</td></tr>)}</tbody></table></div>
+        <div className="overflow-x-auto p-5"><table className="w-full text-sm"><thead><tr className="border-b text-left text-muted-foreground"><th className="pb-3">Categoria</th><th className="pb-3 text-right">Vendas</th><th className="pb-3 text-right">Lucro apurado</th><th className="pb-3 text-right">Stock</th><th className="pb-3 text-right">Exposição</th></tr></thead>
+        <tbody>{summaries.map(c => <tr key={c.name} className="border-b last:border-0"><td className="py-3"><button className="font-semibold text-primary underline-offset-4 hover:underline" onClick={() => setCategory(c.name)}>{c.name}</button></td><td className="text-right font-semibold text-blue-700">{fmt(c.totalSales)}</td><td className="text-right font-semibold text-emerald-700">{fmt(c.totalProfit)}{c.missingCosts > 0 ? " *" : ""}</td><td className="text-right font-semibold text-indigo-700">{fmt(c.stockValue)}</td><td className="text-right font-semibold text-violet-700">{fmt(c.exposureValue)}</td></tr>)}</tbody></table></div>
         {summaries.some(c => c.missingCosts) && <p className="px-5 pb-4 text-xs text-muted-foreground">* Parcial: existem custos de compra por confirmar.</p>}
       </section>}
       {/* Charts row 1 */}

@@ -34,10 +34,13 @@ export function isPurchaseStockEligible(purchase: Purchase): boolean {
 
 /** Count unsold units in both received stock and incoming stock; sale eligibility is checked separately. */
 export function activeUnitsByPurchase(purchases: Purchase[], sales: Sale[]): Map<string, number> {
-  const soldProductIds = new Set(sales.map(sale => sale.productId));
+  const soldByPurchase = new Map<string, number>();
+  sales.forEach(sale => {
+    if (sale.purchaseId) soldByPurchase.set(sale.purchaseId, (soldByPurchase.get(sale.purchaseId) ?? 0) + sale.quantity);
+  });
   return new Map(purchases.map(purchase => [
     purchase.id,
-    soldProductIds.has(purchase.productId) || isPurchaseExcludedFromStock(purchase) ? 0 : purchase.quantity,
+    isPurchaseExcludedFromStock(purchase) ? 0 : Math.max(0, purchase.quantity - (soldByPurchase.get(purchase.id) ?? 0)),
   ]));
 }
 
@@ -46,5 +49,5 @@ export type PurchaseCommercialStatus = "active" | "sold" | "returning" | "exclud
 export function purchaseCommercialStatus(purchase: Purchase, sales: Sale[]): PurchaseCommercialStatus {
   if (purchase.orderStatus === "return_in_progress") return "returning";
   if (isPurchaseExcludedFromStock(purchase)) return "excluded";
-  return sales.some(sale => sale.productId === purchase.productId) ? "sold" : "active";
+  return (activeUnitsByPurchase([purchase], sales).get(purchase.id) ?? 0) === 0 ? "sold" : "active";
 }

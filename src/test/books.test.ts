@@ -9,12 +9,12 @@ const product=(id:string, category="Livros", personal=false):Product => ({id,nam
 describe("category dashboard",()=>{
   const products=[product("sold"),product("active"),product("reading","Livros",true),product("unknown"),product("phone","Tecnologia")];
   const purchases:Purchase[]=products.map(p=>({id:p.id,productId:p.id,price:p.id==="unknown" ? null : 3,quantity:1,date:"2025-01-10"}));
-  const sales:Sale[]=[{id:"s1",productId:"sold",quantity:1,salePrice:10,profit:7,date:"2025-02-01"},{id:"s2",productId:"unknown",quantity:1,salePrice:8,profit:null,date:""},{id:"s3",productId:"phone",quantity:1,salePrice:30,profit:27,date:"2025-03-01"}];
+  const sales:Sale[]=[{id:"s1",productId:"sold",purchaseId:"sold",quantity:1,salePrice:10,profit:7,date:"2025-02-01"},{id:"s2",productId:"unknown",purchaseId:"unknown",quantity:1,salePrice:8,profit:null,date:""},{id:"s3",productId:"phone",purchaseId:"phone",quantity:1,salePrice:30,profit:27,date:"2025-03-01"}];
   it("filters every metric and keeps personal copies outside stock",()=>{
     const data=categoryData(products,purchases,sales,[{id:"e",category:"Livros",amount:2,date:"",description:"Packaging"}],"Livros");
     const d=computeDashboard(data.purchases,data.sales,data.products,data.expenses);
     expect(d.totalSales).toBe(18);expect(d.totalProfit).toBe(7);expect(d.netProfit).toBe(5);
-    expect(d.stockUnits).toBe(1);expect(d.stockValue).toBe(3);expect(d.productCount).toBe(3);
+    expect(d.stockUnits).toBe(1);expect(d.stockValue).toBe(3);expect(d.exposureValue).toBe(4);expect(d.productCount).toBe(3);
     expect(d.missingCosts).toBe(1);expect(d.undatedRevenue).toBe(8);expect(d.avgMargin).toBe(.7);
     expect(d.purchasesVsSales.reduce((s,r)=>s+r.vendas,0)).toBe(10);
     expect(d.topProducts.some(([name])=>name==="phone")).toBe(false);
@@ -34,9 +34,9 @@ describe("category dashboard",()=>{
       {id:"e",productId:"eligible",quantity:1,price:4,date:"2025-01-01"},
     ];
     const sales:Sale[] = [
-      {id:"rs",productId:"returned",quantity:1,salePrice:30,profit:20,date:"2025-02-01"},
-      {id:"ps",productId:"personal",quantity:1,salePrice:40,profit:20,date:"2025-02-01"},
-      {id:"es",productId:"eligible",quantity:1,salePrice:8,profit:4,date:"2025-02-01"},
+      {id:"rs",productId:"returned",purchaseId:"r",quantity:1,salePrice:30,profit:20,date:"2025-02-01"},
+      {id:"ps",productId:"personal",purchaseId:"p",quantity:1,salePrice:40,profit:20,date:"2025-02-01"},
+      {id:"es",productId:"eligible",purchaseId:"e",quantity:1,salePrice:8,profit:4,date:"2025-02-01"},
     ];
     const filtered = categoryData([returned,personal,eligible],purchases,sales,[],"Livros");
     expect(filtered.purchases.map(p => p.id)).toEqual(["e"]);

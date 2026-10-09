@@ -34,6 +34,7 @@ export async function exportDashboardXlsx(
     ["Total Compras", d.totalPurchases, EUR],
     ["Total Vendas", d.totalSales, EUR],
     [d.missingCosts ? "Lucro apurado (parcial)" : "Lucro das vendas", d.totalProfit, EUR],
+    ["Valor exposição (lucro das vendas - compras em stock)", d.exposureValue, EUR],
     ["Despesas operacionais", d.totalExpenses, EUR],
     ["Resultado após despesas", d.netProfit, EUR],
     ["Vendas sem custo", d.missingCosts],

@@ -132,8 +132,15 @@ export async function importBooks(data: BookImportData, progress: (text: string)
   progress("A importar compras e vendas…");
   const {error:purchaseError}=await supabase.from("purchases").upsert(data.records.map(r => ({user_id:userId,product_id:ids.get(ref(r.row))!,source_ref:ref(r.row),quantity:1,price:r.cost,date:r.purchaseDate})),{onConflict:"user_id,source_ref",ignoreDuplicates:true});
   if (purchaseError) throw purchaseError;
+  const {data:purchaseRows,error:purchaseReadError}=await supabase.from("purchases").select("id,source_ref").eq("user_id",userId).like("source_ref",`${prefix}%`).limit(10000);
+  if (purchaseReadError) throw purchaseReadError;
+  const purchaseIds=new Map(purchaseRows.map(p => [p.source_ref,p.id]));
+  if (data.records.some(r => !purchaseIds.has(ref(r.row)))) throw new Error("Não foi possível localizar todas as compras importadas.");
   const sold=data.records.filter(r => r.status === "Vendido");
-  const {error:saleError}=await supabase.from("sales").upsert(sold.map(r => ({user_id:userId,product_id:ids.get(ref(r.row))!,source_ref:ref(r.row),quantity:1,sale_price:r.salePrice!,profit:r.cost==null ? null : r.salePrice!-r.cost,date:r.saleDate})),{onConflict:"user_id,source_ref",ignoreDuplicates:true});
+  const {data:existingSales,error:existingSalesError}=await supabase.from("sales").select("source_ref").eq("user_id",userId).like("source_ref",`${prefix}%`).limit(10000);
+  if (existingSalesError) throw existingSalesError;
+  const existingSaleRefs=new Set(existingSales.map(s => s.source_ref));
+  const {error:saleError}=await supabase.from("sales").upsert(sold.filter(r => !existingSaleRefs.has(ref(r.row))).map(r => ({user_id:userId,product_id:ids.get(ref(r.row))!,purchase_id:purchaseIds.get(ref(r.row))!,source_ref:ref(r.row),quantity:1,sale_price:r.salePrice!,profit:r.cost==null ? null : r.salePrice!-r.cost,date:r.saleDate})),{onConflict:"user_id,source_ref",ignoreDuplicates:true});
   if (saleError) throw saleError;
   const {error:expenseError}=await supabase.from("expenses").upsert(data.expenses.map(r => ({user_id:userId,category:"Livros",description:r.description,amount:r.amount,date:null,source_ref:ref(r.row)})),{onConflict:"user_id,source_ref",ignoreDuplicates:true});
   if (expenseError) throw expenseError;

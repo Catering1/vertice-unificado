@@ -217,6 +217,7 @@ export type Database = {
           created_at: string
           date: string | null
           id: string
+          purchase_id: string
           product_id: string
           profit: number | null
           quantity: number
@@ -228,6 +229,7 @@ export type Database = {
           created_at?: string
           date?: string | null
           id?: string
+          purchase_id: string
           product_id: string
           profit?: number | null
           quantity?: number
@@ -239,6 +241,7 @@ export type Database = {
           created_at?: string
           date?: string | null
           id?: string
+          purchase_id?: string
           product_id?: string
           profit?: number | null
           quantity?: number
@@ -252,6 +255,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_purchase_id_user_id_fkey"
+            columns: ["purchase_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }

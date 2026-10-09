@@ -35,6 +35,7 @@ const PurchaseSchema = z.object({
 
 const SaleSchema = z.object({
   productId: z.string().uuid(),
+  purchaseId: z.string().uuid(),
   quantity: z.number().int().min(1).max(100000),
   salePrice: z.number().min(0).max(1000000),
   date: z.string(),
@@ -121,7 +122,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           sourceRef: r.source_ref, sourceData: r.source_data ?? {},
         })));
         setPurchases(purchs.map(r => ({id: r.id, productId: r.product_id, quantity: r.quantity, price: r.price == null ? null : Number(r.price), date: r.date ?? "", estimatedDeliveryDate: r.estimated_delivery_date ?? null, deliveryDate: r.delivery_date ?? null, collectionDate: r.collection_date ?? null, orderStatus: (r.order_status ?? "not_tracked") as VintedOrderStatus, orderReference: r.order_reference ?? "", orderStatusNote: r.order_status_note ?? "", orderStatusUpdatedAt: r.order_status_updated_at ?? null, refundReceivedAt: r.refund_received_at ?? null})));
-        setSales(sold.map(r => ({id: r.id, productId: r.product_id, quantity: r.quantity, salePrice: Number(r.sale_price), profit: r.profit == null ? null : Number(r.profit), date: r.date ?? ""})));
+        setSales(sold.map(r => ({id: r.id, productId: r.product_id, purchaseId: r.purchase_id, quantity: r.quantity, salePrice: Number(r.sale_price), profit: r.profit == null ? null : Number(r.profit), date: r.date ?? ""})));
         setExpenses(costs.map(r => ({id: r.id, category: r.category, description: r.description, amount: Number(r.amount), date: r.date ?? ""})));
         const names = cats.map(r => r.name);
         setCategories(names);
@@ -203,8 +204,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
     // A single purchase identifies the unit's cost unambiguously. Legacy products
     // with several purchases retain their existing sale costs until reconciled.
-    if (purchases.filter(x => x.productId === p.productId).length === 1) {
-      for (const sale of sales.filter(s=>s.productId===p.productId)) {
+    if (purchases.filter(x => x.id === p.id).length === 1) {
+      for (const sale of sales.filter(s=>s.purchaseId===p.id)) {
         const profit=p.price == null ? null : (sale.salePrice-p.price)*sale.quantity;
         const {error:saleError}=await supabase.from("sales").update({profit}).eq("id",sale.id);
         if (saleError) throw saleError;
@@ -223,29 +224,36 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const addSale = async (s: Omit<Sale, "id" | "profit"> & { purchasePrice?: number }): Promise<Sale> => {
     const { purchasePrice, ...saleInput } = s;
     const validated = SaleSchema.parse(saleInput);
-    const product = getProduct(validated.productId);
+    const purchase = purchases.find(p => p.id === validated.purchaseId && p.productId === validated.productId);
+    if (!purchase) throw new Error("A compra selecionada não corresponde ao artigo.");
+    const alreadySold = sales.filter(existing => existing.purchaseId === purchase.id).reduce((sum, existing) => sum + existing.quantity, 0);
+    if (alreadySold + validated.quantity > purchase.quantity) throw new Error("Esta compra não tem unidades disponíveis para registar a venda.");
     const costPerUnit = typeof purchasePrice === "number" && !Number.isNaN(purchasePrice)
       ? purchasePrice
-      : (product?.purchasePrice ?? null);
+      : (purchase.price ?? null);
     const profit = costPerUnit == null ? null : (validated.salePrice - costPerUnit) * validated.quantity;
     const { data, error } = await supabase.from("sales").insert({
-      user_id: user!.id, product_id: validated.productId, quantity: validated.quantity, sale_price: validated.salePrice, profit, date: validated.date,
+      user_id: user!.id, product_id: validated.productId, purchase_id: validated.purchaseId, quantity: validated.quantity, sale_price: validated.salePrice, profit, date: validated.date,
     } as any).select().single();
     if (error) throw error;
-    const sale: Sale = { id: data.id, productId: data.product_id, quantity: data.quantity, salePrice: Number(data.sale_price), profit: data.profit == null ? null : Number(data.profit), date: data.date ?? "" };
+    const sale: Sale = { id: data.id, productId: data.product_id, purchaseId: data.purchase_id, quantity: data.quantity, salePrice: Number(data.sale_price), profit: data.profit == null ? null : Number(data.profit), date: data.date ?? "" };
     setSales(prev => [...prev, sale]);
     return sale;
   };
 
   const updateSale = async (s: Omit<Sale, "profit"> & { purchasePrice?: number }) => {
     const { purchasePrice, ...saleInput } = s;
-    const product = getProduct(saleInput.productId);
+    const validated = SaleSchema.parse(saleInput);
+    const purchase = purchases.find(p => p.id === validated.purchaseId && p.productId === validated.productId);
+    if (!purchase) throw new Error("A compra selecionada não corresponde ao artigo.");
+    const alreadySold = sales.filter(existing => existing.purchaseId === purchase.id && existing.id !== validated.id).reduce((sum, existing) => sum + existing.quantity, 0);
+    if (alreadySold + validated.quantity > purchase.quantity) throw new Error("Esta compra não tem unidades disponíveis para registar a venda.");
     const costPerUnit = typeof purchasePrice === "number" && !Number.isNaN(purchasePrice)
       ? purchasePrice
-      : (product?.purchasePrice ?? null);
+      : (purchase.price ?? null);
     const profit = costPerUnit == null ? null : (saleInput.salePrice - costPerUnit) * saleInput.quantity;
     const { error } = await supabase.from("sales").update({
-      product_id: saleInput.productId, quantity: saleInput.quantity, sale_price: saleInput.salePrice, profit, date: saleInput.date || null,
+      product_id: saleInput.productId, purchase_id: saleInput.purchaseId, quantity: saleInput.quantity, sale_price: saleInput.salePrice, profit, date: saleInput.date || null,
     } as any).eq("id", saleInput.id);
     if (error) throw error;
     setSales(prev => prev.map(x => x.id === saleInput.id ? { ...saleInput, profit } : x));

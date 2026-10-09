@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Plus, Trash2, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, Grid2X2, List, Package } from "lucide-react";
 import { toast } from "sonner";
-import { isPurchaseStockEligible, purchaseCommercialStatus } from "@/lib/inventory";
+import { activeUnitsByPurchase, isPurchaseStockEligible, purchaseCommercialStatus } from "@/lib/inventory";
 import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import CategoryFilter from "@/components/CategoryFilter";
@@ -66,7 +66,7 @@ function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: str
 }
 
 export default function Sales() {
-  const { sales, purchases, products, categories, addSale, updateSale, deleteSale, getProduct, updateProduct, updatePurchase } = useStore();
+  const { sales, purchases, products, categories, addSale, updateSale, deleteSale, getProduct, updatePurchase } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedRecord = searchParams.get("registo");
   const targetProductId = searchParams.get("produto");
@@ -76,6 +76,7 @@ export default function Sales() {
   const [page, setPage] = useState(1);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [productId, setProductId] = useState("");
+  const [purchaseId, setPurchaseId] = useState("");
   const [salePrice, setSalePrice] = useState("");
   const [purchasePriceOverride, setPurchasePriceOverride] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
@@ -88,24 +89,31 @@ export default function Sales() {
   const [sortField, setSortField] = usePersistedState<SortField | null>("sales-sortField", null);
   const [sortDir, setSortDir] = usePersistedState<SortDir>("sales-sortDir", "asc");
 
-  // Products that have stock
-  const availableProducts = useMemo(() => {
-    const purchased = new Map<string, number>();
-    const sold = new Map<string, number>();
-    purchases.filter(isPurchaseStockEligible).forEach(p => purchased.set(p.productId, (purchased.get(p.productId) ?? 0) + p.quantity));
-    sales.forEach(s => sold.set(s.productId, (sold.get(s.productId) ?? 0) + s.quantity));
-    return products.filter(p => {
-      const stock = (purchased.get(p.id) ?? 0) - (sold.get(p.id) ?? 0);
-      return stock > 0 && p.inventoryUse !== "personal";
+  // Each sellable entry is one purchase record; sales consume only that record's units.
+  const activeUnitCounts = useMemo(() => activeUnitsByPurchase(purchases, sales), [purchases, sales]);
+  const availablePurchases = useMemo(() => purchases.filter(purchase => {
+    const product = getProduct(purchase.productId);
+    return product && product.inventoryUse !== "personal"
+      && (isPurchaseStockEligible(purchase) || editingSale?.purchaseId === purchase.id)
+      && ((activeUnitCounts.get(purchase.id) ?? 0) > 0 || editingSale?.purchaseId === purchase.id);
+  }), [purchases, getProduct, activeUnitCounts, editingSale]);
+  const purchaseNumbers = useMemo(() => {
+    const sorted = [...purchases].sort((a, b) => {
+      const aName = getProduct(a.productId)?.name ?? "";
+      const bName = getProduct(b.productId)?.name ?? "";
+      return aName.localeCompare(bName, "pt-PT") || a.date.localeCompare(b.date) || a.id.localeCompare(b.id);
     });
-  }, [products, purchases, sales]);
-  const purchaseForProduct = useMemo(() => {
-    const map = new Map<string, typeof purchases[number]>();
-    for (const purchase of [...purchases].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))) {
-      if (!map.has(purchase.productId)) map.set(purchase.productId, purchase);
-    }
-    return map;
-  }, [purchases]);
+    const counts = new Map<string, number>();
+    const numbers = new Map<string, number>();
+    sorted.forEach(purchase => {
+      const key = (getProduct(purchase.productId)?.name ?? "Produto").toLocaleLowerCase("pt-PT");
+      const number = (counts.get(key) ?? 0) + 1;
+      counts.set(key, number);
+      numbers.set(purchase.id, number);
+    });
+    return numbers;
+  }, [purchases, getProduct]);
+  const selectedPurchase = purchases.find(purchase => purchase.id === purchaseId);
   const activePurchases = useMemo(() => purchases.filter(purchase => {
     const product = getProduct(purchase.productId);
     if (!product || product.inventoryUse === "personal") return false;
@@ -121,22 +129,23 @@ export default function Sales() {
     if (!productId || !salePrice) return null;
     const sp = Number(salePrice);
     if (isNaN(sp) || sp <= 0) return null;
-    const cost = purchasePriceOverride ? Number(purchasePriceOverride) : getProduct(productId)?.purchasePrice;
+    const cost = purchasePriceOverride ? Number(purchasePriceOverride) : selectedPurchase?.price;
     if (cost == null) return null;
     if (isNaN(cost)) return null;
     const profit = sp - cost;
     const margin = sp > 0 ? (profit / sp) * 100 : 0;
     return { cost, profit, margin };
-  }, [productId, salePrice, purchasePriceOverride, getProduct]);
+  }, [purchaseId, salePrice, purchasePriceOverride, selectedPurchase]);
 
   const openNew = () => {
     setEditingSale(null);
-    setProductId(""); setSalePrice(""); setPurchasePriceOverride(""); setDate(new Date().toISOString().slice(0, 10));
+    setProductId(""); setPurchaseId(""); setSalePrice(""); setPurchasePriceOverride(""); setDate(new Date().toISOString().slice(0, 10));
     setDialogOpen(true);
   };
   const openNewForPurchase = useCallback((purchase: Purchase) => {
     setEditingSale(null);
     setProductId(purchase.productId);
+    setPurchaseId(purchase.id);
     setSalePrice("");
     setPurchasePriceOverride(purchase.price == null ? "" : String(purchase.price));
     setDate(new Date().toISOString().slice(0, 10));
@@ -155,8 +164,8 @@ export default function Sales() {
   const openEdit = (s: Sale) => {
     setEditingSale(s);
     setProductId(s.productId);
+    setPurchaseId(s.purchaseId ?? "");
     setSalePrice(String(s.salePrice));
-    const prod = getProduct(s.productId);
     setPurchasePriceOverride(s.profit == null ? "" : String(s.salePrice - s.profit / s.quantity));
     setDate(s.date);
     setDialogOpen(true);
@@ -172,24 +181,22 @@ export default function Sales() {
     const overridePrice = overrideRaw === "" ? null : Number(overrideRaw);
     if (overridePrice !== null && (isNaN(overridePrice) || overridePrice < 0)) { toast.error("Preço de compra inválido"); return; }
 
-    const product = getProduct(productId);
-    const effectivePurchasePrice = overridePrice ?? (product?.purchasePrice ?? null);
+    const purchase = purchases.find(p => p.id === purchaseId);
+    if (!purchase || purchase.productId !== productId) { toast.error("Selecione a compra específica deste artigo"); return; }
+    const effectivePurchasePrice = overridePrice ?? purchase.price;
 
-    // Sync product purchasePrice if overridden
-    if (overridePrice != null && product && product.purchasePrice !== overridePrice) {
-      await updateProduct({ ...product, purchasePrice: overridePrice });
-    }
-
-    if (overridePrice != null && purchases.filter(p => p.productId === productId).length === 1) {
-      const purchase=purchases.find(p=>p.productId===productId);
-      if (purchase && purchase.price !== overridePrice) await updatePurchase({...purchase,price:overridePrice});
-    }
-    if (editingSale) {
-      await updateSale({ id: editingSale.id, productId, quantity: editingSale.quantity, salePrice: parsedSalePrice, date, purchasePrice: effectivePurchasePrice });
-      toast.success("Venda atualizada");
-    } else {
-      const sale = await addSale({ productId, quantity: 1, salePrice: parsedSalePrice, date, purchasePrice: effectivePurchasePrice });
-      toast.success(`Venda registada — Lucro: ${money(sale.profit)}`);
+    try {
+      if (overridePrice != null && purchase.price !== overridePrice) await updatePurchase({ ...purchase, price: overridePrice });
+      if (editingSale) {
+        await updateSale({ id: editingSale.id, productId, purchaseId, quantity: editingSale.quantity, salePrice: parsedSalePrice, date, purchasePrice: effectivePurchasePrice ?? undefined });
+        toast.success("Venda atualizada");
+      } else {
+        const sale = await addSale({ productId, purchaseId, quantity: 1, salePrice: parsedSalePrice, date, purchasePrice: effectivePurchasePrice ?? undefined });
+        toast.success(`Venda registada — Lucro: ${money(sale.profit)}`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível guardar a venda.");
+      return;
     }
     setDialogOpen(false);
     setEditingSale(null);
@@ -286,20 +293,20 @@ export default function Sales() {
             <DialogHeader><DialogTitle>{editingSale ? "Editar Venda" : "Registar Venda"}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-2">
               <div>
-                <Label>Produto *</Label>
-                <Select value={productId} onValueChange={(v) => {
-                  setProductId(v);
-                  const prod = getProduct(v);
-                  if (prod) {
-                    const cost = purchaseForProduct.get(v)?.price ?? prod.purchasePrice;
-                    setPurchasePriceOverride(cost == null ? "" : String(cost));
+                <Label>Artigo / compra *</Label>
+                <Select value={purchaseId} onValueChange={(v) => {
+                  setPurchaseId(v);
+                  const purchase = purchases.find(p => p.id === v);
+                  if (purchase) {
+                    setProductId(purchase.productId);
+                    setPurchasePriceOverride(purchase.price == null ? "" : String(purchase.price));
                   }
                 }}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Selecione o artigo e a compra" /></SelectTrigger>
                   <SelectContent>
-                    {(editingSale ? products : availableProducts).map(p => {
-                      const purchase = purchaseForProduct.get(p.id);
-                      return <SelectItem key={p.id} value={p.id}>{p.name} · {p.category} · Compra: {purchase?.date || "sem data"} · Custo: {purchase?.price == null ? "por confirmar" : fmt(purchase.price)}</SelectItem>;
+                    {availablePurchases.map(purchase => {
+                      const product = getProduct(purchase.productId);
+                      return <SelectItem key={purchase.id} value={purchase.id}>{product?.name} · Unidade {purchaseNumbers.get(purchase.id)} · {product?.category} · Compra: {purchase.date || "sem data"} · Custo: {purchase.price == null ? "por confirmar" : fmt(purchase.price)}</SelectItem>;
                     })}
                   </SelectContent>
                 </Select>
