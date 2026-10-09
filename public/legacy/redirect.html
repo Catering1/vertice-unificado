@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vértice — site atualizado</title>
+  <link rel="canonical" href="https://vertice-unificado.vercel.app/">
+  <script>
+    const basePath = '/vertice-unificado';
+    const path = location.pathname.startsWith(basePath + '/')
+      ? location.pathname.slice(basePath.length)
+      : '/';
+    location.replace('https://vertice-unificado.vercel.app' + path + location.search + location.hash);
+  </script>
+</head>
+<body>
+  <p>O site Vértice está em <a href="https://vertice-unificado.vercel.app/">vertice-unificado.vercel.app</a>.</p>
+</body>
+</html>

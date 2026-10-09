@@ -84,8 +84,8 @@ export default function SettingsPage() {
         <CardHeader><CardTitle className="text-base">Categorias</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="flex min-w-0 gap-2">
-            <Input placeholder="Nova categoria..." value={newCat} onChange={e => setNewCat(e.target.value)} onKeyDown={e => e.key === "Enter" && addCat()} />
-            <Button onClick={addCat}><Plus className="h-4 w-4" /></Button>
+            <Input aria-label="Nova categoria" placeholder="Nova categoria..." value={newCat} onChange={e => setNewCat(e.target.value)} onKeyDown={e => e.key === "Enter" && addCat()} />
+            <Button aria-label="Adicionar categoria" onClick={addCat}><Plus className="h-4 w-4" /></Button>
           </div>
           <Table>
             <TableBody>
@@ -107,19 +107,19 @@ export default function SettingsPage() {
                   <TableCell className="w-24 text-right">
                     {editingCat === c ? (
                       <div className="flex gap-1 justify-end">
-                        <Button variant="ghost" size="icon" onClick={saveEdit}>
+                        <Button aria-label={`Guardar categoria ${c}`} variant="ghost" size="icon" onClick={saveEdit}>
                           <Check className="h-4 w-4 text-success" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setEditingCat(null)}>
+                        <Button aria-label="Cancelar edição da categoria" variant="ghost" size="icon" onClick={() => setEditingCat(null)}>
                           <X className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       </div>
                     ) : (
                       <div className="flex gap-1 justify-end">
-                        <Button variant="ghost" size="icon" onClick={() => startEdit(c)}>
+                        <Button aria-label={`Editar categoria ${c}`} variant="ghost" size="icon" onClick={() => startEdit(c)}>
                           <Pencil className="h-4 w-4 text-muted-foreground" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={async () => { await deleteCategory(c); toast.success("Categoria removida"); }}>
+                        <Button aria-label={`Eliminar categoria ${c}`} variant="ghost" size="icon" onClick={async () => { await deleteCategory(c); toast.success("Categoria removida"); }}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -134,11 +134,11 @@ export default function SettingsPage() {
 
       {/* Export */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Exportar Dados (CSV)</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Exportar dados</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={exportDashboard}><Download className="mr-2 h-4 w-4" />Dashboard Completo</Button>
-          <Button variant="outline" onClick={exportPurchases}><Download className="mr-2 h-4 w-4" />Compras</Button>
-          <Button variant="outline" onClick={exportSales}><Download className="mr-2 h-4 w-4" />Vendas</Button>
+          <Button variant="outline" onClick={exportDashboard}><Download className="mr-2 h-4 w-4" />Dashboard completo (Excel)</Button>
+          <Button variant="outline" onClick={exportPurchases}><Download className="mr-2 h-4 w-4" />Compras (CSV)</Button>
+          <Button variant="outline" onClick={exportSales}><Download className="mr-2 h-4 w-4" />Vendas (CSV)</Button>
         </CardContent>
       </Card>
     </div>

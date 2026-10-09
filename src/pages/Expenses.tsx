@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pencil, Plus, Trash2 } from "lucide-react";
@@ -54,6 +54,7 @@ export default function Expenses() {
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (saving) return;
     const value = Number(amount);
     if (!description.trim() || !category || !Number.isFinite(value) || value <= 0 || (!date && !editing)) {
       toast.error("Preenche a descrição, categoria, valor e data.");
@@ -108,7 +109,7 @@ export default function Expenses() {
     </CardContent></Card>
 
     <Dialog open={dialogOpen} onOpenChange={open => { if (!saving) setDialogOpen(open); }}>
-      <DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{editing ? "Editar despesa" : "Registar despesa"}</DialogTitle></DialogHeader>
+      <DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{editing ? "Editar despesa" : "Registar despesa"}</DialogTitle><DialogDescription className="sr-only">Indica a descrição, categoria, valor e data da despesa operacional.</DialogDescription></DialogHeader>
         <form onSubmit={save} className="space-y-4 pt-2">
           <div className="space-y-1.5"><Label htmlFor="expense-description">Descrição</Label><Input id="expense-description" value={description} onChange={event => setDescription(event.target.value)} maxLength={500} required autoFocus /></div>
           <div className="space-y-1.5"><Label htmlFor="expense-category">Categoria</Label><select id="expense-category" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={category} onChange={event => setCategory(event.target.value)} required><option value="">Seleciona uma categoria</option>{categories.map(name => <option key={name} value={name}>{name}</option>)}</select></div>

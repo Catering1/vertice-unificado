@@ -20,6 +20,8 @@ Repositório: Catering1/vertice-unificado. Supabase: pxpxipewhwwsiogoyjov.
 - Ligação produto → contacto mantém o ID/assunto e abre a secção correta. O formulário prepara um email apenas com destino configurado e nunca afirma ter enviado. Sem email configurado, encaminha para o chat dos anúncios OLX.
 - Skill alinhada com campos ocultos, IDs de compra/venda, atualização de dados confirmados no site, metadados OLX e tratamento de moderação. Regras atuais prevalecem sobre notas históricas.
 - Removidos erros de lint e TypeScript encontrados. Build inclui agora typecheck; GitHub executa lint, testes e build nos pushes para main e nos PRs.
+- GitHub Pages deixou de servir código antigo: index e 404 encaminham para Vercel, preservando rotas, parâmetros e âncoras. README e skill identificam o domínio correto.
+- Formulários de vendas/despesas incluem descrição acessível; configurações identificam os botões de categorias e distinguem Excel de CSV. Despesas bloqueiam submissões repetidas enquanto guardam.
 
 ## Validação
 - Testes automatizados de inventário, métricas, datas, livros/importação, contacto, persistência de compras/vendas/despesas e ficha pública.
@@ -37,5 +39,13 @@ Repositório: Catering1/vertice-unificado. Supabase: pxpxipewhwwsiogoyjov.
 
 
 ## Resultados locais finais
-- 53/53 testes passaram (7 ficheiros). TypeScript e build passaram. Lint sem erros, com os 9 avisos Fast Refresh já identificados.
+- 54 testes em 8 ficheiros: os 53 anteriores passaram novamente e o novo teste de exportação Excel também passou. O Excel gerado foi reaberto e validado: quatro folhas, despesas, custos/lucros desconhecidos vazios e referência privada ausente. TypeScript e build passaram. Lint sem erros, com os 9 avisos Fast Refresh já identificados.
+
+## Verificação em produção
+- Commit principal 1856f9e: deployment Vercel dpl_8De1pLHcpXGanjordKwmr8KYpYSA concluído; ambos os domínios Vercel responderam 200 com o bundle novo. Workflow GitHub 37978562490 passou (lint, testes e build).
+- No browser: oito produtos públicos; S26+ 512 GB, preto, 649 € e fotografia real; botão de interesse mantém produto/assunto; chat OLX acessível e email desativado sem destino configurado.
+- Dashboard: filtro de compras por receber, edição sem campo de referência, apenas duas opções de receção; seleção de vendas exclui as cinco unidades por receber. Pré-visualização Fold7 com custo 580 € e venda hipotética 719 € deu lucro 139 € e margem 19,3%, sem gravar.
+- Despesas: campos vazios impedem guardar. Configurações e categorias carregam. Download no browser não pôde ser confirmado pelo evento de download; a geração/leitura do ficheiro Excel foi verificada no teste automatizado, sem afirmar descarga real concluída.
+- Vista móvel emulada a 390 × 844: menu e contacto funcionam, sem ultrapassar a largura do ecrã. Emulação reposta no fim.
+- GitHub Pages: commit de publicação b7d96bc e workflow 37980197493 concluídos; o browser confirmou encaminhamento para Vercel. Fonte reproduzível em public/legacy/redirect.html.
 
