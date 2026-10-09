@@ -103,7 +103,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (fetching) return;
       fetching = true;
       if (initial) setLoading(true);
-      setError(null);
       try {
         // Read every page; Supabase otherwise truncates at 1,000 rows.
         async function allRows<T extends "products" | "purchases" | "sales" | "categories" | "expenses">(table: T): Promise<Tables<T>[]> {
@@ -133,6 +132,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setExpenses(costs.map(r => ({id: r.id, category: r.category, description: r.description, amount: Number(r.amount), date: r.date ?? ""})));
         const names = cats.map(r => r.name);
         setCategories(previous => previous.length === names.length && previous.every((name, index) => name === names[index]) ? previous : names);
+        setError(null);
       } catch {
         if (!cancelled) { setError("Não foi possível carregar todos os dados. Atualize a página para tentar novamente."); toast.error("Erro ao carregar os dados"); }
       } finally { fetching = false; if (!cancelled) setLoading(false); }

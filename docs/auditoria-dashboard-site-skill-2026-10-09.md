@@ -22,6 +22,7 @@ Repositório: Catering1/vertice-unificado. Supabase: pxpxipewhwwsiogoyjov.
 - Removidos erros de lint e TypeScript encontrados. Build inclui agora typecheck; GitHub executa lint, testes e build nos pushes para main e nos PRs.
 - GitHub Pages deixou de servir código antigo: index e 404 encaminham para Vercel, preservando rotas, parâmetros e âncoras. README e skill identificam o domínio correto.
 - Formulários de vendas/despesas incluem descrição acessível; configurações identificam os botões de categorias e distinguem Excel de CSV. Despesas bloqueiam submissões repetidas enquanto guardam.
+- Todas as páginas administrativas aguardam o carregamento inicial e bloqueiam edição/exportação quando a API falha; deixam de apresentar inventário vazio ou permitir exportar dados incompletos. O erro só desaparece após uma consulta bem-sucedida.
 
 ## Validação
 - Testes automatizados de inventário, métricas, datas, livros/importação, contacto, persistência de compras/vendas/despesas e ficha pública.
@@ -39,7 +40,7 @@ Repositório: Catering1/vertice-unificado. Supabase: pxpxipewhwwsiogoyjov.
 
 
 ## Resultados locais finais
-- 54 testes em 8 ficheiros: os 53 anteriores passaram novamente e o novo teste de exportação Excel também passou. O Excel gerado foi reaberto e validado: quatro folhas, despesas, custos/lucros desconhecidos vazios e referência privada ausente. TypeScript e build passaram. Lint sem erros, com os 9 avisos Fast Refresh já identificados.
+- 57 testes em 9 ficheiros, incluindo exportação Excel e bloqueio administrativo durante carregamento/falha de API. O Excel gerado foi reaberto e validado: quatro folhas, despesas, custos/lucros desconhecidos vazios e referência privada ausente. TypeScript e build passaram. Lint sem erros, com os 9 avisos Fast Refresh já identificados.
 
 ## Verificação em produção
 - Commit principal 1856f9e: deployment Vercel dpl_8De1pLHcpXGanjordKwmr8KYpYSA concluído; ambos os domínios Vercel responderam 200 com o bundle novo. Workflow GitHub 37978562490 passou (lint, testes e build).

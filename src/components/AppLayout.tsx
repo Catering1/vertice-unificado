@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
+import { useStore } from "@/lib/store";
 
 const navItems = [
   { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
@@ -18,6 +19,7 @@ const navItems = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { signOut, user } = useAuth();
+  const { loading, error } = useStore();
   const [sidebarVisible, setSidebarVisible] = useState(() => localStorage.getItem("admin-sidebar-visible") !== "false");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const toggleSidebar = () => setSidebarVisible(value => { localStorage.setItem("admin-sidebar-visible", String(!value)); return !value; });
@@ -103,7 +105,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </DropdownMenu>
         </header>
         <main className="min-w-0 flex-1 overflow-x-hidden px-4 pb-24 pt-5 md:p-8">
-          {children}
+          {loading ? <p role="status" className="py-12 text-center text-muted-foreground">A carregar os dados do negócio…</p>
+            : error ? <div role="alert" className="space-y-3 rounded-lg border border-destructive/30 p-4"><p>Não foi possível atualizar os dados do negócio. Confirma a ligação antes de editar ou exportar.</p><Button onClick={() => window.location.reload()}>Tentar novamente</Button></div>
+            : children}
         </main>
       </div>
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(0,0,0,0.06)] backdrop-blur md:hidden" aria-label="Navegação principal">
