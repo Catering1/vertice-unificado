@@ -207,6 +207,10 @@ O repositório ativo da loja pública e do dashboard é `Catering1/vertice-unifi
 - Atualizada .agents/skills/verificar-vinted-registar-dashboard-anunciar-olx/SKILL.md: cada produto comercial Ativo tem de ser reconciliado com anúncios das duas contas e todos os estados OLX; sem anúncio, preparar um sem duplicar. Quando existir venda no dashboard, terminar o anúncio correspondente e confirmar a remoção de Ativos. Esta autorização aplica-se à remoção de anúncios da unidade vendida, não de homónimos.
 - Produtos por receber/inspeção continuam sem poder ser apresentados como prontos ou publicados; devem ficar representados no acompanhamento OLX quando houver forma honesta e sem pagamento. Registar bloqueios específicos se conta, informação essencial, rascunho ou interface impedir a criação. Nenhuma taxa autorizada.
 
+## Regra de cobertura OLX — 2026-10-09
+- Cada produto comercial `Ativo` e elegível para venda deve ter exatamente um anúncio publicado em `Ativos` em pelo menos uma das duas contas OLX. Um anúncio numa conta basta; não duplicar a mesma unidade na outra.
+- Antes de criar, reconciliar ambas as contas e todos os estados. Se existir apenas em `Por pagar`, `Pendentes`, `Para edição` ou `Terminados`, recuperar o anúncio existente sem pagar em vez de criar outro. Produtos ainda não elegíveis ficam pendentes; a inexistência de rascunho privado no OLX não autoriza publicação antecipada.
+
 ## Execução manual 2026-10-09 14:14 +01:00 — reconciliação OLX e Vinted
 - Vinted autenticada: Todos, Em curso, Concluídos e Cancelados revistos. Mantêm-se seis pedidos em curso previamente registados; Fold8 (`25168549388`) e Fold7 (`25128585583`) aparecem como concluídos. Cancelados/reembolsados sem nova compra de revenda; nenhuma referência nova.
 - Dashboard autenticado: categoria Eletrónica mostra 8 produtos Ativos. Fold8 (`Z Fold 8 ultra`) está Vendido, com compra ainda `Por Receber` e entrega registada em 05/10; sem inspeção confirmada, mantido sem alteração à compra. Os restantes produtos ativos incluem quatro por receber, o Surface Laptop Studio recebido, Fold7 recebido e Surface Laptop GO 3 recebido.
