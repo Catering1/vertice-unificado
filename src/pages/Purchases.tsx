@@ -26,15 +26,13 @@ type ViewMode = "table" | "gallery";
 
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const ORDER_RECEIPT_STATUSES: { value: PurchaseReceiptStatus; label: string }[] = [
-  { value: "pending", label: "Por receber" },
+  { value: "pending", label: "Por Receber" },
   { value: "received", label: "Recebido" },
-  { value: "excluded", label: "Devolução / fora do stock" },
+  { value: "excluded", label: "Em devolução" },
 ];
 const orderStatusLabel = (status?: VintedOrderStatus) => {
-  if (status === "return_in_progress") return "Em devolução";
   const receiptStatus = purchaseReceiptStatus({ orderStatus: status });
-  if (receiptStatus === "excluded") return "Fora do stock";
-  return receiptStatus === "received" ? "Recebido" : "Por receber";
+  return ORDER_RECEIPT_STATUSES.find(option => option.value === receiptStatus)?.label ?? "Por Receber";
 };
 
 function collectionDeadline(deliveryDate?: string | null) {
@@ -111,6 +109,7 @@ export default function Purchases() {
   const [collectionDate, setCollectionDate] = useState("");
   const [orderReference, setOrderReference] = useState("");
   const [orderStatusNote, setOrderStatusNote] = useState("");
+  const [receiptStatus, setReceiptStatus] = useState<PurchaseReceiptStatus>("pending");
 
   const [searchDate, setSearchDate] = usePersistedState("purchases-searchDate", "");
   const [catFilter, setCatFilter] = usePersistedState("purchases-catFilter", "all");
@@ -133,6 +132,7 @@ export default function Purchases() {
     setPrice(""); setDate(new Date().toISOString().slice(0, 10)); setEstimatedDeliveryDate(""); setDeliveryDate("");
     setCollectionDate("");
     setOrderReference(""); setOrderStatusNote("");
+    setReceiptStatus("pending");
     setDialogOpen(true);
   };
 
@@ -155,6 +155,7 @@ export default function Purchases() {
     setCollectionDate(p.collectionDate ?? "");
     setOrderReference(p.orderReference ?? "");
     setOrderStatusNote(p.orderStatusNote ?? "");
+    setReceiptStatus(purchaseReceiptStatus(p));
     setDialogOpen(true);
   };
 
@@ -169,9 +170,16 @@ export default function Purchases() {
     const retailPriceParsed = retailPrice ? Number(retailPrice) : 0;
     const warrantyMonthsParsed = Number(warrantyMonths || 0);
     if (collectionDate && !deliveryDate) { toast.error("Indique a data de entrega antes da data de levantamento"); return; }
-    const orderStatus: VintedOrderStatus = deliveryDate
-      ? (collectionDate ? "received_verified" : "delivered")
-      : editingPurchase?.orderStatus === "not_tracked" ? "not_tracked" : "ordered";
+    const previousStatus = editingPurchase?.orderStatus;
+    const orderStatus: VintedOrderStatus = receiptStatus === "excluded"
+      ? (previousStatus && ["return_in_progress", "refund_partial", "refunded", "cancelled"].includes(previousStatus) ? previousStatus : "return_in_progress")
+      : receiptStatus === "received"
+        ? (previousStatus === "not_tracked" ? "not_tracked" : "received_verified")
+        : deliveryDate && !collectionDate
+          ? "delivered"
+          : previousStatus && ["ordered", "shipped", "electronic_verification"].includes(previousStatus)
+            ? previousStatus
+            : "ordered";
     if (Number.isNaN(retailPriceParsed) || Number.isNaN(warrantyMonthsParsed) || warrantyMonthsParsed < 0) {
       toast.error("Verifique o preço de venda e a garantia");
       return;
@@ -343,7 +351,7 @@ export default function Purchases() {
           </Select>
           <Select value={orderStatusFilter === "all" || orderStatusFilter === "pending" || orderStatusFilter === "received" || orderStatusFilter === "excluded" ? orderStatusFilter : "all"} onValueChange={v => { setOrderStatusFilter(v as PurchaseReceiptStatus | "all"); setPage(1); }}>
             <SelectTrigger className="w-[240px] shrink-0">
-              <span className="truncate">{orderStatusFilter === "all" ? "Estado da encomenda: Todos" : orderStatusFilter === "received" ? "Encomenda: Recebido" : orderStatusFilter === "excluded" ? "Encomenda: Fora do stock" : "Encomenda: Por receber"}</span>
+              <span className="truncate">{orderStatusFilter === "all" ? "Estado da encomenda: Todos" : `Encomenda: ${ORDER_RECEIPT_STATUSES.find(option => option.value === orderStatusFilter)?.label}`}</span>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os estados da encomenda</SelectItem>
@@ -369,7 +377,7 @@ export default function Purchases() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
             <DialogHeader><DialogTitle>{editingPurchase ? "Editar Compra" : "Registar Compra"}</DialogTitle></DialogHeader>
-            <div className="grid gap-4 py-2">
+              <div className="grid gap-4 py-2">
               <div>
                 <Label>Nome do Produto *</Label>
                 <Input placeholder="Ex: iPhone 15, Camiseta..." value={productName} onChange={e => setProductName(e.target.value)} />
@@ -383,12 +391,23 @@ export default function Purchases() {
                 </Select>
               </div>
               <div><Label>Preço de Compra *</Label><Input type="number" min={0} step={0.01} inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} /></div>
+              <div>
+                <Label>Estado da encomenda</Label>
+                <Select value={receiptStatus} onValueChange={value => setReceiptStatus(value as PurchaseReceiptStatus)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{ORDER_RECEIPT_STATUSES.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">Artigos entregues mas ainda não inspecionados ficam em Por Receber.</p>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div><Label>Data de compra *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+                <div><Label>Data prevista de entrega</Label><Input aria-label="Data prevista de entrega" type="date" value={estimatedDeliveryDate} onChange={e => setEstimatedDeliveryDate(e.target.value)} /></div>
                 <div><Label>Data de Entrega</Label><Input aria-label="Data de entrega" type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} /></div>
                 <div><Label>Data Limite levantamento</Label><Input aria-label="Data limite para levantar a encomenda" type="date" value={pickupDeadline} readOnly disabled={!pickupDeadline} /></div>
                 <div><Label>Data Levantamento</Label><Input aria-label="Data de levantamento" type="date" value={collectionDate} disabled={!deliveryDate} onChange={e => setCollectionDate(e.target.value)} /></div>
               </div>
+              <div><Label>Referência da encomenda (privada)</Label><Input aria-label="Referência da encomenda" value={orderReference} onChange={e => setOrderReference(e.target.value)} maxLength={200} /></div>
+              <div><Label>Atualização da encomenda (privada)</Label><textarea aria-label="Atualização da encomenda" value={orderStatusNote} onChange={e => setOrderStatusNote(e.target.value)} maxLength={1000} rows={3} className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
               <div><Label>Descrição para anúncio</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado, características, acessórios e defeitos a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
               {relatedSales.length > 0 && <section className="space-y-2 rounded-md border p-3" aria-label="Vendas do produto">
                 <h3 className="text-sm font-semibold">Vendas deste produto</h3>
@@ -500,7 +519,7 @@ export default function Purchases() {
                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : visible.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}</p><p className="text-xs font-normal text-muted-foreground">Data de compra: {formatDate(p.date)}</p>{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Data de Entrega: {formatDate(p.deliveryDate)}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}{p.collectionDate && <p className="text-xs font-normal text-muted-foreground">Data Levantamento: {formatDate(p.collectionDate)}</p>}</TableCell>
+                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}</p><p className="text-xs font-normal text-muted-foreground">Data de compra: {formatDate(p.date)}</p>{p.estimatedDeliveryDate && <p className="text-xs font-normal text-muted-foreground">Data prevista de entrega: {formatDate(p.estimatedDeliveryDate)}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Data de Entrega: {formatDate(p.deliveryDate)}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}{p.collectionDate && <p className="text-xs font-normal text-muted-foreground">Data Levantamento: {formatDate(p.collectionDate)}</p>}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>

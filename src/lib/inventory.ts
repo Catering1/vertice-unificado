@@ -15,13 +15,14 @@ export function isPurchaseExcludedFromStock(purchase: Pick<Purchase, "orderStatu
 
 export function purchaseReceiptStatus(purchase: Pick<Purchase, "orderStatus">): PurchaseReceiptStatus {
   if (isPurchaseExcludedFromStock(purchase)) return "excluded";
-  return purchase.orderStatus === "delivered" || purchase.orderStatus === "received_verified" ? "received" : "pending";
+  // Legacy records remain treated as received; newly tracked orders are received only after inspection.
+  return !purchase.orderStatus || purchase.orderStatus === "not_tracked" || purchase.orderStatus === "received_verified" ? "received" : "pending";
 }
 
-/** Received purchases and legacy records are sellable; returns and cancellations never are. */
+/** Only inspected receipts and legacy inventory may be sold; delivered but uninspected orders stay blocked. */
 export function isPurchaseStockEligible(purchase: Purchase): boolean {
   if (isPurchaseExcludedFromStock(purchase)) return false;
-  return !purchase.orderStatus || purchase.orderStatus === "not_tracked" || purchase.orderStatus === "delivered" || purchase.orderStatus === "received_verified";
+  return !purchase.orderStatus || purchase.orderStatus === "not_tracked" || purchase.orderStatus === "received_verified";
 }
 
 /** A purchase is active only while its product has no sale and it remains in stock. */
@@ -29,7 +30,7 @@ export function activeUnitsByPurchase(purchases: Purchase[], sales: Sale[]): Map
   const soldProductIds = new Set(sales.map(sale => sale.productId));
   return new Map(purchases.map(purchase => [
     purchase.id,
-    soldProductIds.has(purchase.productId) || isPurchaseExcludedFromStock(purchase) ? 0 : purchase.quantity,
+    soldProductIds.has(purchase.productId) || !isPurchaseStockEligible(purchase) ? 0 : purchase.quantity,
   ]));
 }
 

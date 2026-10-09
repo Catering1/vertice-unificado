@@ -1,5 +1,12 @@
 # Memória do projeto Vendig Machine Store
 
+## Alteração 2026-10-09 — estados de encomenda e previsão de entrega
+- A interface de Compras apresenta apenas os estados de encomenda `Por Receber`, `Recebido` e `Em devolução`. A discriminação detalhada continua privada nos campos da compra. Entrega sem inspeção permanece `Por Receber`; apenas `received_verified` é `Recebido` para compras acompanhadas. Cancelamentos/reembolsos/devoluções são apresentados como `Em devolução`.
+- O formulário permite editar referência e nota privada, estado visível, data prevista (`estimated_delivery_date`) e data real de entrega (`delivery_date`) separadamente. A tabela apresenta a previsão quando preenchida. Para previsões Vinted, usar a última data do intervalo; não inventar ou reutilizar intervalos vencidos.
+- Reconciliação 09/10: produto `Samsung Galaxy S26 Ultra 1TB` tinha sido criado sem compra associada. A omissão ocorreu porque a execução anterior interpretou o reembolso como razão para não registar, e não detetou o produto órfão; criou-se compra de reconciliação com referência Vinted `25412906240`, custo histórico 639,29 €, quantidade 1 e data aproximada 28/09 baseada na criação do produto. O estado privado é `refunded`, apresentado como `Em devolução`; o produto foi retirado da montra e não representa stock vendável. Confirmação necessária apenas para corrigir a data se a data real de compra diferir.
+- Previsões confirmadas gravadas: Watch6 Classic (ref. `25552535902`) 15/10/2026; S26 Ultra (ref. `25428465350`) 12/10/2026; Buds3 (ref. `25389183419`) 15/10/2026. Flip8 não recebeu previsão atual (última janela já vencida); S26+ sem janela atual acessível. Não preencher até confirmação de nova previsão.
+- `npm run build` validado em 09/10/2026.
+
 ## Alteração 2026-10-08 — detalhes de compra
 - O diálogo de edição de compra mostra o UUID único do produto e o UUID da compra. Quando há vendas associadas ao `product_id`, mostra a data, quantidade, preço, lucro e ID de cada venda. A associação é pelo ID do produto, nunca pelo nome.
 
