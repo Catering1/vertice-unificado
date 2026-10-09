@@ -41,6 +41,8 @@ const SaleSchema = z.object({
   date: z.string(),
 });
 
+const NON_RECEIPT_STATUSES = new Set(["return_in_progress", "refund_partial", "refunded", "cancelled"]);
+
 const ExpenseSchema = z.object({
   category: z.string().trim().min(1).max(100),
   description: z.string().trim().min(1).max(500),
@@ -172,7 +174,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const addPurchase = async (p: Omit<Purchase, "id">) => {
     const validated = PurchaseSchema.parse(p);
-    const orderStatus = validated.orderStatus ?? "not_tracked";
+    const requestedStatus = validated.orderStatus ?? "not_tracked";
+    const orderStatus = validated.collectionDate && !NON_RECEIPT_STATUSES.has(requestedStatus)
+      ? "received_verified" as const
+      : requestedStatus;
     const orderStatusUpdatedAt = validated.orderStatusUpdatedAt ?? (orderStatus === "not_tracked" ? null : new Date().toISOString());
     const { data, error } = await supabase.from("purchases").insert({
       user_id: user!.id, product_id: validated.productId, quantity: validated.quantity, price: validated.price, date: validated.date, estimated_delivery_date: validated.estimatedDeliveryDate || null, delivery_date: validated.deliveryDate || null, collection_date: validated.collectionDate || null,
@@ -186,12 +191,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const updatePurchase = async (p: Purchase) => {
     const validated = PurchaseSchema.parse(p);
     const previous = purchases.find(x => x.id === p.id);
-    const orderStatus = validated.orderStatus ?? previous?.orderStatus ?? "not_tracked";
+    const requestedStatus = validated.orderStatus ?? previous?.orderStatus ?? "not_tracked";
     const orderReference = validated.orderReference === undefined ? (previous?.orderReference ?? "") : validated.orderReference;
     const orderStatusNote = validated.orderStatusNote === undefined ? (previous?.orderStatusNote ?? "") : validated.orderStatusNote;
     const deliveryDate = validated.deliveryDate === undefined ? (previous?.deliveryDate ?? null) : validated.deliveryDate;
     const estimatedDeliveryDate = validated.estimatedDeliveryDate === undefined ? (previous?.estimatedDeliveryDate ?? null) : validated.estimatedDeliveryDate;
     const collectionDate = validated.collectionDate === undefined ? (previous?.collectionDate ?? null) : validated.collectionDate;
+    const orderStatus = collectionDate && !NON_RECEIPT_STATUSES.has(requestedStatus)
+      ? "received_verified" as const
+      : requestedStatus;
     const refundReceivedAt = validated.refundReceivedAt === undefined ? (previous?.refundReceivedAt ?? null) : validated.refundReceivedAt;
     const statusChanged = orderStatus !== (previous?.orderStatus ?? "not_tracked")
       || (orderStatusNote?.trim() || "") !== (previous?.orderStatusNote?.trim() || "");

@@ -176,6 +176,8 @@ export default function Purchases() {
     const previousStatus = editingPurchase?.orderStatus;
     const receiptOrderStatus: VintedOrderStatus = receiptStatus === "excluded"
       ? (previousStatus && ["return_in_progress", "refund_partial", "refunded", "cancelled"].includes(previousStatus) ? previousStatus : "return_in_progress")
+      : collectionDate
+        ? "received_verified"
       : receiptStatus === "received"
         ? (previousStatus === "not_tracked" ? "not_tracked" : "received_verified")
         : deliveryDate && !collectionDate
@@ -415,7 +417,7 @@ export default function Purchases() {
                 <div><Label>Data prevista de entrega</Label><Input aria-label="Data prevista de entrega" type="date" value={estimatedDeliveryDate} onChange={e => setEstimatedDeliveryDate(e.target.value)} /></div>
                 <div><Label>Data de Entrega</Label><Input aria-label="Data de entrega" type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} /></div>
                 <div><Label>Data Limite levantamento</Label><Input aria-label="Data limite para levantar a encomenda" type="date" value={pickupDeadline} readOnly disabled={!pickupDeadline} /></div>
-                <div><Label>Data Levantamento</Label><Input aria-label="Data de levantamento" type="date" value={collectionDate} disabled={!deliveryDate} onChange={e => setCollectionDate(e.target.value)} /></div>
+                <div><Label>Data Levantamento</Label><Input aria-label="Data de levantamento" type="date" value={collectionDate} disabled={!deliveryDate} onChange={e => { const value = e.target.value; setCollectionDate(value); if (value) setReceiptStatus("received"); }} /></div>
               </div>
               <div><Label>Referência da encomenda (privada)</Label><Input aria-label="Referência da encomenda" value={orderReference} onChange={e => setOrderReference(e.target.value)} maxLength={200} /></div>
               <div><Label>Atualização da encomenda (privada)</Label><textarea aria-label="Atualização da encomenda" value={orderStatusNote} onChange={e => setOrderStatusNote(e.target.value)} maxLength={1000} rows={3} className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
