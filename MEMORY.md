@@ -7,6 +7,12 @@
 - Previsões confirmadas gravadas: Watch6 Classic (ref. `25552535902`) 15/10/2026; S26 Ultra (ref. `25428465350`) 12/10/2026; Buds3 (ref. `25389183419`) 15/10/2026. Flip8 não recebeu previsão atual (última janela já vencida); S26+ sem janela atual acessível. Não preencher até confirmação de nova previsão.
 - `npm run build` validado em 09/10/2026.
 
+## Alteração 2026-10-09 — confirmação de reembolsos e reconciliação S26 256 GB
+- Correção de reconciliação: o S26 Ultra 1 TB não era o artigo em falta; Vinted mostra-o cancelado/reembolsado (ref. `25412906240`). O artigo não registado era o Samsung S26 Ultra 256 GB (ref. `25214327086`), mostrado em Cancelados como não enviado/reembolso processado, total 613,99 €. Foi associado ao produto existente `S26 256GB` sem duplicar produto. A data não aparece na lista e o detalhe da encomenda não carregou; data da compra deixada vazia e a limitação registada em nota privada.
+- Compras em estados `refunded`/`cancelled` continuam a afetar métricas financeiras enquanto o recebimento do dinheiro não for confirmado. No diálogo de edição de uma compra `Em devolução`, existe a caixa privada `Confirmo que já recebi o reembolso`. Ao guardar, grava `refund_received_at` e a linha deixa de afetar as métricas/cartões; permanece no histórico. Reembolsos ainda por receber continuam contabilizados como custo. Linhas em devolução/reembolso parcial continuam excluídas do stock.
+- Migração aplicada ao Supabase ativo: `purchases.refund_received_at timestamptz`. `npm test` passou (29 testes) e `npm run build` passou.
+- Para não perder encomendas canceladas em execuções futuras, consultar também a vista/filtro `Cancelados`, além das encomendas em curso e concluídas; procurar tanto pelo modelo como pela referência e reconciliar produtos existentes com compras.
+
 ## Alteração 2026-10-08 — detalhes de compra
 - O diálogo de edição de compra mostra o UUID único do produto e o UUID da compra. Quando há vendas associadas ao `product_id`, mostra a data, quantidade, preço, lucro e ID de cada venda. A associação é pelo ID do produto, nunca pelo nome.
 

@@ -152,6 +152,7 @@ export type Database = {
           order_status: string
           order_status_note: string | null
           order_status_updated_at: string | null
+          refund_received_at: string | null
           source_ref: string | null
           created_at: string
           collection_date: string | null
@@ -169,6 +170,7 @@ export type Database = {
           order_status?: string
           order_status_note?: string | null
           order_status_updated_at?: string | null
+          refund_received_at?: string | null
           source_ref?: string | null
           created_at?: string
           collection_date?: string | null
@@ -186,6 +188,7 @@ export type Database = {
           order_status?: string
           order_status_note?: string | null
           order_status_updated_at?: string | null
+          refund_received_at?: string | null
           source_ref?: string | null
           created_at?: string
           collection_date?: string | null

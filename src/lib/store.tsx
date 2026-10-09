@@ -30,6 +30,7 @@ const PurchaseSchema = z.object({
   orderReference: z.string().max(200).optional().nullable(),
   orderStatusNote: z.string().max(1000).optional().nullable(),
   orderStatusUpdatedAt: z.string().datetime({ offset: true }).optional().nullable(),
+  refundReceivedAt: z.string().datetime({ offset: true }).optional().nullable(),
 });
 
 const SaleSchema = z.object({
@@ -119,7 +120,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           inventoryUse: r.inventory_use ?? "business", storeVisible: r.store_visible ?? true,
           sourceRef: r.source_ref, sourceData: r.source_data ?? {},
         })));
-        setPurchases(purchs.map(r => ({id: r.id, productId: r.product_id, quantity: r.quantity, price: r.price == null ? null : Number(r.price), date: r.date ?? "", estimatedDeliveryDate: r.estimated_delivery_date ?? null, deliveryDate: r.delivery_date ?? null, collectionDate: r.collection_date ?? null, orderStatus: (r.order_status ?? "not_tracked") as VintedOrderStatus, orderReference: r.order_reference ?? "", orderStatusNote: r.order_status_note ?? "", orderStatusUpdatedAt: r.order_status_updated_at ?? null})));
+        setPurchases(purchs.map(r => ({id: r.id, productId: r.product_id, quantity: r.quantity, price: r.price == null ? null : Number(r.price), date: r.date ?? "", estimatedDeliveryDate: r.estimated_delivery_date ?? null, deliveryDate: r.delivery_date ?? null, collectionDate: r.collection_date ?? null, orderStatus: (r.order_status ?? "not_tracked") as VintedOrderStatus, orderReference: r.order_reference ?? "", orderStatusNote: r.order_status_note ?? "", orderStatusUpdatedAt: r.order_status_updated_at ?? null, refundReceivedAt: r.refund_received_at ?? null})));
         setSales(sold.map(r => ({id: r.id, productId: r.product_id, quantity: r.quantity, salePrice: Number(r.sale_price), profit: r.profit == null ? null : Number(r.profit), date: r.date ?? ""})));
         setExpenses(costs.map(r => ({id: r.id, category: r.category, description: r.description, amount: Number(r.amount), date: r.date ?? ""})));
         const names = cats.map(r => r.name);
@@ -175,9 +176,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.from("purchases").insert({
       user_id: user!.id, product_id: validated.productId, quantity: validated.quantity, price: validated.price, date: validated.date, estimated_delivery_date: validated.estimatedDeliveryDate || null, delivery_date: validated.deliveryDate || null, collection_date: validated.collectionDate || null,
       order_status: orderStatus, order_reference: validated.orderReference?.trim() || null, order_status_note: validated.orderStatusNote?.trim() || null, order_status_updated_at: orderStatusUpdatedAt,
+      refund_received_at: validated.refundReceivedAt || null,
     } as any).select().single();
     if (error) throw error;
-    setPurchases(prev => [...prev, { id: data.id, productId: data.product_id, quantity: data.quantity, price: data.price == null ? null : Number(data.price), date: data.date ?? "", estimatedDeliveryDate: data.estimated_delivery_date ?? null, deliveryDate: data.delivery_date ?? null, collectionDate: data.collection_date ?? null, orderStatus: data.order_status as VintedOrderStatus, orderReference: data.order_reference ?? "", orderStatusNote: data.order_status_note ?? "", orderStatusUpdatedAt: data.order_status_updated_at }]);
+    setPurchases(prev => [...prev, { id: data.id, productId: data.product_id, quantity: data.quantity, price: data.price == null ? null : Number(data.price), date: data.date ?? "", estimatedDeliveryDate: data.estimated_delivery_date ?? null, deliveryDate: data.delivery_date ?? null, collectionDate: data.collection_date ?? null, orderStatus: data.order_status as VintedOrderStatus, orderReference: data.order_reference ?? "", orderStatusNote: data.order_status_note ?? "", orderStatusUpdatedAt: data.order_status_updated_at, refundReceivedAt: data.refund_received_at }]);
   };
 
   const updatePurchase = async (p: Purchase) => {
@@ -189,12 +191,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const deliveryDate = validated.deliveryDate === undefined ? (previous?.deliveryDate ?? null) : validated.deliveryDate;
     const estimatedDeliveryDate = validated.estimatedDeliveryDate === undefined ? (previous?.estimatedDeliveryDate ?? null) : validated.estimatedDeliveryDate;
     const collectionDate = validated.collectionDate === undefined ? (previous?.collectionDate ?? null) : validated.collectionDate;
+    const refundReceivedAt = validated.refundReceivedAt === undefined ? (previous?.refundReceivedAt ?? null) : validated.refundReceivedAt;
     const statusChanged = orderStatus !== (previous?.orderStatus ?? "not_tracked")
       || (orderStatusNote?.trim() || "") !== (previous?.orderStatusNote?.trim() || "");
     const orderStatusUpdatedAt = statusChanged ? new Date().toISOString() : (validated.orderStatusUpdatedAt ?? previous?.orderStatusUpdatedAt ?? null);
     const { error } = await supabase.from("purchases").update({
       product_id: p.productId, quantity: p.quantity, price: p.price, date: p.date || null, estimated_delivery_date: estimatedDeliveryDate || null, delivery_date: deliveryDate || null, collection_date: collectionDate || null,
       order_status: orderStatus, order_reference: orderReference?.trim() || null, order_status_note: orderStatusNote?.trim() || null, order_status_updated_at: orderStatusUpdatedAt,
+      refund_received_at: refundReceivedAt,
     } as any).eq("id", p.id);
     if (error) throw error;
     // A single purchase identifies the unit's cost unambiguously. Legacy products
@@ -207,7 +211,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setSales(prev=>prev.map(s=>s.id===sale.id ? {...s,profit} : s));
       }
     }
-    setPurchases(prev => prev.map(x => x.id === p.id ? {...p, estimatedDeliveryDate, deliveryDate, collectionDate, orderStatus, orderReference: orderReference?.trim() || "", orderStatusNote: orderStatusNote?.trim() || "", orderStatusUpdatedAt} : x));
+    setPurchases(prev => prev.map(x => x.id === p.id ? {...p, estimatedDeliveryDate, deliveryDate, collectionDate, orderStatus, orderReference: orderReference?.trim() || "", orderStatusNote: orderStatusNote?.trim() || "", orderStatusUpdatedAt, refundReceivedAt} : x));
   };
 
   const deletePurchase = async (id: string) => {

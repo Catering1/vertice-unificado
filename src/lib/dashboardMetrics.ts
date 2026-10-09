@@ -1,19 +1,19 @@
 import type { Expense, Product, Purchase, Sale } from "@/types";
-import { activeUnitsByPurchase, isPurchaseExcludedFromStock, purchaseReceiptStatus } from "@/lib/inventory";
+import { activeUnitsByPurchase, isPurchaseExcludedFromDashboard, purchaseReceiptStatus } from "@/lib/inventory";
 
 export const money = (v: number | null) => v == null ? "Por confirmar" : v.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 export const displayDate = (date: string) => date ? new Date(`${date}T12:00:00`).toLocaleDateString("pt-PT") : "Sem data";
 export function categoryData(products: Product[], purchases: Purchase[], sales: Sale[], expenses: Expense[], category = "all") {
   const selected = products.filter(p => p.inventoryUse !== "personal" && (category === "all" || p.category === category));
   const ids = new Set(selected.map(p => p.id));
-  const eligiblePurchases = purchases.filter(p => ids.has(p.productId) && !isPurchaseExcludedFromStock(p));
+  const eligiblePurchases = purchases.filter(p => ids.has(p.productId) && !isPurchaseExcludedFromDashboard(p));
   const eligibleIds = new Set(eligiblePurchases.map(p => p.productId));
   return { products: selected.filter(p => eligibleIds.has(p.id)), purchases: eligiblePurchases, sales: sales.filter(s => eligibleIds.has(s.productId)), expenses: expenses.filter(e => category === "all" || e.category === category) };
 }
 
 export function computeDashboard(allPurchases: Purchase[], allSales: Sale[], allProducts: Product[], expenses: Expense[] = []) {
   const businessIds = new Set(allProducts.filter(p => p.inventoryUse !== "personal").map(p => p.id));
-  const purchases = allPurchases.filter(p => businessIds.has(p.productId) && !isPurchaseExcludedFromStock(p));
+  const purchases = allPurchases.filter(p => businessIds.has(p.productId) && !isPurchaseExcludedFromDashboard(p));
   const eligibleIds = new Set(purchases.map(p => p.productId));
   const sales = allSales.filter(s => eligibleIds.has(s.productId));
   const products = allProducts.filter(p => eligibleIds.has(p.id));

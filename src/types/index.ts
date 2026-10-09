@@ -29,6 +29,7 @@ export interface Purchase {
   orderReference?: string | null;
   orderStatusNote?: string | null;
   orderStatusUpdatedAt?: string | null;
+  refundReceivedAt?: string | null;
 }
 
 export type VintedOrderStatus =

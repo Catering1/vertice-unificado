@@ -13,6 +13,13 @@ export function isPurchaseExcludedFromStock(purchase: Pick<Purchase, "orderStatu
   return purchase.orderStatus != null && EXCLUDED_STOCK_STATUSES.has(purchase.orderStatus);
 }
 
+/** A processed full refund remains in financial metrics until its receipt is confirmed. */
+export function isPurchaseExcludedFromDashboard(purchase: Pick<Purchase, "orderStatus" | "refundReceivedAt">): boolean {
+  if (purchase.refundReceivedAt) return true;
+  if (purchase.orderStatus === "refunded" || purchase.orderStatus === "cancelled") return false;
+  return isPurchaseExcludedFromStock(purchase);
+}
+
 export function purchaseReceiptStatus(purchase: Pick<Purchase, "orderStatus">): PurchaseReceiptStatus {
   if (isPurchaseExcludedFromStock(purchase)) return "excluded";
   // Legacy records remain treated as received; newly tracked orders are received only after inspection.

@@ -110,6 +110,7 @@ export default function Purchases() {
   const [orderReference, setOrderReference] = useState("");
   const [orderStatusNote, setOrderStatusNote] = useState("");
   const [receiptStatus, setReceiptStatus] = useState<PurchaseReceiptStatus>("pending");
+  const [refundReceived, setRefundReceived] = useState(false);
 
   const [searchDate, setSearchDate] = usePersistedState("purchases-searchDate", "");
   const [catFilter, setCatFilter] = usePersistedState("purchases-catFilter", "all");
@@ -133,6 +134,7 @@ export default function Purchases() {
     setCollectionDate("");
     setOrderReference(""); setOrderStatusNote("");
     setReceiptStatus("pending");
+    setRefundReceived(false);
     setDialogOpen(true);
   };
 
@@ -156,12 +158,13 @@ export default function Purchases() {
     setOrderReference(p.orderReference ?? "");
     setOrderStatusNote(p.orderStatusNote ?? "");
     setReceiptStatus(purchaseReceiptStatus(p));
+    setRefundReceived(Boolean(p.refundReceivedAt));
     setDialogOpen(true);
   };
 
   const save = async () => {
     if (saving) return;
-    if (!productName.trim() || !price || !date) {
+    if (!productName.trim() || !price || (!date && !(editingPurchase && receiptStatus === "excluded"))) {
       toast.error("Preencha todos os campos");
       return;
     }
@@ -171,7 +174,7 @@ export default function Purchases() {
     const warrantyMonthsParsed = Number(warrantyMonths || 0);
     if (collectionDate && !deliveryDate) { toast.error("Indique a data de entrega antes da data de levantamento"); return; }
     const previousStatus = editingPurchase?.orderStatus;
-    const orderStatus: VintedOrderStatus = receiptStatus === "excluded"
+    const receiptOrderStatus: VintedOrderStatus = receiptStatus === "excluded"
       ? (previousStatus && ["return_in_progress", "refund_partial", "refunded", "cancelled"].includes(previousStatus) ? previousStatus : "return_in_progress")
       : receiptStatus === "received"
         ? (previousStatus === "not_tracked" ? "not_tracked" : "received_verified")
@@ -180,6 +183,11 @@ export default function Purchases() {
           : previousStatus && ["ordered", "shipped", "electronic_verification"].includes(previousStatus)
             ? previousStatus
             : "ordered";
+    const orderStatus: VintedOrderStatus = receiptStatus === "excluded" && refundReceived ? "refunded" : receiptOrderStatus;
+    const isRefundProcessed = ["refunded", "cancelled"].includes(orderStatus);
+    const refundReceivedAt = isRefundProcessed
+      ? refundReceived ? (editingPurchase?.refundReceivedAt ?? new Date().toISOString()) : null
+      : null;
     if (Number.isNaN(retailPriceParsed) || Number.isNaN(warrantyMonthsParsed) || warrantyMonthsParsed < 0) {
       toast.error("Verifique o preço de venda e a garantia");
       return;
@@ -191,12 +199,12 @@ export default function Purchases() {
       let productId: string;
       if (existingProd) {
         productId = existingProd.id;
-        await updateProduct({...existingProd,name:productName.trim(),category:productCategory,supplier:productSupplier,purchasePrice:priceParsed,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,inventoryUse});
+        await updateProduct({...existingProd,name:productName.trim(),category:productCategory,supplier:productSupplier,purchasePrice:purchases.filter(p => p.productId === existingProd.id).length > 1 ? existingProd.purchasePrice : priceParsed,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,inventoryUse});
       } else {
         productId = await addProduct({name:productName.trim(),category:productCategory,purchasePrice:priceParsed,supplier:productSupplier,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,photoUrls:[],inventoryUse,storeVisible:productCategory !== "Livros" && inventoryUse !== "personal"});
       }
       if (editingPurchase) {
-        await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderReference, orderStatusNote });
+        await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderReference, orderStatusNote, refundReceivedAt });
         toast.success("Compra atualizada");
       } else {
         await addPurchase({ productId, quantity: 1, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderReference, orderStatusNote });
@@ -408,6 +416,7 @@ export default function Purchases() {
               </div>
               <div><Label>Referência da encomenda (privada)</Label><Input aria-label="Referência da encomenda" value={orderReference} onChange={e => setOrderReference(e.target.value)} maxLength={200} /></div>
               <div><Label>Atualização da encomenda (privada)</Label><textarea aria-label="Atualização da encomenda" value={orderStatusNote} onChange={e => setOrderStatusNote(e.target.value)} maxLength={1000} rows={3} className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
+              {editingPurchase && receiptStatus === "excluded" && <label className="flex items-start gap-2 rounded-md border p-3 text-sm"><input type="checkbox" checked={refundReceived} onChange={event => setRefundReceived(event.target.checked)} className="mt-0.5" /><span><span className="font-medium">Confirmo que já recebi o reembolso</span><span className="mt-1 block text-xs text-muted-foreground">Quando confirmado e guardado, esta compra fica como reembolsada e deixa de entrar nos cartões e totais do dashboard. O registo mantém-se no histórico.</span></span></label>}
               <div><Label>Descrição para anúncio</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado, características, acessórios e defeitos a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
               {relatedSales.length > 0 && <section className="space-y-2 rounded-md border p-3" aria-label="Vendas do produto">
                 <h3 className="text-sm font-semibold">Vendas deste produto</h3>
@@ -453,6 +462,7 @@ export default function Purchases() {
                   </div>
                   <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Data de compra: {formatDate(p.date)}</p>{p.deliveryDate && <p>Data de Entrega: {formatDate(p.deliveryDate)}</p>}{p.deliveryDate && <p>Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}{p.collectionDate && <p>Data Levantamento: {formatDate(p.collectionDate)}</p>}</div></div>
                   <p className="border-t pt-3 text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
+                  {p.refundReceivedAt && <p className="text-xs text-muted-foreground">Reembolso recebido: {formatDate(p.refundReceivedAt.slice(0, 10))}</p>}
                   {stockState === "Ativo" && <Button variant="outline" className="w-full" onClick={() => openSale(p)}>Registar venda</Button>}
                 </CardContent>
               </Card>
@@ -491,6 +501,7 @@ export default function Purchases() {
               {p.deliveryDate && <p className="text-xs text-muted-foreground">Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}
               {p.collectionDate && <p className="text-xs text-muted-foreground">Data Levantamento: {formatDate(p.collectionDate)}</p>}
               <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
+              {p.refundReceivedAt && <p className="text-xs text-muted-foreground">Reembolso recebido: {formatDate(p.refundReceivedAt.slice(0, 10))}</p>}
               {commercialStatus(p) === "Ativo" && <Button variant="outline" className="mt-2 w-full" onClick={() => openSale(p)}>Registar venda</Button>}
             </CardContent>
           </Card>

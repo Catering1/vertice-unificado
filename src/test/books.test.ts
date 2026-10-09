@@ -29,7 +29,7 @@ describe("category dashboard",()=>{
     const personal = product("personal","Livros",true);
     const eligible = product("eligible");
     const purchases:Purchase[] = [
-      {id:"r",productId:"returned",quantity:2,price:10,date:"2025-01-01",orderStatus:"refunded"},
+      {id:"r",productId:"returned",quantity:2,price:10,date:"2025-01-01",orderStatus:"refunded",refundReceivedAt:"2025-01-02T00:00:00.000Z"},
       {id:"p",productId:"personal",quantity:1,price:20,date:"2025-01-01"},
       {id:"e",productId:"eligible",quantity:1,price:4,date:"2025-01-01"},
     ];

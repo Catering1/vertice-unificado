@@ -13,7 +13,7 @@ const purchase = (orderStatus: VintedOrderStatus): Purchase => ({
 });
 
 describe("sellable stock eligibility", () => {
-  it.each(["not_tracked", "delivered", "received_verified"] as VintedOrderStatus[])("counts %s as available", status => {
+  it.each(["not_tracked", "received_verified"] as VintedOrderStatus[])("counts %s as available", status => {
     expect(isPurchaseStockEligible(purchase(status))).toBe(true);
   });
 
@@ -39,10 +39,10 @@ describe("purchase identity and active stock value", () => {
     const dashboard = computeDashboard(purchases, sales, products);
     expect(dashboard.stockValue).toBe(120);
     expect(dashboard.stockUnits).toBe(1);
-    expect(dashboard.pendingStockValue).toBe(120);
-    expect(dashboard.pendingStockUnits).toBe(1);
-    expect(dashboard.receivedStockValue).toBe(0);
-    expect(dashboard.receivedStockUnits).toBe(0);
+    expect(dashboard.pendingStockValue).toBe(0);
+    expect(dashboard.pendingStockUnits).toBe(0);
+    expect(dashboard.receivedStockValue).toBe(120);
+    expect(dashboard.receivedStockUnits).toBe(1);
     expect(dashboard.totalPurchases).toBe(200);
   });
 
@@ -52,12 +52,12 @@ describe("purchase identity and active stock value", () => {
     expect(computeDashboard(legacy, sales, products).stockValue).toBe(0);
   });
 
-  it("keeps a product active when it has no sale, independently of delivery status", () => {
+  it("blocks an order from sellable stock until it is received and inspected", () => {
     const pending = [{ ...purchases[0], orderStatus: "ordered" as const }];
-    expect(activeUnitsByPurchase(pending, [])).toEqual(new Map([["a", 1]]));
+    expect(activeUnitsByPurchase(pending, [])).toEqual(new Map([["a", 0]]));
     const dashboard = computeDashboard(pending, [], products);
-    expect(dashboard.stockValue).toBe(80);
-    expect(dashboard.pendingStockValue).toBe(80);
+    expect(dashboard.stockValue).toBe(0);
+    expect(dashboard.pendingStockValue).toBe(0);
     expect(dashboard.receivedStockValue).toBe(0);
   });
 
@@ -81,6 +81,24 @@ describe("purchase identity and active stock value", () => {
     expect(dashboard.pendingStockUnits).toBe(0);
     expect(dashboard.receivedStockUnits).toBe(0);
     expect(purchaseReceiptStatus(excluded[0])).toBe("excluded");
+  });
+
+  it("keeps refunded purchases in financial metrics until refund receipt is confirmed", () => {
+    const waitingForRefund = [{ ...purchase("refunded"), id: "refund-pending", productId: "first" }];
+    const confirmedRefund = [{ ...waitingForRefund[0], refundReceivedAt: "2026-10-09T10:00:00.000Z" }];
+    const refundSale: Sale[] = [{ id: "refund-sale", productId: "first", quantity: 1, salePrice: 150, date: "2026-10-01", profit: 50 }];
+    const awaiting = computeDashboard(waitingForRefund, refundSale, products);
+    const confirmed = computeDashboard(confirmedRefund, refundSale, products);
+
+    expect(awaiting.totalPurchases).toBe(100);
+    expect(awaiting.totalSales).toBe(150);
+    expect(awaiting.totalProfit).toBe(50);
+    expect(awaiting.productCount).toBe(1);
+    expect(awaiting.stockValue).toBe(0);
+    expect(confirmed.totalPurchases).toBe(0);
+    expect(confirmed.totalSales).toBe(0);
+    expect(confirmed.totalProfit).toBe(0);
+    expect(confirmed.productCount).toBe(0);
   });
 
   it("shows a return as a return rather than a sale", () => {
