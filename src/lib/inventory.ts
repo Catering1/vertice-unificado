@@ -32,12 +32,12 @@ export function isPurchaseStockEligible(purchase: Purchase): boolean {
   return !purchase.orderStatus || purchase.orderStatus === "not_tracked" || purchase.orderStatus === "received_verified";
 }
 
-/** A purchase is active only while its product has no sale and it remains in stock. */
+/** Count unsold units in both received stock and incoming stock; sale eligibility is checked separately. */
 export function activeUnitsByPurchase(purchases: Purchase[], sales: Sale[]): Map<string, number> {
   const soldProductIds = new Set(sales.map(sale => sale.productId));
   return new Map(purchases.map(purchase => [
     purchase.id,
-    soldProductIds.has(purchase.productId) || !isPurchaseStockEligible(purchase) ? 0 : purchase.quantity,
+    soldProductIds.has(purchase.productId) || isPurchaseExcludedFromStock(purchase) ? 0 : purchase.quantity,
   ]));
 }
 

@@ -1,7 +1,7 @@
 import { money, displayDate as formatDate } from "@/lib/dashboardMetrics";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { activeUnitsByPurchase, purchaseCommercialStatus, purchaseReceiptStatus, PurchaseReceiptStatus } from "@/lib/inventory";
+import { activeUnitsByPurchase, isPurchaseStockEligible, purchaseCommercialStatus, purchaseReceiptStatus, PurchaseReceiptStatus } from "@/lib/inventory";
 import { useStore } from "@/lib/store";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { Purchase, VintedOrderStatus } from "@/types";
@@ -252,7 +252,10 @@ export default function Purchases() {
       const prod = getProduct(p.productId);
       if (selectedRecord && p.id !== selectedRecord) return false;
       if (selectedRecord) return true;
-      if (search && !prod?.name.toLocaleLowerCase("pt-PT").includes(search.toLocaleLowerCase("pt-PT"))) return false;
+      if (search) {
+        const term = search.toLocaleLowerCase("pt-PT");
+        if (!prod?.name.toLocaleLowerCase("pt-PT").includes(term) && !p.orderReference?.toLocaleLowerCase("pt-PT").includes(term)) return false;
+      }
       if (catFilter !== "all" && prod?.category !== catFilter) return false;
       if (searchDate && !p.date.includes(searchDate)) return false;
       const status = purchaseCommercialStatus(p, sales);
@@ -369,7 +372,7 @@ export default function Purchases() {
         </div>
         <div className="grid w-full grid-cols-[minmax(0,160px)_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[180px_minmax(0,320px)]">
           <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full min-w-0 justify-start overflow-hidden text-ellipsis whitespace-nowrap", !searchDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4 shrink-0" /><span className="truncate">{searchDate ? displayDate : <><span className="sm:hidden">Mês</span><span className="hidden sm:inline">Filtrar por mês</span></>}</span></Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><MonthYearPicker value={searchDate} onChange={value => { setSearchDate(value); setPage(1); }} /></PopoverContent></Popover>
-          <Input className="min-w-0" aria-label="Pesquisar produto" placeholder="Pesquisar produto…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
+          <Input className="min-w-0" aria-label="Pesquisar produto ou referência" placeholder="Pesquisar produto ou referência…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/>
         </div>
 
         <div className="hidden sm:block sm:flex-1" />
@@ -462,8 +465,9 @@ export default function Purchases() {
                   </div>
                   <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Data de compra: {formatDate(p.date)}</p>{p.deliveryDate && <p>Data de Entrega: {formatDate(p.deliveryDate)}</p>}{p.deliveryDate && <p>Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}{p.collectionDate && <p>Data Levantamento: {formatDate(p.collectionDate)}</p>}</div></div>
                   <p className="border-t pt-3 text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
+                  {p.orderReference && <p className="text-xs text-muted-foreground">Ref. da encomenda: {p.orderReference}</p>}
                   {p.refundReceivedAt && <p className="text-xs text-muted-foreground">Reembolso recebido: {formatDate(p.refundReceivedAt.slice(0, 10))}</p>}
-                  {stockState === "Ativo" && <Button variant="outline" className="w-full" onClick={() => openSale(p)}>Registar venda</Button>}
+                  {stockState === "Ativo" && isPurchaseStockEligible(p) && <Button variant="outline" className="w-full" onClick={() => openSale(p)}>Registar venda</Button>}
                 </CardContent>
               </Card>
             );
@@ -501,8 +505,9 @@ export default function Purchases() {
               {p.deliveryDate && <p className="text-xs text-muted-foreground">Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}
               {p.collectionDate && <p className="text-xs text-muted-foreground">Data Levantamento: {formatDate(p.collectionDate)}</p>}
               <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
+              {p.orderReference && <p className="text-xs text-muted-foreground">Ref. da encomenda: {p.orderReference}</p>}
               {p.refundReceivedAt && <p className="text-xs text-muted-foreground">Reembolso recebido: {formatDate(p.refundReceivedAt.slice(0, 10))}</p>}
-              {commercialStatus(p) === "Ativo" && <Button variant="outline" className="mt-2 w-full" onClick={() => openSale(p)}>Registar venda</Button>}
+              {commercialStatus(p) === "Ativo" && isPurchaseStockEligible(p) && <Button variant="outline" className="mt-2 w-full" onClick={() => openSale(p)}>Registar venda</Button>}
             </CardContent>
           </Card>
         ))}
@@ -535,7 +540,7 @@ export default function Purchases() {
                   <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      {commercialStatus(p) === "Ativo" && <Button variant="outline" size="sm" onClick={() => openSale(p)}>Registar venda</Button>}
+                      {commercialStatus(p) === "Ativo" && isPurchaseStockEligible(p) && <Button variant="outline" size="sm" onClick={() => openSale(p)}>Registar venda</Button>}
                       <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
                         <Pencil className="h-4 w-4 text-muted-foreground" />
                       </Button>

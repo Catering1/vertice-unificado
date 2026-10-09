@@ -18,7 +18,7 @@ Executa esta rotina quando solicitado ou pela automação diária. Trabalha apen
 
 ## 2. Registar compra e estado no dashboard
 
-- Usa o formulário de Compras do dashboard, mantendo o produto associado ao respetivo registo de compra. Se o produto já existir, atualiza-o em vez de criar outro produto.
+- Usa o formulário de Compras do dashboard, mantendo cada compra associada à sua unidade. Antes de reutilizar um `product_id`, confirma que corresponde à mesma encomenda e que não tem uma compra ou venda histórica de outra unidade. Para uma nova unidade, cria um produto próprio mesmo que o modelo/nome coincida com outro; preserva as vendas e custos históricos. Confirma a referência da encomenda e a associação depois de guardar.
 - Mantém estados de encomenda e informação da Vinted estritamente privados; não os coloques em descrição pública, especificações públicas, anúncio OLX ou na montra.
 - Regista o estado atual nos campos privados da compra: estado, referência curta da encomenda e nota com atualização/data e montante parcial reembolsado, quando aplicável. Não guardes endereço, telefone, credenciais ou mensagens privadas integrais.
 - Usa os estados disponíveis no dashboard: pedido realizado/a preparar, enviado, em verificação eletrónica, entregue por inspecionar, recebido e inspecionado, devolução em curso, reembolso parcial, reembolsado ou cancelado. Para encomendas antigas sem estado verificável, mantém “Não acompanhado” até confirmar.

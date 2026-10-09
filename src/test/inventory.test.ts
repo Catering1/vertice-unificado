@@ -17,7 +17,7 @@ describe("sellable stock eligibility", () => {
     expect(isPurchaseStockEligible(purchase(status))).toBe(true);
   });
 
-  it.each(["ordered", "shipped", "electronic_verification", "return_in_progress", "refund_partial", "refunded", "cancelled"] as VintedOrderStatus[])("excludes %s from available stock", status => {
+  it.each(["ordered", "shipped", "electronic_verification", "delivered", "return_in_progress", "refund_partial", "refunded", "cancelled"] as VintedOrderStatus[])("excludes %s from available stock", status => {
     expect(isPurchaseStockEligible(purchase(status))).toBe(false);
   });
 });
@@ -46,18 +46,30 @@ describe("purchase identity and active stock value", () => {
     expect(dashboard.totalPurchases).toBe(200);
   });
 
+  it("shows a shipped new unit as incoming after an older unit of the same model was sold", () => {
+    const incoming = { ...purchases[1], orderStatus: "shipped" as const, price: 681.8 };
+    const dashboard = computeDashboard([purchases[0], incoming], sales, products);
+    expect(purchaseCommercialStatus(incoming, sales)).toBe("active");
+    expect(isPurchaseStockEligible(incoming)).toBe(false);
+    expect(dashboard.pendingStockUnits).toBe(1);
+    expect(dashboard.pendingStockValue).toBe(681.8);
+    expect(dashboard.receivedStockUnits).toBe(0);
+  });
+
   it("marks every legacy purchase of a product as sold when that product has a sale", () => {
     const legacy = purchases.map(p => ({ ...p, productId: "first" }));
     expect(activeUnitsByPurchase(legacy, sales)).toEqual(new Map([["a", 0], ["b", 0]]));
     expect(computeDashboard(legacy, sales, products).stockValue).toBe(0);
   });
 
-  it("blocks an order from sellable stock until it is received and inspected", () => {
+  it("counts an unsold order as incoming while keeping it ineligible for sale", () => {
     const pending = [{ ...purchases[0], orderStatus: "ordered" as const }];
-    expect(activeUnitsByPurchase(pending, [])).toEqual(new Map([["a", 0]]));
+    expect(activeUnitsByPurchase(pending, [])).toEqual(new Map([["a", 1]]));
+    expect(isPurchaseStockEligible(pending[0])).toBe(false);
     const dashboard = computeDashboard(pending, [], products);
-    expect(dashboard.stockValue).toBe(0);
-    expect(dashboard.pendingStockValue).toBe(0);
+    expect(dashboard.stockValue).toBe(80);
+    expect(dashboard.pendingStockValue).toBe(80);
+    expect(dashboard.pendingStockUnits).toBe(1);
     expect(dashboard.receivedStockValue).toBe(0);
   });
 
