@@ -11,11 +11,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom";
 
 const today = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Lisbon", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
 export default function Expenses() {
   const { expenses, categories, addExpense, updateExpense, deleteExpense, loading, error } = useStore();
+  const [searchParams] = useSearchParams();
+  const detailCategory = searchParams.get("categoria");
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
@@ -26,8 +29,9 @@ export default function Expenses() {
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(today);
   const filtered = useMemo(() => expenses.filter(expense =>
-    `${expense.description} ${expense.category}`.toLocaleLowerCase("pt-PT").includes(search.toLocaleLowerCase("pt-PT"))
-  ).sort((a, b) => b.date.localeCompare(a.date)), [expenses, search]);
+    (!detailCategory || expense.category === detailCategory)
+    && `${expense.description} ${expense.category}`.toLocaleLowerCase("pt-PT").includes(search.toLocaleLowerCase("pt-PT"))
+  ).sort((a, b) => b.date.localeCompare(a.date)), [expenses, search, detailCategory]);
   const total = filtered.reduce((sum, expense) => sum + expense.amount, 0);
 
   const openNew = () => {
@@ -91,7 +95,7 @@ export default function Expenses() {
 
   return <div className="space-y-5 animate-fade-in">
     <div className="flex flex-wrap items-end justify-between gap-4">
-      <div><h1 className="text-2xl font-bold">Despesas operacionais</h1><p className="mt-1 text-sm text-muted-foreground">{filtered.length} registos · Total {money(total)}</p></div>
+      <div><h1 className="text-2xl font-bold">Despesas operacionais{detailCategory ? ` · ${detailCategory}` : ""}</h1><p className="mt-1 text-sm text-muted-foreground">{filtered.length} registos · Total {money(total)}</p></div>
       <div className="flex w-full flex-wrap gap-2 sm:w-auto">
         <Input className="w-full sm:w-64" aria-label="Pesquisar despesas" placeholder="Pesquisar descrição ou categoria…" value={search} onChange={event => setSearch(event.target.value)} />
         <Button className="w-full gap-2 sm:w-auto" onClick={openNew}><Plus className="h-4 w-4" />Nova despesa</Button>

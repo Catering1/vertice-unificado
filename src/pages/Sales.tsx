@@ -89,6 +89,17 @@ export default function Sales() {
   const [sortField, setSortField] = usePersistedState<SortField | null>("sales-sortField", null);
   const [sortDir, setSortDir] = usePersistedState<SortDir>("sales-sortDir", "asc");
 
+  const detail = searchParams.get("detalhe");
+  const detailCategory = searchParams.get("categoria");
+  useEffect(() => {
+    if (detail !== "sales") return;
+    setSalesView("sales");
+    setPage(1);
+    setSearch("");
+    setSearchDate("");
+    setCatFilter(detailCategory && categories.includes(detailCategory) ? detailCategory : "all");
+  }, [detail, detailCategory, categories, setCatFilter, setSearchDate]);
+
   // Each sellable entry is one purchase record; sales consume only that record's units.
   const activeUnitCounts = useMemo(() => activeUnitsByPurchase(purchases, sales), [purchases, sales]);
   const availablePurchases = useMemo(() => purchases.filter(purchase => {

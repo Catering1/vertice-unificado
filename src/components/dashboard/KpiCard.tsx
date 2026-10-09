@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 interface KpiCardProps {
   label: string;
@@ -11,10 +12,11 @@ interface KpiCardProps {
   iconColor: string;
   valueClassName?: string;
   accentClassName?: string;
+  href?: string;
 }
 
-export default function KpiCard({ label, shortLabel, value, icon: Icon, iconBg, iconColor, valueClassName, accentClassName }: KpiCardProps) {
-  return (
+export default function KpiCard({ label, shortLabel, value, icon: Icon, iconBg, iconColor, valueClassName, accentClassName, href }: KpiCardProps) {
+  const card = (
     <Card title={label} className={cn("relative h-32 min-w-0 overflow-hidden border bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg", accentClassName)}>
       <div className={cn("absolute inset-x-0 top-0 h-1", iconBg)} aria-hidden="true" />
       <CardContent className="flex h-full min-w-0 flex-col p-3 sm:p-4">
@@ -26,4 +28,5 @@ export default function KpiCard({ label, shortLabel, value, icon: Icon, iconBg, 
       </CardContent>
     </Card>
   );
+  return href ? <Link to={href} aria-label={`Ver detalhe: ${label}`} className="group block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">{card}</Link> : card;
 }

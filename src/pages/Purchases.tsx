@@ -121,6 +121,29 @@ export default function Purchases() {
   const [sortDir, setSortDir] = usePersistedState<SortDir>("purchases-sortDir", "asc");
   const [viewMode, setViewMode] = usePersistedState<ViewMode>("purchases-viewMode", "table");
 
+  const detail = searchParams.get("detalhe");
+  const detailCategory = searchParams.get("categoria");
+  useEffect(() => {
+    if (!detail) return;
+    setPage(1);
+    setSearch("");
+    setSearchDate("");
+    setCatFilter(detailCategory && categories.includes(detailCategory) ? detailCategory : "all");
+    if (detail === "stock") {
+      setStockFilter("active");
+      setOrderStatusFilter("all");
+    } else if (detail === "received") {
+      setStockFilter("active");
+      setOrderStatusFilter("received");
+    } else if (detail === "pending") {
+      setStockFilter("active");
+      setOrderStatusFilter("pending");
+    } else {
+      setStockFilter("all");
+      setOrderStatusFilter("all");
+    }
+  }, [detail, detailCategory, categories, setCatFilter, setOrderStatusFilter, setSearchDate, setStockFilter]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const relatedSales = editingPurchase
     ? sales.filter(sale => sale.productId === editingPurchase.productId)
