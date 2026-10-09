@@ -37,7 +37,13 @@ Executa esta rotina quando solicitado ou pela automação diária. Trabalha apen
 
 ## 3. Determinar elegibilidade OLX
 
-O dashboard é a fonte de verdade. Só considera artigos registados como compras de revenda e ainda ativos/em stock. Publica apenas quando o artigo foi recebido e inspecionado, a venda está autorizada pelo estado do negócio, e existem dados suficientes para um anúncio honesto.
+O dashboard é a fonte de verdade para o ciclo de vida dos anúncios. Cada produto comercial com estado `Ativo` tem de ter um anúncio correspondente numa das contas OLX atribuídas ao negócio. Se não existir, cria o anúncio nessa conta, sem duplicar o artigo entre contas. Esta regra aplica-se também a produtos ativos que ainda não possam ser publicados: prepara o anúncio com informação confirmada quando possível e deixa-o no estado de OLX que não exija pagamento nem apresente falsamente o artigo como disponível. Se os dados mínimos não permitirem sequer um rascunho honesto, regista o produto como pendente com os dados concretos em falta.
+
+Quando o dashboard indicar que um produto foi vendido, localiza o anúncio correspondente pelo ID do produto e/ou ID OLX nas duas contas e termina-o no OLX, independentemente do separador em que apareça. Confirma que deixou de estar ativo e regista o ID e o resultado. Não termines anúncios de outras unidades do mesmo modelo. A rotina autoriza esta remoção quando a venda está registada no dashboard.
+
+Antes de publicar/ativar, continua a exigir receção e inspeção, autorização de venda e dados suficientes para um anúncio honesto. Produtos ativos ainda por receber ou inspecionar têm de estar representados no acompanhamento OLX, mas não podem ser apresentados como disponíveis para entrega imediata nem publicados como stock pronto. Não revelar a encomenda, fornecedor ou estado Vinted; se a plataforma não permitir representar o produto sem enganar o comprador, deixa a criação/publicação pendente e explica a limitação. Nunca pagues taxas, pacotes ou destaques.
+
+Em cada execução, cruza a lista completa de produtos comerciais ativos do dashboard com os anúncios de ambas as contas e com todas as vistas OLX (`Ativos`, `Pendentes`, `Por pagar`, `Para edição` e `Terminados`). Inclui o ID do produto e o ID OLX na correspondência quando possível. Um anúncio `Por pagar` ou em moderação já conta como anúncio existente, mas não como publicação ativa. Não cries duplicados para contornar taxas, moderação ou o limite de rascunhos. Se um anúncio tiver sido removido/terminado por engano enquanto o produto continua ativo, prepara-o novamente quando as regras acima permitirem.
 
 Antes de cada anúncio:
 
