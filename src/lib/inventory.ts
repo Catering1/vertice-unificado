@@ -9,24 +9,22 @@ const EXCLUDED_STOCK_STATUSES = new Set([
   "cancelled",
 ]);
 
-export function isPurchaseExcludedFromStock(purchase: Pick<Purchase, "orderStatus">): boolean {
-  return purchase.orderStatus != null && EXCLUDED_STOCK_STATUSES.has(purchase.orderStatus);
+export function isPurchaseExcludedFromStock(purchase: Pick<Purchase, "orderStatus" | "refundReceivedAt">): boolean {
+  return Boolean(purchase.refundReceivedAt) || (purchase.orderStatus != null && EXCLUDED_STOCK_STATUSES.has(purchase.orderStatus));
 }
 
-/** A processed full refund remains in financial metrics until its receipt is confirmed. */
+/** A return or refund remains a cost until the money has actually been received. */
 export function isPurchaseExcludedFromDashboard(purchase: Pick<Purchase, "orderStatus" | "refundReceivedAt">): boolean {
-  if (purchase.refundReceivedAt) return true;
-  if (purchase.orderStatus === "refunded" || purchase.orderStatus === "cancelled") return false;
-  return isPurchaseExcludedFromStock(purchase);
+  return Boolean(purchase.refundReceivedAt);
 }
 
 export function purchaseReceiptStatus(purchase: Pick<Purchase, "orderStatus">): PurchaseReceiptStatus {
   if (isPurchaseExcludedFromStock(purchase)) return "excluded";
-  // Legacy records remain treated as received; newly tracked orders are received only after inspection.
+  // received_verified is the internal value for a confirmed physical receipt.
   return !purchase.orderStatus || purchase.orderStatus === "not_tracked" || purchase.orderStatus === "received_verified" ? "received" : "pending";
 }
 
-/** Only inspected receipts and legacy inventory may be sold; delivered but uninspected orders stay blocked. */
+/** Only confirmed receipts and legacy inventory may be sold. */
 export function isPurchaseStockEligible(purchase: Purchase): boolean {
   if (isPurchaseExcludedFromStock(purchase)) return false;
   return !purchase.orderStatus || purchase.orderStatus === "not_tracked" || purchase.orderStatus === "received_verified";

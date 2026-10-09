@@ -4,11 +4,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { Product, Purchase, Sale, Expense, VintedOrderStatus } from "@/types";
 import { z } from "zod";
 import { toast } from "sonner";
+import type { Tables } from "@/integrations/supabase/types";
+import { isPurchaseStockEligible } from "@/lib/inventory";
 
 const ProductSchema = z.object({
-  name: z.string().min(1).max(200).trim(),
+  name: z.string().trim().min(1).max(200),
   category: z.string().min(1).max(100),
-  purchasePrice: z.number().min(0).max(1000000),
+  purchasePrice: z.number().min(0).max(1000000).nullable(),
   supplier: z.string().max(200).trim(),
   retailPrice: z.number().min(0).max(1000000),
   condition: z.string().min(1).max(100).trim(),
@@ -21,7 +23,7 @@ const ProductSchema = z.object({
 const PurchaseSchema = z.object({
   productId: z.string().uuid(),
   quantity: z.number().int().min(1).max(100000),
-  price: z.number().min(0).max(1000000),
+  price: z.number().min(0).max(1000000).nullable(),
   date: z.string(),
   estimatedDeliveryDate: z.string().optional().nullable(),
   deliveryDate: z.string().optional().nullable(),
@@ -96,17 +98,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     let cancelled = false;
-    const fetchAll = async () => {
-      setLoading(true);
+    let fetching = false;
+    const fetchAll = async (initial = false) => {
+      if (fetching) return;
+      fetching = true;
+      if (initial) setLoading(true);
       setError(null);
       try {
         // Read every page; Supabase otherwise truncates at 1,000 rows.
-        async function allRows(table: "products" | "purchases" | "sales" | "categories" | "expenses") {
-          const rows = [];
+        async function allRows<T extends "products" | "purchases" | "sales" | "categories" | "expenses">(table: T): Promise<Tables<T>[]> {
+          const rows: Tables<T>[] = [];
           for (let start = 0; ; start += 500) {
-            const result = await supabase.from(table).select("*").eq("user_id", user!.id).order("id").range(start, start + 499);
+            const result = await supabase.from(table as "products" | "purchases" | "sales" | "categories" | "expenses").select("*").eq("user_id", user!.id).order("id").range(start, start + 499);
             if (result.error) throw result.error;
-            rows.push(...result.data);
+            rows.push(...result.data as Tables<T>[]);
             if (result.data.length < 500) break;
           }
           return rows;
@@ -121,19 +126,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           warrantyMonths: Number(r.warranty_months ?? 0), description: r.description ?? "",
           specifications: r.specifications ?? "", photoUrls: r.photo_urls ?? [],
           inventoryUse: r.inventory_use ?? "business", storeVisible: r.store_visible ?? true,
-          sourceRef: r.source_ref, sourceData: r.source_data ?? {},
+          sourceRef: r.source_ref, sourceData: (r.source_data ?? {}) as Record<string, unknown>,
         })));
         setPurchases(purchs.map(r => ({id: r.id, productId: r.product_id, quantity: r.quantity, price: r.price == null ? null : Number(r.price), date: r.date ?? "", estimatedDeliveryDate: r.estimated_delivery_date ?? null, deliveryDate: r.delivery_date ?? null, collectionDate: r.collection_date ?? null, orderStatus: (r.order_status ?? "not_tracked") as VintedOrderStatus, orderReference: r.order_reference ?? "", orderStatusNote: r.order_status_note ?? "", orderStatusUpdatedAt: r.order_status_updated_at ?? null, refundReceivedAt: r.refund_received_at ?? null})));
         setSales(sold.map(r => ({id: r.id, productId: r.product_id, purchaseId: r.purchase_id, quantity: r.quantity, salePrice: Number(r.sale_price), profit: r.profit == null ? null : Number(r.profit), date: r.date ?? ""})));
         setExpenses(costs.map(r => ({id: r.id, category: r.category, description: r.description, amount: Number(r.amount), date: r.date ?? ""})));
         const names = cats.map(r => r.name);
-        setCategories(names);
+        setCategories(previous => previous.length === names.length && previous.every((name, index) => name === names[index]) ? previous : names);
       } catch {
         if (!cancelled) { setError("Não foi possível carregar todos os dados. Atualize a página para tentar novamente."); toast.error("Erro ao carregar os dados"); }
-      } finally { if (!cancelled) setLoading(false); }
+      } finally { fetching = false; if (!cancelled) setLoading(false); }
     };
-    fetchAll();
-    return () => { cancelled = true; };
+    void fetchAll(true);
+    const refresh = () => { if (document.visibilityState === "visible") void fetchAll(); };
+    window.addEventListener("focus", refresh);
+    const interval = window.setInterval(refresh, 30_000);
+    return () => { cancelled = true; window.removeEventListener("focus", refresh); window.clearInterval(interval); };
   }, [user]);
 
   const getProduct = useCallback((id: string) => products.find(p => p.id === id), [products]);
@@ -145,10 +153,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       retail_price: validated.retailPrice, condition: validated.condition, warranty_months: validated.warrantyMonths,
       description: validated.description, specifications: validated.specifications, photo_urls: validated.photoUrls,
       inventory_use: p.inventoryUse ?? "business", store_visible: p.storeVisible ?? true,
-    } as any).select().single();
+    }).select().single();
     if (error) throw error;
-    const row = data as any;
-    const newProd: Product = { id: row.id, name: row.name, category: row.category, purchasePrice: Number(row.purchase_price), supplier: row.supplier, retailPrice: Number(row.retail_price ?? 0), condition: row.condition ?? "Verificado", warrantyMonths: Number(row.warranty_months ?? 0), description: row.description ?? "", specifications: row.specifications ?? "", photoUrls: row.photo_urls ?? [], inventoryUse: row.inventory_use, storeVisible: row.store_visible };
+    const row = data;
+    const newProd: Product = { id: row.id, name: row.name, category: row.category, purchasePrice: row.purchase_price == null ? null : Number(row.purchase_price), supplier: row.supplier, retailPrice: Number(row.retail_price ?? 0), condition: row.condition ?? "Verificado", warrantyMonths: Number(row.warranty_months ?? 0), description: row.description ?? "", specifications: row.specifications ?? "", photoUrls: row.photo_urls ?? [], inventoryUse: row.inventory_use, storeVisible: row.store_visible };
     setProducts(prev => [...prev, newProd]);
     return data.id;
   };
@@ -159,7 +167,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       retail_price: p.retailPrice, condition: p.condition, warranty_months: p.warrantyMonths,
       description: p.description, specifications: p.specifications, photo_urls: p.photoUrls,
       inventory_use: p.inventoryUse ?? "business", store_visible: p.storeVisible ?? true,
-    } as any).eq("id", p.id);
+    }).eq("id", p.id);
     if (error) throw error;
     setProducts(prev => prev.map(x => x.id === p.id ? p : x));
   };
@@ -183,7 +191,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       user_id: user!.id, product_id: validated.productId, quantity: validated.quantity, price: validated.price, date: validated.date, estimated_delivery_date: validated.estimatedDeliveryDate || null, delivery_date: validated.deliveryDate || null, collection_date: validated.collectionDate || null,
       order_status: orderStatus, order_reference: validated.orderReference?.trim() || null, order_status_note: validated.orderStatusNote?.trim() || null, order_status_updated_at: orderStatusUpdatedAt,
       refund_received_at: validated.refundReceivedAt || null,
-    } as any).select().single();
+    }).select().single();
     if (error) throw error;
     setPurchases(prev => [...prev, { id: data.id, productId: data.product_id, quantity: data.quantity, price: data.price == null ? null : Number(data.price), date: data.date ?? "", estimatedDeliveryDate: data.estimated_delivery_date ?? null, deliveryDate: data.delivery_date ?? null, collectionDate: data.collection_date ?? null, orderStatus: data.order_status as VintedOrderStatus, orderReference: data.order_reference ?? "", orderStatusNote: data.order_status_note ?? "", orderStatusUpdatedAt: data.order_status_updated_at, refundReceivedAt: data.refund_received_at }]);
   };
@@ -211,7 +219,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       product_id: p.productId, quantity: p.quantity, price: p.price, date: p.date || null, estimated_delivery_date: estimatedDeliveryDate || null, delivery_date: deliveryDate || null, collection_date: collectionDate || null,
       order_status: orderStatus, order_reference: orderReference?.trim() || null, order_status_note: orderStatusNote?.trim() || null, order_status_updated_at: orderStatusUpdatedAt,
       refund_received_at: refundReceivedAt,
-    } as any).eq("id", p.id);
+    }).eq("id", p.id);
     if (error) throw error;
     // A single purchase identifies the unit's cost unambiguously. Legacy products
     // with several purchases retain their existing sale costs until reconciled.
@@ -237,6 +245,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const validated = SaleSchema.parse(saleInput);
     const purchase = purchases.find(p => p.id === validated.purchaseId && p.productId === validated.productId);
     if (!purchase) throw new Error("A compra selecionada não corresponde ao artigo.");
+    if (!isPurchaseStockEligible(purchase) || getProduct(purchase.productId)?.inventoryUse === "personal") throw new Error("Confirme a receção do artigo antes de registar a venda.");
     const alreadySold = sales.filter(existing => existing.purchaseId === purchase.id).reduce((sum, existing) => sum + existing.quantity, 0);
     if (alreadySold + validated.quantity > purchase.quantity) throw new Error("Esta compra não tem unidades disponíveis para registar a venda.");
     const costPerUnit = typeof purchasePrice === "number" && !Number.isNaN(purchasePrice)
@@ -245,7 +254,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const profit = costPerUnit == null ? null : (validated.salePrice - costPerUnit) * validated.quantity;
     const { data, error } = await supabase.from("sales").insert({
       user_id: user!.id, product_id: validated.productId, purchase_id: validated.purchaseId, quantity: validated.quantity, sale_price: validated.salePrice, profit, date: validated.date,
-    } as any).select().single();
+    }).select().single();
     if (error) throw error;
     const sale: Sale = { id: data.id, productId: data.product_id, purchaseId: data.purchase_id, quantity: data.quantity, salePrice: Number(data.sale_price), profit: data.profit == null ? null : Number(data.profit), date: data.date ?? "" };
     setSales(prev => [...prev, sale]);
@@ -257,7 +266,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const validated = SaleSchema.parse(saleInput);
     const purchase = purchases.find(p => p.id === validated.purchaseId && p.productId === validated.productId);
     if (!purchase) throw new Error("A compra selecionada não corresponde ao artigo.");
-    const alreadySold = sales.filter(existing => existing.purchaseId === purchase.id && existing.id !== validated.id).reduce((sum, existing) => sum + existing.quantity, 0);
+    const previous = sales.find(existing => existing.id === saleInput.id);
+    if (previous?.purchaseId !== purchase.id && !isPurchaseStockEligible(purchase)) throw new Error("Confirme a receção do artigo antes de registar a venda.");
+    const alreadySold = sales.filter(existing => existing.purchaseId === purchase.id && existing.id !== saleInput.id).reduce((sum, existing) => sum + existing.quantity, 0);
     if (alreadySold + validated.quantity > purchase.quantity) throw new Error("Esta compra não tem unidades disponíveis para registar a venda.");
     const costPerUnit = typeof purchasePrice === "number" && !Number.isNaN(purchasePrice)
       ? purchasePrice
@@ -265,7 +276,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const profit = costPerUnit == null ? null : (saleInput.salePrice - costPerUnit) * saleInput.quantity;
     const { error } = await supabase.from("sales").update({
       product_id: saleInput.productId, purchase_id: saleInput.purchaseId, quantity: saleInput.quantity, sale_price: saleInput.salePrice, profit, date: saleInput.date || null,
-    } as any).eq("id", saleInput.id);
+    }).eq("id", saleInput.id);
     if (error) throw error;
     setSales(prev => prev.map(x => x.id === saleInput.id ? { ...saleInput, profit } : x));
   };
@@ -306,7 +317,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const addCategory = async (c: string) => {
     if (categories.includes(c)) return;
-    const { error } = await supabase.from("categories").insert({ user_id: user!.id, name: c } as any);
+    const { error } = await supabase.from("categories").insert({ user_id: user!.id, name: c });
     if (error) throw error;
     setCategories(prev => [...prev, c]);
   };
@@ -314,11 +325,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const updateCategory = async (oldName: string, newName: string) => {
     if (!newName.trim() || categories.includes(newName.trim())) return;
     const trimmed = newName.trim();
-    const { error } = await supabase.from("categories").update({ name: trimmed } as any).eq("user_id", user!.id).eq("name", oldName);
+    const { error } = await supabase.from("categories").update({ name: trimmed }).eq("user_id", user!.id).eq("name", oldName);
     if (error) throw error;
     setCategories(prev => prev.map(c => c === oldName ? trimmed : c));
     // Update products with old category
-    const { error: productError } = await supabase.from("products").update({ category: trimmed } as any).eq("user_id", user!.id).eq("category", oldName);
+    const { error: productError } = await supabase.from("products").update({ category: trimmed }).eq("user_id", user!.id).eq("category", oldName);
     if (productError) throw productError;
     const { error: expenseError } = await supabase.from("expenses").update({category:trimmed}).eq("user_id",user!.id).eq("category",oldName);
     if (expenseError) throw expenseError;

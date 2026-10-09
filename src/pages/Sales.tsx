@@ -72,6 +72,7 @@ export default function Sales() {
   const targetProductId = searchParams.get("produto");
   const targetPurchaseId = searchParams.get("compra");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
@@ -146,7 +147,7 @@ export default function Sales() {
     const profit = sp - cost;
     const margin = sp > 0 ? (profit / sp) * 100 : 0;
     return { cost, profit, margin };
-  }, [purchaseId, salePrice, purchasePriceOverride, selectedPurchase]);
+  }, [productId, salePrice, purchasePriceOverride, selectedPurchase]);
 
   const openNew = () => {
     setEditingSale(null);
@@ -166,7 +167,7 @@ export default function Sales() {
   useEffect(() => {
     if (!targetProductId) return;
     const purchase = purchases.find(p => p.productId === targetProductId && (!targetPurchaseId || p.id === targetPurchaseId));
-    if (!purchase || purchaseCommercialStatus(purchase, sales) !== "active") return;
+    if (!purchase || purchaseCommercialStatus(purchase, sales) !== "active" || !isPurchaseStockEligible(purchase)) return;
     setSalesView("active");
     openNewForPurchase(purchase);
     setSearchParams({}, { replace: true });
@@ -183,6 +184,7 @@ export default function Sales() {
   };
 
   const save = async () => {
+    if (saving) return;
     if (!productId || !salePrice || (!date && !editingSale)) { toast.error("Preencha todos os campos"); return; }
 
     const parsedSalePrice = Number(salePrice);
@@ -196,6 +198,7 @@ export default function Sales() {
     if (!purchase || purchase.productId !== productId) { toast.error("Selecione a compra específica deste artigo"); return; }
     const effectivePurchasePrice = overridePrice ?? purchase.price;
 
+    setSaving(true);
     try {
       if (overridePrice != null && purchase.price !== overridePrice) await updatePurchase({ ...purchase, price: overridePrice });
       if (editingSale) {
@@ -208,6 +211,8 @@ export default function Sales() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível guardar a venda.");
       return;
+    } finally {
+      setSaving(false);
     }
     setDialogOpen(false);
     setEditingSale(null);
@@ -352,7 +357,7 @@ export default function Sales() {
               )}
 
               <div><Label>Data *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
-              <Button onClick={save}>{editingSale ? "Guardar" : "Registar"}</Button>
+              <Button onClick={save} disabled={saving}>{saving ? "A guardar…" : editingSale ? "Guardar" : "Registar"}</Button>
             </div>
           </DialogContent>
         </Dialog>

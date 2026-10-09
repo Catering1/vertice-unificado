@@ -1,5 +1,15 @@
 # Memória do projeto Vendig Machine Store
 
+## Regras atuais e auditoria — 2026-10-09
+- Esta secção e a skill atual prevalecem sobre notas históricas abaixo. Por Receber também pode ter anúncio OLX; Recebido significa receção física confirmada e não existe estado Por inspecionar. Devoluções/cancelamentos/reembolsos são resultados separados da receção.
+- Referências de encomenda ocultas em toda a interface; a rotina consulta/grava purchases.order_reference através do conector Supabase autorizado do projeto pxpxipewhwwsiogoyjov. Não restaurar o campo no formulário. Vendas ligadas por sales.purchase_id; não reconciliar apenas pelo nome nem pela existência de uma venda no produto.
+- Fichas públicas usam exclusivamente conteúdo/preço/fotos guardados na unidade; sem recuperação por nome de características ou imagens de outras unidades. S26+ confirmado: 512 GB, preto, 649 €. Especificações S26 Ultra sem menção a SIM desbloqueado.
+- Correspondências de cinco anúncios conhecidas guardadas em products.source_data.olx, preservando outras chaves; needs_recheck requer nova confirmação do estado na conta. A montra não expõe metadados internos.
+- Dashboard/catálogo atualizam ao recuperar foco e a cada 30 segundos visíveis. Vendas parciais mantêm restantes unidades na montra. Reembolsos/devoluções continuam a contar como custo até refund_received_at confirmado, sem stock vendável.
+- Edição de uma compra recebida preserva o estado, referência e custos desconhecidos; edição de venda não conta duas vezes a própria venda. Servidor bloqueia novas vendas sem receção e excesso de unidades.
+- Contacto por email preparado apenas com VITE_CONTACT_EMAIL configurado; sem destino, usar chat OLX. Não afirmar envio automático. Ligação de interesse mantém o produto/assunto.
+- Build inclui typecheck e GitHub valida lint/testes/build. Relatório detalhado: docs/auditoria-dashboard-site-skill-2026-10-09.md. Testes SQL reversíveis: scripts/verify-public-stock.sql. Não criar registos financeiros reais para testar.
+
 ## Correção 2026-10-09 — reconciliação por referência e montra automática
 - A omissão inicial da encomenda S26 Ultra 256 GB ref. `25428465350` ocorreu porque a pesquisa por nome/modelo encontrou `S26 ultra` e aceitou esse produto histórico como correspondência. Não foi verificada a referência Vinted contra cada compra, o `product_id` e a venda histórica; a nova unidade ficou ligada à unidade vendida. A rotina diária deve percorrer todas as vistas/páginas Vinted, reconciliar cada referência com compra e produto próprios e confirmar vendas/custos por ID, sem concluir por nome igual que uma compra já está registada.
 - O anúncio original e todas as suas imagens reais são fontes obrigatórias para confirmar detalhes observáveis do artigo e selecionar fotografias da unidade. Cruzar com o texto e a inspeção; não inferir RAM, capacidade, estado funcional ou garantia apenas da aparência nem expor dados privados.

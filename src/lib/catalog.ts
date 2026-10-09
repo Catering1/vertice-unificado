@@ -32,11 +32,11 @@ export type CatalogPresentation = {
 const catalog: Record<string, CatalogPresentation> = {
   "samsung galaxy s26+": {
     condition: "Em processo de entrega",
-    description: "Samsung Galaxy S26+ novo, em preto, com 128 GB de armazenamento. O equipamento encontra-se em processo de entrega e será sujeito a inspeção antes de ficar disponível para venda. As duas fotografias apresentadas são do artigo real no anúncio de origem; o estado final, os acessórios incluídos e a configuração completa serão confirmados após a receção.",
+    description: "Samsung Galaxy S26+. Consulta na ficha da unidade as características confirmadas.",
     illustrative: false,
     photos: [s26Plus01, s26Plus02],
     price: 0,
-    specifications: ["Modelo Samsung Galaxy S26+", "128 GB de armazenamento", "Cor preta", "Novo", "RAM e restantes detalhes por confirmar após a receção"],
+    specifications: ["Modelo Samsung Galaxy S26+"],
   },
   "samsung galaxy buds3 silver": {
     condition: "Em processo de entrega",

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Plus, Trash2, Upload, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, Grid2X2, List, Package } from "lucide-react";
@@ -28,10 +28,18 @@ const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov
 const ORDER_RECEIPT_STATUSES: { value: PurchaseReceiptStatus; label: string }[] = [
   { value: "pending", label: "Por Receber" },
   { value: "received", label: "Recebido" },
-  { value: "excluded", label: "Em devolução" },
+];
+type OrderOutcome = "normal" | "return_in_progress" | "refund_partial" | "refunded" | "cancelled";
+const ORDER_OUTCOMES: { value: OrderOutcome; label: string }[] = [
+  { value: "normal", label: "Em curso / concluída" },
+  { value: "return_in_progress", label: "Em devolução" },
+  { value: "refund_partial", label: "Reembolso parcial" },
+  { value: "refunded", label: "Reembolsada" },
+  { value: "cancelled", label: "Cancelada" },
 ];
 const orderStatusLabel = (status?: VintedOrderStatus) => {
   const receiptStatus = purchaseReceiptStatus({ orderStatus: status });
+  if (receiptStatus === "excluded") return ORDER_OUTCOMES.find(option => option.value === status)?.label ?? "Fora do stock";
   return ORDER_RECEIPT_STATUSES.find(option => option.value === receiptStatus)?.label ?? "Por Receber";
 };
 
@@ -107,9 +115,9 @@ export default function Purchases() {
   const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
   const [collectionDate, setCollectionDate] = useState("");
-  const [orderReference, setOrderReference] = useState("");
   const [orderStatusNote, setOrderStatusNote] = useState("");
   const [receiptStatus, setReceiptStatus] = useState<PurchaseReceiptStatus>("pending");
+  const [orderOutcome, setOrderOutcome] = useState<OrderOutcome>("normal");
   const [refundReceived, setRefundReceived] = useState(false);
 
   const [searchDate, setSearchDate] = usePersistedState("purchases-searchDate", "");
@@ -146,7 +154,7 @@ export default function Purchases() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const relatedSales = editingPurchase
-    ? sales.filter(sale => sale.productId === editingPurchase.productId)
+    ? sales.filter(sale => sale.purchaseId === editingPurchase.id)
     : [];
 
   const openNew = () => {
@@ -155,8 +163,9 @@ export default function Purchases() {
     setProductName(""); setProductCategory("Outros"); setProductSupplier(""); setRetailPrice(""); setCondition("Verificado"); setWarrantyMonths("0"); setDescription(""); setSpecifications("");
     setPrice(""); setDate(new Date().toISOString().slice(0, 10)); setEstimatedDeliveryDate(""); setDeliveryDate("");
     setCollectionDate("");
-    setOrderReference(""); setOrderStatusNote("");
+    setOrderStatusNote("");
     setReceiptStatus("pending");
+    setOrderOutcome("normal");
     setRefundReceived(false);
     setDialogOpen(true);
   };
@@ -178,16 +187,17 @@ export default function Purchases() {
     setEstimatedDeliveryDate(p.estimatedDeliveryDate ?? "");
     setDeliveryDate(p.deliveryDate ?? "");
     setCollectionDate(p.collectionDate ?? "");
-    setOrderReference(p.orderReference ?? "");
     setOrderStatusNote(p.orderStatusNote ?? "");
-    setReceiptStatus(p.collectionDate ? purchaseReceiptStatus(p) : p.orderStatus === "received_verified" ? "pending" : purchaseReceiptStatus(p));
+    const receipt = purchaseReceiptStatus(p);
+    setReceiptStatus(receipt === "excluded" ? p.collectionDate ? "received" : "pending" : receipt);
+    setOrderOutcome(receipt === "excluded" ? p.orderStatus as OrderOutcome : "normal");
     setRefundReceived(Boolean(p.refundReceivedAt));
     setDialogOpen(true);
   };
 
   const save = async () => {
     if (saving) return;
-    if (!productName.trim() || !price || (!date && !(editingPurchase && receiptStatus === "excluded"))) {
+    if (!productName.trim() || (!price && !editingPurchase) || (!date && !editingPurchase)) {
       toast.error("Preencha todos os campos");
       return;
     }
@@ -197,8 +207,8 @@ export default function Purchases() {
     const warrantyMonthsParsed = Number(warrantyMonths || 0);
     if (collectionDate && !deliveryDate) { toast.error("Indique a data de entrega antes da data de levantamento"); return; }
     const previousStatus = editingPurchase?.orderStatus;
-    const receiptOrderStatus: VintedOrderStatus = receiptStatus === "excluded"
-      ? (previousStatus && ["return_in_progress", "refund_partial", "refunded", "cancelled"].includes(previousStatus) ? previousStatus : "return_in_progress")
+    const receiptOrderStatus: VintedOrderStatus = orderOutcome !== "normal"
+      ? orderOutcome
       : collectionDate
         ? "received_verified"
       : receiptStatus === "received"
@@ -208,7 +218,7 @@ export default function Purchases() {
           : previousStatus && ["ordered", "shipped", "electronic_verification"].includes(previousStatus)
             ? previousStatus
             : "ordered";
-    const orderStatus: VintedOrderStatus = receiptStatus === "excluded" && refundReceived ? "refunded" : receiptOrderStatus;
+    const orderStatus: VintedOrderStatus = orderOutcome !== "normal" && refundReceived ? "refunded" : receiptOrderStatus;
     const isRefundProcessed = ["refunded", "cancelled"].includes(orderStatus);
     const refundReceivedAt = isRefundProcessed
       ? refundReceived ? (editingPurchase?.refundReceivedAt ?? new Date().toISOString()) : null
@@ -229,10 +239,10 @@ export default function Purchases() {
         productId = await addProduct({name:productName.trim(),category:productCategory,purchasePrice:priceParsed,supplier:productSupplier,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,photoUrls:[],inventoryUse,storeVisible:productCategory !== "Livros" && inventoryUse !== "personal"});
       }
       if (editingPurchase) {
-        await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderReference, orderStatusNote, refundReceivedAt });
+        await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderReference: undefined, orderStatusNote, refundReceivedAt });
         toast.success("Compra atualizada");
       } else {
-        await addPurchase({ productId, quantity: 1, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderReference, orderStatusNote });
+        await addPurchase({ productId, quantity: 1, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderStatusNote });
         toast.success("Compra registada");
       }
       setDialogOpen(false);
@@ -387,11 +397,12 @@ export default function Purchases() {
           </Select>
           <Select value={orderStatusFilter === "all" || orderStatusFilter === "pending" || orderStatusFilter === "received" || orderStatusFilter === "excluded" ? orderStatusFilter : "all"} onValueChange={v => { setOrderStatusFilter(v as PurchaseReceiptStatus | "all"); setPage(1); }}>
             <SelectTrigger className="w-[240px] shrink-0">
-              <span className="truncate">{orderStatusFilter === "all" ? "Estado da encomenda: Todos" : `Encomenda: ${ORDER_RECEIPT_STATUSES.find(option => option.value === orderStatusFilter)?.label}`}</span>
+              <span className="truncate">{orderStatusFilter === "all" ? "Estado da encomenda: Todos" : orderStatusFilter === "excluded" ? "Devoluções / cancelamentos" : `Encomenda: ${ORDER_RECEIPT_STATUSES.find(option => option.value === orderStatusFilter)?.label}`}</span>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os estados da encomenda</SelectItem>
               {ORDER_RECEIPT_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              <SelectItem value="excluded">Devoluções / cancelamentos</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -412,7 +423,7 @@ export default function Purchases() {
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-            <DialogHeader><DialogTitle>{editingPurchase ? "Editar Compra" : "Registar Compra"}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editingPurchase ? "Editar Compra" : "Registar Compra"}</DialogTitle><DialogDescription className="sr-only">Dados da compra selecionada, receção e resultado da encomenda.</DialogDescription></DialogHeader>
               <div className="grid gap-4 py-2">
               <div>
                 <Label>Nome do Produto *</Label>
@@ -428,12 +439,19 @@ export default function Purchases() {
               </div>
               <div><Label>Preço de Compra *</Label><Input type="number" min={0} step={0.01} inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} /></div>
               <div>
-                <Label>Estado da encomenda</Label>
+                <Label>Estado de receção</Label>
                 <Select value={receiptStatus} onValueChange={value => setReceiptStatus(value as PurchaseReceiptStatus)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger aria-label="Estado de receção"><SelectValue /></SelectTrigger>
                   <SelectContent>{ORDER_RECEIPT_STATUSES.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
                 </Select>
                 <p className="mt-1 text-xs text-muted-foreground">Usa Por Receber até confirmar a chegada física; depois seleciona Recebido.</p>
+              </div>
+              <div>
+                <Label>Resultado da encomenda</Label>
+                <Select value={orderOutcome} onValueChange={value => { setOrderOutcome(value as OrderOutcome); setRefundReceived(false); }}>
+                  <SelectTrigger aria-label="Resultado da encomenda"><SelectValue /></SelectTrigger>
+                  <SelectContent>{ORDER_OUTCOMES.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div><Label>Data de compra *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
@@ -443,7 +461,7 @@ export default function Purchases() {
                 <div><Label>Data Levantamento</Label><Input aria-label="Data de levantamento" type="date" value={collectionDate} disabled={!deliveryDate} onChange={e => { const value = e.target.value; setCollectionDate(value); setReceiptStatus(value ? "received" : "pending"); }} /></div>
               </div>
               <div><Label>Atualização da encomenda (privada)</Label><textarea aria-label="Atualização da encomenda" value={orderStatusNote} onChange={e => setOrderStatusNote(e.target.value)} maxLength={1000} rows={3} className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
-              {editingPurchase && receiptStatus === "excluded" && <label className="flex items-start gap-2 rounded-md border p-3 text-sm"><input type="checkbox" checked={refundReceived} onChange={event => setRefundReceived(event.target.checked)} className="mt-0.5" /><span><span className="font-medium">Confirmo que já recebi o reembolso</span><span className="mt-1 block text-xs text-muted-foreground">Quando confirmado e guardado, esta compra fica como reembolsada e deixa de entrar nos cartões e totais do dashboard. O registo mantém-se no histórico.</span></span></label>}
+              {editingPurchase && orderOutcome !== "normal" && <label className="flex items-start gap-2 rounded-md border p-3 text-sm"><input type="checkbox" checked={refundReceived} onChange={event => setRefundReceived(event.target.checked)} className="mt-0.5" /><span><span className="font-medium">Confirmo que já recebi o reembolso</span><span className="mt-1 block text-xs text-muted-foreground">Quando confirmado e guardado, esta compra fica como reembolsada e deixa de entrar nos cartões e totais do dashboard. O registo mantém-se no histórico.</span></span></label>}
               <div><Label>Descrição para anúncio</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado, características, acessórios e defeitos a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
               {relatedSales.length > 0 && <section className="space-y-2 rounded-md border p-3" aria-label="Vendas do produto">
                 <h3 className="text-sm font-semibold">Vendas deste produto</h3>
@@ -508,7 +526,7 @@ export default function Purchases() {
               <div className="flex items-center justify-between">
                 <span className="font-medium truncate">{getProduct(p.productId)?.name ?? "—"}</span>
                 <div className="flex gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} aria-label={`Editar ${getProduct(p.productId)?.name ?? "compra"}`}>
                     <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                   </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }}>
@@ -563,7 +581,7 @@ export default function Purchases() {
                   <TableCell>
                     <div className="flex gap-1">
                       {commercialStatus(p) === "Ativo" && isPurchaseStockEligible(p) && <Button variant="outline" size="sm" onClick={() => openSale(p)}>Registar venda</Button>}
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(p)} aria-label={`Editar ${getProduct(p.productId)?.name ?? "compra"}`}>
                         <Pencil className="h-4 w-4 text-muted-foreground" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }}>

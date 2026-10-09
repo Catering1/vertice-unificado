@@ -117,4 +117,18 @@ describe("purchase identity and active stock value", () => {
     const returning = { ...purchases[0], orderStatus: "return_in_progress" as const };
     expect(purchaseCommercialStatus(returning, [])).toBe("returning");
   });
+
+  it("does not sell or publish a refunded unit even if the tracked status is inconsistent", () => {
+    const refunded = { ...purchases[0], orderStatus: "received_verified" as const, refundReceivedAt: "2026-10-09T12:00:00Z" };
+    expect(isPurchaseStockEligible(refunded)).toBe(false);
+    expect(activeUnitsByPurchase([refunded], []).get(refunded.id)).toBe(0);
+    expect(purchaseCommercialStatus(refunded, [])).toBe("excluded");
+  });
+
+  it.each(["return_in_progress", "refund_partial", "cancelled"] as VintedOrderStatus[])("keeps %s in financial exposure until the refund arrives", orderStatus => {
+    const pendingRefund = { ...purchases[0], orderStatus };
+    expect(computeDashboard([pendingRefund], [], products).totalPurchases).toBe(80);
+    expect(computeDashboard([pendingRefund], [], products).stockUnits).toBe(0);
+    expect(computeDashboard([{ ...pendingRefund, refundReceivedAt: "2026-10-09T12:00:00Z" }], [], products).totalPurchases).toBe(0);
+  });
 });
