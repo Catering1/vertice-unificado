@@ -433,7 +433,7 @@ export default function Purchases() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{ORDER_RECEIPT_STATUSES.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
                 </Select>
-                <p className="mt-1 text-xs text-muted-foreground">Artigos entregues mas ainda não inspecionados ficam em Por Receber.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Usa Por Receber até confirmar a chegada física; depois seleciona Recebido.</p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div><Label>Data de compra *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
