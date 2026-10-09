@@ -197,9 +197,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const deliveryDate = validated.deliveryDate === undefined ? (previous?.deliveryDate ?? null) : validated.deliveryDate;
     const estimatedDeliveryDate = validated.estimatedDeliveryDate === undefined ? (previous?.estimatedDeliveryDate ?? null) : validated.estimatedDeliveryDate;
     const collectionDate = validated.collectionDate === undefined ? (previous?.collectionDate ?? null) : validated.collectionDate;
+    const clearedCollectionAfterReceipt = Boolean(previous?.collectionDate) && !collectionDate && requestedStatus === "received_verified";
     const orderStatus = collectionDate && !NON_RECEIPT_STATUSES.has(requestedStatus)
       ? "received_verified" as const
-      : requestedStatus;
+      : clearedCollectionAfterReceipt
+        ? (deliveryDate ? "delivered" as const : "ordered" as const)
+        : requestedStatus;
     const refundReceivedAt = validated.refundReceivedAt === undefined ? (previous?.refundReceivedAt ?? null) : validated.refundReceivedAt;
     const statusChanged = orderStatus !== (previous?.orderStatus ?? "not_tracked")
       || (orderStatusNote?.trim() || "") !== (previous?.orderStatusNote?.trim() || "");

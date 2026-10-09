@@ -157,7 +157,7 @@ export default function Purchases() {
     setCollectionDate(p.collectionDate ?? "");
     setOrderReference(p.orderReference ?? "");
     setOrderStatusNote(p.orderStatusNote ?? "");
-    setReceiptStatus(purchaseReceiptStatus(p));
+    setReceiptStatus(p.collectionDate ? purchaseReceiptStatus(p) : p.orderStatus === "received_verified" ? "pending" : purchaseReceiptStatus(p));
     setRefundReceived(Boolean(p.refundReceivedAt));
     setDialogOpen(true);
   };
@@ -417,7 +417,7 @@ export default function Purchases() {
                 <div><Label>Data prevista de entrega</Label><Input aria-label="Data prevista de entrega" type="date" value={estimatedDeliveryDate} onChange={e => setEstimatedDeliveryDate(e.target.value)} /></div>
                 <div><Label>Data de Entrega</Label><Input aria-label="Data de entrega" type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} /></div>
                 <div><Label>Data Limite levantamento</Label><Input aria-label="Data limite para levantar a encomenda" type="date" value={pickupDeadline} readOnly disabled={!pickupDeadline} /></div>
-                <div><Label>Data Levantamento</Label><Input aria-label="Data de levantamento" type="date" value={collectionDate} disabled={!deliveryDate} onChange={e => { const value = e.target.value; setCollectionDate(value); if (value) setReceiptStatus("received"); }} /></div>
+                <div><Label>Data Levantamento</Label><Input aria-label="Data de levantamento" type="date" value={collectionDate} disabled={!deliveryDate} onChange={e => { const value = e.target.value; setCollectionDate(value); setReceiptStatus(value ? "received" : "pending"); }} /></div>
               </div>
               <div><Label>Referência da encomenda (privada)</Label><Input aria-label="Referência da encomenda" value={orderReference} onChange={e => setOrderReference(e.target.value)} maxLength={200} /></div>
               <div><Label>Atualização da encomenda (privada)</Label><textarea aria-label="Atualização da encomenda" value={orderStatusNote} onChange={e => setOrderStatusNote(e.target.value)} maxLength={1000} rows={3} className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
