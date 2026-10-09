@@ -442,7 +442,6 @@ export default function Purchases() {
                 <div><Label>Data Limite levantamento</Label><Input aria-label="Data limite para levantar a encomenda" type="date" value={pickupDeadline} readOnly disabled={!pickupDeadline} /></div>
                 <div><Label>Data Levantamento</Label><Input aria-label="Data de levantamento" type="date" value={collectionDate} disabled={!deliveryDate} onChange={e => { const value = e.target.value; setCollectionDate(value); setReceiptStatus(value ? "received" : "pending"); }} /></div>
               </div>
-              <div><Label>Referência da encomenda (privada)</Label><Input aria-label="Referência da encomenda" value={orderReference} onChange={e => setOrderReference(e.target.value)} maxLength={200} /></div>
               <div><Label>Atualização da encomenda (privada)</Label><textarea aria-label="Atualização da encomenda" value={orderStatusNote} onChange={e => setOrderStatusNote(e.target.value)} maxLength={1000} rows={3} className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
               {editingPurchase && receiptStatus === "excluded" && <label className="flex items-start gap-2 rounded-md border p-3 text-sm"><input type="checkbox" checked={refundReceived} onChange={event => setRefundReceived(event.target.checked)} className="mt-0.5" /><span><span className="font-medium">Confirmo que já recebi o reembolso</span><span className="mt-1 block text-xs text-muted-foreground">Quando confirmado e guardado, esta compra fica como reembolsada e deixa de entrar nos cartões e totais do dashboard. O registo mantém-se no histórico.</span></span></label>}
               <div><Label>Descrição para anúncio</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado, características, acessórios e defeitos a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
@@ -490,7 +489,6 @@ export default function Purchases() {
                   </div>
                   <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Data de compra: {formatDate(p.date)}</p>{p.deliveryDate && <p>Data de Entrega: {formatDate(p.deliveryDate)}</p>}{p.deliveryDate && <p>Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}{p.collectionDate && <p>Data Levantamento: {formatDate(p.collectionDate)}</p>}</div></div>
                   <p className="border-t pt-3 text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
-                  {p.orderReference && <p className="text-xs text-muted-foreground">Ref. da encomenda: {p.orderReference}</p>}
                   {p.refundReceivedAt && <p className="text-xs text-muted-foreground">Reembolso recebido: {formatDate(p.refundReceivedAt.slice(0, 10))}</p>}
                   {stockState === "Ativo" && isPurchaseStockEligible(p) && <Button variant="outline" className="w-full" onClick={() => openSale(p)}>Registar venda</Button>}
                 </CardContent>
@@ -530,7 +528,6 @@ export default function Purchases() {
               {p.deliveryDate && <p className="text-xs text-muted-foreground">Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}
               {p.collectionDate && <p className="text-xs text-muted-foreground">Data Levantamento: {formatDate(p.collectionDate)}</p>}
               <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
-              {p.orderReference && <p className="text-xs text-muted-foreground">Ref. da encomenda: {p.orderReference}</p>}
               {p.refundReceivedAt && <p className="text-xs text-muted-foreground">Reembolso recebido: {formatDate(p.refundReceivedAt.slice(0, 10))}</p>}
               {commercialStatus(p) === "Ativo" && isPurchaseStockEligible(p) && <Button variant="outline" className="mt-2 w-full" onClick={() => openSale(p)}>Registar venda</Button>}
             </CardContent>
