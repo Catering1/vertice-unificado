@@ -17,6 +17,15 @@ dist
 dist-ssr
 *.local
 
+# Automação local Vértice (segredos, perfis e artefactos de execução)
+automation/vertice/.venv/
+automation/vertice/config.toml
+automation/vertice/logs/
+automation/vertice/reports/
+automation/vertice/state/
+automation/vertice/screenshots/
+automation/vertice/*.lock
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -27,3 +36,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+automation/execution-audit.md

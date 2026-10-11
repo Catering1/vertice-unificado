@@ -42,6 +42,14 @@ describe("public product uses the dashboard's exact unit", () => {
     expect(host.querySelector("img")?.getAttribute("src")).toBe(product.image_url);
     expect(host.querySelector('a[href*="produto=unit"]')).not.toBeNull();
   });
+  it("shows a delivered order as available while preserving the receipt and inspection distinction", async () => {
+    rpc.mockResolvedValue({ data: [{ ...product, availability_status: "delivered", condition: "Estado por confirmar" }], error: null });
+    await render();
+    expect(host.textContent).toContain("Disponível");
+    expect(host.textContent).toContain("A entrega foi confirmada");
+    expect(host.textContent).not.toContain("Por receber");
+    expect(host.textContent).not.toContain("Equipamento verificado");
+  });
   it("does not invent a price, unit description or photos when they are missing", async () => {
     rpc.mockResolvedValue({ data: [{ ...product, retail_price: 0, description: "", specifications: "", photo_urls: [], image_url: null }], error: null });
     await render();
@@ -67,4 +75,3 @@ describe("public product uses the dashboard's exact unit", () => {
     expect(host.querySelector('[role="alert"]')).toBeNull();
   });
 });
-

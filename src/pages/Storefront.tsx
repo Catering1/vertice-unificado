@@ -70,7 +70,7 @@ export default function Storefront() {
                   <Link key={product.id} to={`/produto/${product.id}`} className="group overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:shadow-lg">
                     <div className="relative aspect-[4/3] bg-secondary">
                       {image ? <img src={image} alt={product.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" /> : <div className="flex h-full items-center justify-center text-sm font-semibold text-muted-foreground">Fotografia em preparação</div>}
-                      <span className={`absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-bold shadow-sm ${comingSoon ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"}`}>{comingSoon ? "Por receber" : "Recebido"}</span>
+                      <span className={`absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-bold shadow-sm ${comingSoon ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"}`}>{comingSoon ? "Por receber" : "Disponível"}</span>
                     </div>
                     <h3 className="p-5 text-lg font-semibold group-hover:underline">{product.title}</h3>
                   </Link>
