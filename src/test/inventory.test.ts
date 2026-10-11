@@ -13,11 +13,11 @@ const purchase = (orderStatus: VintedOrderStatus): Purchase => ({
 });
 
 describe("sellable stock eligibility", () => {
-  it.each(["not_tracked", "received_verified"] as VintedOrderStatus[])("counts %s as available", status => {
+  it.each(["not_tracked", "delivered", "received_verified"] as VintedOrderStatus[])("counts %s as available", status => {
     expect(isPurchaseStockEligible(purchase(status))).toBe(true);
   });
 
-  it.each(["ordered", "shipped", "electronic_verification", "delivered", "return_in_progress", "refund_partial", "refunded", "cancelled"] as VintedOrderStatus[])("excludes %s from available stock", status => {
+  it.each(["ordered", "shipped", "electronic_verification", "return_in_progress", "refund_partial", "refunded", "cancelled"] as VintedOrderStatus[])("excludes %s from available stock", status => {
     expect(isPurchaseStockEligible(purchase(status))).toBe(false);
   });
 });
@@ -54,6 +54,13 @@ describe("purchase identity and active stock value", () => {
     expect(dashboard.pendingStockUnits).toBe(1);
     expect(dashboard.pendingStockValue).toBe(681.8);
     expect(dashboard.receivedStockUnits).toBe(0);
+  });
+
+  it("counts a delivered unit as received and permits registering its sale", () => {
+    const delivered = purchase("delivered");
+    expect(purchaseReceiptStatus(delivered)).toBe("received");
+    expect(isPurchaseStockEligible(delivered)).toBe(true);
+    expect(activeUnitsByPurchase([delivered], []).get(delivered.id)).toBe(1);
   });
 
   it("consumes only the specifically selected purchase when product rows repeat", () => {

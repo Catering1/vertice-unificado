@@ -85,7 +85,7 @@ describe("dashboard persistence and purchase identity", () => {
     expect(mock.rows.sales[0].sale_price).toBe(180);
   });
   it("rejects a new sale of an incoming unit before writing", async () => {
-    await expect(store.addSale({ productId, purchaseId: incomingId, quantity: 1, salePrice: 150, date: "2026-10-09" })).rejects.toThrow("receção");
+    await expect(store.addSale({ productId, purchaseId: incomingId, quantity: 1, salePrice: 150, date: "2026-10-09" })).rejects.toThrow("elegível");
     expect(mock.writes).toHaveLength(0);
   });
   it("rejects selling an exhausted purchase before writing", async () => {

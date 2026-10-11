@@ -444,7 +444,7 @@ export default function Purchases() {
                   <SelectTrigger aria-label="Estado de receção"><SelectValue /></SelectTrigger>
                   <SelectContent>{ORDER_RECEIPT_STATUSES.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
                 </Select>
-                <p className="mt-1 text-xs text-muted-foreground">Usa Por Receber até confirmar a chegada física; depois seleciona Recebido.</p>
+                <p className="mt-1 text-xs text-muted-foreground">A encomenda passa automaticamente a Recebido quando a Vinted indica Entregue. Antes disso, podes ajustar o estado manualmente.</p>
               </div>
               <div>
                 <Label>Resultado da encomenda</Label>

@@ -20,14 +20,13 @@ export function isPurchaseExcludedFromDashboard(purchase: Pick<Purchase, "orderS
 
 export function purchaseReceiptStatus(purchase: Pick<Purchase, "orderStatus">): PurchaseReceiptStatus {
   if (isPurchaseExcludedFromStock(purchase)) return "excluded";
-  // received_verified is the internal value for a confirmed physical receipt.
-  return !purchase.orderStatus || purchase.orderStatus === "not_tracked" || purchase.orderStatus === "received_verified" ? "received" : "pending";
+  return !purchase.orderStatus || purchase.orderStatus === "not_tracked" || purchase.orderStatus === "delivered" || purchase.orderStatus === "received_verified" ? "received" : "pending";
 }
 
-/** Only confirmed receipts and legacy inventory may be sold. */
+/** Delivered, received, and legacy inventory may be sold; earlier shipping states may not. */
 export function isPurchaseStockEligible(purchase: Purchase): boolean {
   if (isPurchaseExcludedFromStock(purchase)) return false;
-  return !purchase.orderStatus || purchase.orderStatus === "not_tracked" || purchase.orderStatus === "received_verified";
+  return !purchase.orderStatus || purchase.orderStatus === "not_tracked" || purchase.orderStatus === "delivered" || purchase.orderStatus === "received_verified";
 }
 
 /** Count unsold units in both received stock and incoming stock; sale eligibility is checked separately. */

@@ -245,7 +245,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const validated = SaleSchema.parse(saleInput);
     const purchase = purchases.find(p => p.id === validated.purchaseId && p.productId === validated.productId);
     if (!purchase) throw new Error("A compra selecionada não corresponde ao artigo.");
-    if (!isPurchaseStockEligible(purchase) || getProduct(purchase.productId)?.inventoryUse === "personal") throw new Error("Confirme a receção do artigo antes de registar a venda.");
+    if (!isPurchaseStockEligible(purchase) || getProduct(purchase.productId)?.inventoryUse === "personal") throw new Error("A compra não está elegível para registar a venda.");
     const alreadySold = sales.filter(existing => existing.purchaseId === purchase.id).reduce((sum, existing) => sum + existing.quantity, 0);
     if (alreadySold + validated.quantity > purchase.quantity) throw new Error("Esta compra não tem unidades disponíveis para registar a venda.");
     const costPerUnit = typeof purchasePrice === "number" && !Number.isNaN(purchasePrice)
@@ -267,7 +267,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const purchase = purchases.find(p => p.id === validated.purchaseId && p.productId === validated.productId);
     if (!purchase) throw new Error("A compra selecionada não corresponde ao artigo.");
     const previous = sales.find(existing => existing.id === saleInput.id);
-    if (previous?.purchaseId !== purchase.id && !isPurchaseStockEligible(purchase)) throw new Error("Confirme a receção do artigo antes de registar a venda.");
+    if (previous?.purchaseId !== purchase.id && !isPurchaseStockEligible(purchase)) throw new Error("A compra não está elegível para registar a venda.");
     const alreadySold = sales.filter(existing => existing.purchaseId === purchase.id && existing.id !== saleInput.id).reduce((sum, existing) => sum + existing.quantity, 0);
     if (alreadySold + validated.quantity > purchase.quantity) throw new Error("Esta compra não tem unidades disponíveis para registar a venda.");
     const costPerUnit = typeof purchasePrice === "number" && !Number.isNaN(purchasePrice)
