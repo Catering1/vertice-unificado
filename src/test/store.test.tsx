@@ -49,6 +49,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 const productId = "20000000-0000-4000-8000-000000000001";
 const receivedId = "30000000-0000-4000-8000-000000000001";
 const incomingId = "30000000-0000-4000-8000-000000000002";
+const deliveredId = "30000000-0000-4000-8000-000000000003";
 let root: Root;
 let host: HTMLDivElement;
 let store: ReturnType<typeof useStore>;
@@ -66,6 +67,7 @@ beforeEach(async () => {
     purchases: [
       { id: receivedId, product_id: productId, quantity: 1, price: 100, date: "2026-10-01", order_status: "received_verified", order_reference: "PRIVATE-REFERENCE", collection_date: null },
       { id: incomingId, product_id: productId, quantity: 1, price: null, date: null, order_status: "shipped", order_reference: "PRIVATE-INCOMING" },
+      { id: deliveredId, product_id: productId, quantity: 1, price: 200, date: "2026-10-08", order_status: "delivered", order_reference: "PRIVATE-DELIVERED" },
     ],
     sales: [{ id: "40000000-0000-4000-8000-000000000001", product_id: productId, purchase_id: receivedId, quantity: 1, sale_price: 150, profit: 50, date: "2026-10-03" }],
     categories: [{ id: "category", name: "Eletrónica" }],
@@ -87,6 +89,11 @@ describe("dashboard persistence and purchase identity", () => {
   it("rejects a new sale of an incoming unit before writing", async () => {
     await expect(store.addSale({ productId, purchaseId: incomingId, quantity: 1, salePrice: 150, date: "2026-10-09" })).rejects.toThrow("elegível");
     expect(mock.writes).toHaveLength(0);
+  });
+  it("registers a sale against a delivered purchase", async () => {
+    await act(async () => store.addSale({ productId, purchaseId: deliveredId, quantity: 1, salePrice: 250, date: "2026-10-09" }));
+    expect(store.sales.some(sale => sale.purchaseId === deliveredId)).toBe(true);
+    expect(mock.rows.sales.some(row => row.purchase_id === deliveredId)).toBe(true);
   });
   it("rejects selling an exhausted purchase before writing", async () => {
     await expect(store.addSale({ productId, purchaseId: receivedId, quantity: 1, salePrice: 150, date: "2026-10-09" })).rejects.toThrow("unidades disponíveis");
