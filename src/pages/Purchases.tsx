@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Plus, Trash2, Upload, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, Grid2X2, List, Package } from "lucide-react";
+import ProductListingPhotos from "@/components/ProductListingPhotos";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getCatalogPresentation } from "@/lib/catalog";
@@ -463,6 +464,7 @@ export default function Purchases() {
               <div><Label>Atualização da encomenda (privada)</Label><textarea aria-label="Atualização da encomenda" value={orderStatusNote} onChange={e => setOrderStatusNote(e.target.value)} maxLength={1000} rows={3} className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
               {editingPurchase && orderOutcome !== "normal" && <label className="flex items-start gap-2 rounded-md border p-3 text-sm"><input type="checkbox" checked={refundReceived} onChange={event => setRefundReceived(event.target.checked)} className="mt-0.5" /><span><span className="font-medium">Confirmo que já recebi o reembolso</span><span className="mt-1 block text-xs text-muted-foreground">Quando confirmado e guardado, esta compra fica como reembolsada e deixa de entrar nos cartões e totais do dashboard. O registo mantém-se no histórico.</span></span></label>}
               <div><Label>Descrição para anúncio</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado, características, acessórios e defeitos a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
+              {editingPurchase && <section className="space-y-2 rounded-md border p-3"><div><h3 className="text-sm font-semibold">Fotografias próprias desta unidade</h3><p className="text-xs text-muted-foreground">Adiciona aqui as fotos tiradas no telemóvel para o segundo anúncio OLX.</p></div><ProductListingPhotos productId={editingPurchase.productId} productName={productName || "Produto"} /></section>}
               {relatedSales.length > 0 && <section className="space-y-2 rounded-md border p-3" aria-label="Vendas do produto">
                 <h3 className="text-sm font-semibold">Vendas deste produto</h3>
                 {relatedSales.map(sale => <div key={sale.id} className="border-t pt-2 text-sm first:border-0 first:pt-0">
@@ -503,7 +505,7 @@ export default function Purchases() {
                 <CardContent className="space-y-3 p-4">
                   <div className="flex gap-3">
                   <div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{product?.name ?? "Produto removido"}</h2><p className="mt-0.5 text-sm text-muted-foreground">{product?.category ?? "Sem categoria"} · Compra: {formatDate(p.date)}</p></div>
-                    <div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} aria-label={`Editar ${product?.name ?? "compra"}`}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }} aria-label={`Remover ${product?.name ?? "compra"}`}><Trash2 className="h-4 w-4" /></Button></div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} aria-label={`Editar ${product?.name ?? "compra"}`}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }} aria-label={`Remover ${product?.name ?? "compra"}`}><Trash2 className="h-4 w-4" /></Button></div>
                   </div>
                   <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Data de compra: {formatDate(p.date)}</p>{p.deliveryDate && <p>Data de Entrega: {formatDate(p.deliveryDate)}</p>}{p.deliveryDate && <p>Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}{p.collectionDate && <p>Data Levantamento: {formatDate(p.collectionDate)}</p>}</div></div>
                   <p className="border-t pt-3 text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
