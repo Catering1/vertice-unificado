@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 const BUCKET = "product-listing-photos";
 const MAX_PHOTOS = 10;
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
-const MAX_DIMENSION = 2560;
+const MAX_DIMENSION = 2048;
 
 type ListingPhoto = { name: string; path: string; signedUrl: string; createdAt: string };
 
@@ -37,7 +37,7 @@ async function toListingJpeg(file: File): Promise<File> {
     context.fillStyle = "#ffffff";
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const jpeg = await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Não foi possível converter a fotografia.")), "image/jpeg", 0.92));
+    const jpeg = await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Não foi possível converter a fotografia.")), "image/jpeg", 0.88));
     const baseName = safeFileName(file.name.replace(/\.[^.]+$/, ""));
     return new File([jpeg], `${baseName}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
   } finally {
@@ -68,12 +68,18 @@ export default function ProductListingPhotos({ productId, productName }: { produ
       return;
     }
     const files = (data ?? []).filter(file => file.id && file.name);
-    const signed = await Promise.all(files.map(async file => {
-      const path = `${productId}/${file.name}`;
-      const { data: signedData } = await storage.createSignedUrl(path, 60 * 60);
-      if (!signedData?.signedUrl) return null;
-      return { name: file.name, path, signedUrl: signedData.signedUrl, createdAt: file.created_at ?? "" } satisfies ListingPhoto;
-    }));
+    const paths = files.map(file => `${productId}/${file.name}`);
+    const { data: signedData, error: signedError } = await storage.createSignedUrls(paths, 60 * 60);
+    if (signedError) {
+      setError("Não foi possível carregar as fotos. Confirma a ligação e tenta novamente.");
+      setLoading(false);
+      return;
+    }
+    const signed = files.map((file, index) => {
+      const signedUrl = signedData?.[index]?.signedUrl;
+      if (!signedUrl) return null;
+      return { name: file.name, path: paths[index], signedUrl, createdAt: file.created_at ?? "" } satisfies ListingPhoto;
+    });
     setPhotos(signed.filter((photo): photo is ListingPhoto => photo !== null));
     setLoading(false);
   }, [productId]);
@@ -99,9 +105,10 @@ export default function ProductListingPhotos({ productId, productName }: { produ
         const mime = file.type.toLowerCase() || inferredTypes[file.name.split(".").pop()?.toLowerCase() ?? ""] || "";
         if (!["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"].includes(mime)) throw new Error("Formato não suportado. Usa JPEG, PNG, WebP ou HEIC.");
         if (file.size > MAX_FILE_SIZE) throw new Error("Cada foto original deve ter no máximo 25 MB.");
-        const path = `${productId}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
-        const original = file.type === mime ? file : new File([file], file.name, { type: mime, lastModified: file.lastModified });
-        const { error: uploadError } = await storage.upload(path, original, { contentType: mime, cacheControl: "3600", upsert: false });
+        const source = file.type === mime ? file : new File([file], file.name, { type: mime, lastModified: file.lastModified });
+        const optimized = await toListingJpeg(source);
+        const path = `${productId}/${crypto.randomUUID()}-${optimized.name}`;
+        const { error: uploadError } = await storage.upload(path, optimized, { contentType: "image/jpeg", cacheControl: "31536000", upsert: false });
         if (uploadError) throw uploadError;
         uploaded += 1;
       } catch (uploadError) {
@@ -126,7 +133,7 @@ export default function ProductListingPhotos({ productId, productName }: { produ
     toast.success("Fotografia eliminada.");
   }
 
-  async function downloadZip(mode: "originals" | "olx") {
+  async function downloadZip() {
     if (!photos.length) return;
     setDownloading(true);
     try {
@@ -135,19 +142,14 @@ export default function ProductListingPhotos({ productId, productName }: { produ
       for (const [index, photo] of photos.entries()) {
         const { data, error: downloadError } = await storage.download(photo.path);
         if (downloadError || !data) throw downloadError ?? new Error("Falhou a transferência de uma fotografia.");
-        const originalName = photo.name.replace(/^[0-9a-f-]{36}-/i, "");
-        if (mode === "olx") {
-          const derived = await toListingJpeg(new File([data], originalName, { type: data.type || "application/octet-stream" }));
-          zip.file(`${String(index + 1).padStart(2, "0")}-${derived.name}`, derived);
-        } else {
-          zip.file(`${String(index + 1).padStart(2, "0")}-${originalName}`, data);
-        }
+        const fileName = photo.name.replace(/^[0-9a-f-]{36}-/i, "");
+        zip.file(`${String(index + 1).padStart(2, "0")}-${fileName}`, data);
       }
       const archive = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(archive);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `${safeFileName(productName)}-${mode === "olx" ? "fotos-OLX" : "fotos-originais"}.zip`;
+      anchor.download = `${safeFileName(productName)}-fotos-OLX.zip`;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
@@ -172,7 +174,7 @@ export default function ProductListingPhotos({ productId, productName }: { produ
           </DialogHeader>
           <div className="space-y-4">
             <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
-              Até {MAX_PHOTOS} fotos por produto. Os originais ficam guardados sem alterações num espaço privado. Limite por fotografia: 25 MB. O espaço gratuito tem 1 GB total, partilhado com o resto do projeto.
+              Até {MAX_PHOTOS} fotos por produto. Antes do envio são reduzidas para 2048 px e convertidas para JPEG, mantendo boa qualidade para OLX e carregando muito mais depressa. Limite do ficheiro original: 25 MB.
             </div>
             <div className="flex flex-wrap gap-2">
               <input ref={inputRef} type="file" accept="image/*" multiple className="sr-only" aria-label="Escolher fotografias" onChange={event => void uploadFiles(event.target.files)} />
@@ -180,13 +182,9 @@ export default function ProductListingPhotos({ productId, productName }: { produ
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 {uploading ? "A carregar…" : "Adicionar fotos do telemóvel"}
               </Button>
-              <Button type="button" variant="outline" onClick={() => void downloadZip("originals")} disabled={downloading || photos.length === 0} className="min-h-11 gap-2">
+              <Button type="button" variant="outline" onClick={() => void downloadZip()} disabled={downloading || photos.length === 0} className="min-h-11 gap-2">
                 {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                Descarregar originais para o PC
-              </Button>
-              <Button type="button" variant="outline" onClick={() => void downloadZip("olx")} disabled={downloading || photos.length === 0} className="min-h-11 gap-2">
-                {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                Preparar cópias para OLX
+                Descarregar fotos para OLX
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">Ao abrir no telemóvel, escolhe várias fotografias de uma vez. Não incluas IMEI, número de série, faturas, etiquetas ou dados pessoais.</p>
