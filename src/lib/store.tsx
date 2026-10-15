@@ -82,6 +82,7 @@ const StoreContext = createContext<StoreContextType | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const userId = user?.id;
   const [products, setProducts] = useState<Product[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
@@ -92,7 +93,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch all data when user changes
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setProducts([]); setPurchases([]); setSales([]); setCategories([]); setExpenses([]);
       setLoading(false);
       return;
@@ -108,7 +109,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         async function allRows<T extends "products" | "purchases" | "sales" | "categories" | "expenses">(table: T): Promise<Tables<T>[]> {
           const rows: Tables<T>[] = [];
           for (let start = 0; ; start += 500) {
-            const result = await supabase.from(table as "products" | "purchases" | "sales" | "categories" | "expenses").select("*").eq("user_id", user!.id).order("id").range(start, start + 499);
+            const result = await supabase.from(table as "products" | "purchases" | "sales" | "categories" | "expenses").select("*").eq("user_id", userId).order("id").range(start, start + 499);
             if (result.error) throw result.error;
             rows.push(...result.data as Tables<T>[]);
             if (result.data.length < 500) break;
@@ -142,7 +143,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("focus", refresh);
     const interval = window.setInterval(refresh, 30_000);
     return () => { cancelled = true; window.removeEventListener("focus", refresh); window.clearInterval(interval); };
-  }, [user]);
+  }, [userId]);
 
   const getProduct = useCallback((id: string) => products.find(p => p.id === id), [products]);
 

@@ -11,7 +11,7 @@ const MAX_PHOTOS = 10;
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const MAX_DIMENSION = 2048;
 
-type ListingPhoto = { name: string; path: string; signedUrl: string; createdAt: string };
+type ListingPhoto = { name: string; path: string; createdAt: string };
 
 function safeFileName(value: string) {
   return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "fotografia.jpg";
@@ -68,19 +68,11 @@ export default function ProductListingPhotos({ productId, productName }: { produ
       return;
     }
     const files = (data ?? []).filter(file => file.id && file.name);
-    const paths = files.map(file => `${productId}/${file.name}`);
-    const { data: signedData, error: signedError } = await storage.createSignedUrls(paths, 60 * 60);
-    if (signedError) {
-      setError("Não foi possível carregar as fotos. Confirma a ligação e tenta novamente.");
-      setLoading(false);
-      return;
-    }
-    const signed = files.map((file, index) => {
-      const signedUrl = signedData?.[index]?.signedUrl;
-      if (!signedUrl) return null;
-      return { name: file.name, path: paths[index], signedUrl, createdAt: file.created_at ?? "" } satisfies ListingPhoto;
-    });
-    setPhotos(signed.filter((photo): photo is ListingPhoto => photo !== null));
+    setPhotos(files.map(file => ({
+      name: file.name,
+      path: `${productId}/${file.name}`,
+      createdAt: file.created_at ?? "",
+    })));
     setLoading(false);
   }, [productId]);
 
@@ -188,12 +180,13 @@ export default function ProductListingPhotos({ productId, productName }: { produ
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">Ao abrir no telemóvel, escolhe várias fotografias de uma vez. Não incluas IMEI, número de série, faturas, etiquetas ou dados pessoais.</p>
-            {loading ? <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> A carregar fotos…</div> : error ? <p role="alert" className="text-sm text-destructive">{error}</p> : photos.length === 0 ? <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">Ainda não adicionaste fotos próprias a este produto.</p> : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {loading ? <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> A verificar fotos…</div> : error ? <p role="alert" className="text-sm text-destructive">{error}</p> : photos.length === 0 ? <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">Ainda não adicionaste fotos próprias a este produto.</p> : (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">{photos.length} {photos.length === 1 ? "fotografia guardada" : "fotografias guardadas"}</p>
                 {photos.map((photo, index) => (
-                  <div key={photo.path} className="relative overflow-hidden rounded-md border bg-muted">
-                    <img src={photo.signedUrl} alt={`${productName}, foto ${index + 1}`} className="aspect-square w-full object-cover" />
-                    <Button type="button" variant="destructive" size="icon" className="absolute right-2 top-2 h-8 w-8" onClick={() => void deletePhoto(photo)} aria-label={`Eliminar foto ${index + 1}`}>
+                  <div key={photo.path} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+                    <span className="text-sm text-muted-foreground">Fotografia {index + 1}</span>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => void deletePhoto(photo)} aria-label={`Eliminar foto ${index + 1}`}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

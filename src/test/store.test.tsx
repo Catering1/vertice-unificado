@@ -9,6 +9,7 @@ const mock = vi.hoisted(() => ({
   user: { id: "10000000-0000-4000-8000-000000000001" },
   rows: {} as Record<string, Record<string, unknown>[]>,
   writes: [] as { table: string; operation: string; fields: Record<string, unknown> }[],
+  rangeCalls: 0,
 }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: mock.user }) }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -34,7 +35,7 @@ vi.mock("@/integrations/supabase/client", () => ({
         select() { return builder; },
         eq(key: string, value: unknown) { filters[key] = value; return builder; },
         order() { return builder; },
-        range(start: number, end: number) { return Promise.resolve({ data: mock.rows[table].slice(start, end + 1), error: null }); },
+        range(start: number, end: number) { mock.rangeCalls += 1; return Promise.resolve({ data: mock.rows[table].slice(start, end + 1), error: null }); },
         insert(value: Record<string, unknown>) { operation = "insert"; fields = value; return builder; },
         update(value: Record<string, unknown>) { operation = "update"; fields = value; return builder; },
         delete() { operation = "delete"; return builder; },
@@ -62,6 +63,7 @@ beforeEach(async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal("IntersectionObserver", class { observe() {} disconnect() {} unobserve() {} });
   mock.writes = [];
+  mock.rangeCalls = 0;
   mock.rows = {
     products: [{ id: productId, name: "Equipamento de teste", category: "Eletrónica", purchase_price: 100, supplier: "", inventory_use: "business", photo_urls: [] }],
     purchases: [
@@ -147,5 +149,13 @@ describe("dashboard persistence and purchase identity", () => {
     await act(async () => window.dispatchEvent(new Event("focus")));
     expect(store.purchases).toHaveLength(1001);
     expect(store.categories).toBe(categories);
+  });
+  it("keeps the loaded dashboard visible when auth refreshes the same user", async () => {
+    const callsBeforeRefresh = mock.rangeCalls;
+    mock.user = { id: "10000000-0000-4000-8000-000000000001" };
+    await mount();
+    expect(store.loading).toBe(false);
+    expect(mock.rangeCalls).toBe(callsBeforeRefresh);
+    expect(store.products).toHaveLength(1);
   });
 });
