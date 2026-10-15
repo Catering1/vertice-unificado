@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import JSZip from "jszip";
-import { Camera, Download, Loader2, Trash2, Upload, X } from "lucide-react";
+import { Camera, Loader2, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -11,7 +10,7 @@ const MAX_PHOTOS = 10;
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const MAX_DIMENSION = 2048;
 
-type ListingPhoto = { name: string; path: string; createdAt: string };
+type ListingPhoto = { name: string; path: string; signedUrl: string; createdAt: string };
 
 function safeFileName(value: string) {
   return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "fotografia.jpg";
@@ -50,7 +49,6 @@ export default function ProductListingPhotos({ productId, productName }: { produ
   const [photos, setPhotos] = useState<ListingPhoto[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -68,11 +66,17 @@ export default function ProductListingPhotos({ productId, productName }: { produ
       return;
     }
     const files = (data ?? []).filter(file => file.id && file.name);
-    setPhotos(files.map(file => ({
-      name: file.name,
-      path: `${productId}/${file.name}`,
-      createdAt: file.created_at ?? "",
-    })));
+    const paths = files.map(file => `${productId}/${file.name}`);
+    const { data: signedData, error: signedError } = await storage.createSignedUrls(paths, 60 * 60);
+    if (signedError) {
+      setError("Não foi possível verificar as fotos. Confirma a ligação e tenta novamente.");
+      setLoading(false);
+      return;
+    }
+    setPhotos(files.flatMap((file, index) => {
+      const signedUrl = signedData?.[index]?.signedUrl;
+      return signedUrl ? [{ name: file.name, path: paths[index], signedUrl, createdAt: file.created_at ?? "" }] : [];
+    }));
     setLoading(false);
   }, [productId]);
 
@@ -125,34 +129,6 @@ export default function ProductListingPhotos({ productId, productName }: { produ
     toast.success("Fotografia eliminada.");
   }
 
-  async function downloadZip() {
-    if (!photos.length) return;
-    setDownloading(true);
-    try {
-      const zip = new JSZip();
-      const storage = supabase.storage.from(BUCKET);
-      for (const [index, photo] of photos.entries()) {
-        const { data, error: downloadError } = await storage.download(photo.path);
-        if (downloadError || !data) throw downloadError ?? new Error("Falhou a transferência de uma fotografia.");
-        const fileName = photo.name.replace(/^[0-9a-f-]{36}-/i, "");
-        zip.file(`${String(index + 1).padStart(2, "0")}-${fileName}`, data);
-      }
-      const archive = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(archive);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `${safeFileName(productName)}-fotos-OLX.zip`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
-    } catch {
-      toast.error("Não foi possível preparar o ficheiro ZIP das fotografias.");
-    } finally {
-      setDownloading(false);
-    }
-  }
-
   return (
     <>
       <Button type="button" variant="outline" className="min-h-11 w-full justify-center gap-1.5" onClick={() => setOpen(true)} aria-label={`Gerir fotos para anúncios de ${productName}`}>
@@ -168,15 +144,11 @@ export default function ProductListingPhotos({ productId, productName }: { produ
             <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
               Até {MAX_PHOTOS} fotos por produto. Antes do envio são reduzidas para 2048 px e convertidas para JPEG, mantendo boa qualidade para OLX e carregando muito mais depressa. Limite do ficheiro original: 25 MB.
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div>
               <input ref={inputRef} type="file" accept="image/*" multiple className="sr-only" aria-label="Escolher fotografias" onChange={event => void uploadFiles(event.target.files)} />
               <Button type="button" onClick={() => inputRef.current?.click()} disabled={uploading || photos.length >= MAX_PHOTOS} className="min-h-11 gap-2">
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 {uploading ? "A carregar…" : "Adicionar fotos do telemóvel"}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => void downloadZip()} disabled={downloading || photos.length === 0} className="min-h-11 gap-2">
-                {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                Descarregar fotos para OLX
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">Ao abrir no telemóvel, escolhe várias fotografias de uma vez. Não incluas IMEI, número de série, faturas, etiquetas ou dados pessoais.</p>
@@ -185,6 +157,7 @@ export default function ProductListingPhotos({ productId, productName }: { produ
                 <p className="text-sm font-medium">{photos.length} {photos.length === 1 ? "fotografia guardada" : "fotografias guardadas"}</p>
                 {photos.map((photo, index) => (
                   <div key={photo.path} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+                    <a href={photo.signedUrl} data-listing-photo={index + 1} className="hidden" aria-hidden="true" tabIndex={-1}>Fotografia {index + 1}</a>
                     <span className="text-sm text-muted-foreground">Fotografia {index + 1}</span>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => void deletePhoto(photo)} aria-label={`Eliminar foto ${index + 1}`}>
                       <Trash2 className="h-4 w-4" />
