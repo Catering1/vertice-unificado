@@ -423,7 +423,7 @@ export default function Purchases() {
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+          <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg" onOpenAutoFocus={event => event.preventDefault()}>
             <DialogHeader><DialogTitle>{editingPurchase ? "Editar Compra" : "Registar Compra"}</DialogTitle><DialogDescription className="sr-only">Dados da compra selecionada, receção e resultado da encomenda.</DialogDescription></DialogHeader>
               <div className="grid gap-4 py-2">
               <div>
