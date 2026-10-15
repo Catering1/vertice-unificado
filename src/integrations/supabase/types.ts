@@ -159,6 +159,8 @@ export type Database = {
           date: string | null
           delivery_date: string | null
           estimated_delivery_date: string | null
+          pickup_available_date: string | null
+          pickup_deadline: string | null
           id: string
           price: number | null
           product_id: string
@@ -177,6 +179,8 @@ export type Database = {
           date?: string | null
           delivery_date?: string | null
           estimated_delivery_date?: string | null
+          pickup_available_date?: string | null
+          pickup_deadline?: string | null
           id?: string
           price?: number | null
           product_id: string
@@ -195,6 +199,8 @@ export type Database = {
           date?: string | null
           delivery_date?: string | null
           estimated_delivery_date?: string | null
+          pickup_available_date?: string | null
+          pickup_deadline?: string | null
           id?: string
           price?: number | null
           product_id?: string

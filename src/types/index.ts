@@ -23,6 +23,8 @@ export interface Purchase {
   price: number | null;
   date: string;
   estimatedDeliveryDate?: string | null;
+  pickupAvailableDate?: string | null;
+  pickupDeadline?: string | null;
   deliveryDate?: string | null;
   collectionDate?: string | null;
   orderStatus?: VintedOrderStatus;

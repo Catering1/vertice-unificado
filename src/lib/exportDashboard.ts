@@ -101,6 +101,8 @@ export async function exportDashboardXlsx(
     { header: "Preço", key: "price", width: 14 },
     { header: "Data da compra", key: "date", width: 16 },
     { header: "Data estimada de entrega", key: "estimatedDeliveryDate", width: 24 },
+    { header: "Chegada ao ponto de recolha", key: "pickupAvailableDate", width: 28 },
+    { header: "Data limite de levantamento", key: "pickupDeadline", width: 28 },
     { header: "Data de receção", key: "deliveryDate", width: 18 },
     { header: "Data de levantamento", key: "collectionDate", width: 22 },
   ];
@@ -115,6 +117,8 @@ export async function exportDashboardXlsx(
         price: p.price,
         date: p.date,
         estimatedDeliveryDate: p.estimatedDeliveryDate ?? "",
+        pickupAvailableDate: p.pickupAvailableDate ?? "",
+        pickupDeadline: p.pickupDeadline ?? "",
         deliveryDate: p.deliveryDate ?? "",
         collectionDate: p.collectionDate ?? "",
       });

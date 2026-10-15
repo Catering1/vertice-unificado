@@ -15,8 +15,8 @@ import ProfitByProductChart from "@/components/dashboard/ProfitByProductChart";
 import PurchasesVsSalesChart from "@/components/dashboard/PurchasesVsSalesChart";
 import AnalyzeDialog from "@/components/dashboard/AnalyzeDialog";
 
-function pickupDeadline(deliveryDate: string) {
-  const [year, month, day] = deliveryDate.split("-").map(Number);
+function derivedPickupDeadline(pickupAvailableDate: string) {
+  const [year, month, day] = pickupAvailableDate.split("-").map(Number);
   const deadline = new Date(Date.UTC(year, month - 1, day));
   deadline.setUTCDate(deadline.getUTCDate() + 7);
   return deadline;
@@ -73,8 +73,9 @@ export default function Dashboard() {
     const productsById = new Map(data.products.map(product => [product.id, product]));
     const today = utcToday();
     return data.purchases.flatMap(purchase => {
-      if (!purchase.deliveryDate || purchase.orderStatus !== "delivered") return [];
-      const deadline = pickupDeadline(purchase.deliveryDate);
+      if (purchase.collectionDate || !purchase.pickupAvailableDate) return [];
+      const deadlineValue = purchase.pickupDeadline || derivedPickupDeadline(purchase.pickupAvailableDate).toISOString().slice(0, 10);
+      const deadline = new Date(`${deadlineValue}T00:00:00Z`);
       const daysRemaining = Math.round((deadline.getTime() - today.getTime()) / 86_400_000);
       if (daysRemaining > 2) return [];
       return [{

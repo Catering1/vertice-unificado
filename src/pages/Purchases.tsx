@@ -114,6 +114,8 @@ export default function Purchases() {
   const [price, setPrice] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState("");
+  const [pickupAvailableDate, setPickupAvailableDate] = useState("");
+  const [savedPickupDeadline, setSavedPickupDeadline] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
   const [collectionDate, setCollectionDate] = useState("");
   const [orderStatusNote, setOrderStatusNote] = useState("");
@@ -162,7 +164,7 @@ export default function Purchases() {
     setEditingPurchase(null);
     setInventoryUse("business");
     setProductName(""); setProductCategory("Outros"); setProductSupplier(""); setRetailPrice(""); setCondition("Verificado"); setWarrantyMonths("0"); setDescription(""); setSpecifications("");
-    setPrice(""); setDate(new Date().toISOString().slice(0, 10)); setEstimatedDeliveryDate(""); setDeliveryDate("");
+    setPrice(""); setDate(new Date().toISOString().slice(0, 10)); setEstimatedDeliveryDate(""); setPickupAvailableDate(""); setSavedPickupDeadline(""); setDeliveryDate("");
     setCollectionDate("");
     setOrderStatusNote("");
     setReceiptStatus("pending");
@@ -186,6 +188,8 @@ export default function Purchases() {
     setPrice(p.price == null ? "" : String(p.price));
     setDate(p.date);
     setEstimatedDeliveryDate(p.estimatedDeliveryDate ?? "");
+    setPickupAvailableDate(p.pickupAvailableDate ?? "");
+    setSavedPickupDeadline(p.pickupDeadline ?? "");
     setDeliveryDate(p.deliveryDate ?? "");
     setCollectionDate(p.collectionDate ?? "");
     setOrderStatusNote(p.orderStatusNote ?? "");
@@ -240,10 +244,10 @@ export default function Purchases() {
         productId = await addProduct({name:productName.trim(),category:productCategory,purchasePrice:priceParsed,supplier:productSupplier,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,photoUrls:[],inventoryUse,storeVisible:productCategory !== "Livros" && inventoryUse !== "personal"});
       }
       if (editingPurchase) {
-        await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderReference: undefined, orderStatusNote, refundReceivedAt });
+        await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, pickupAvailableDate: pickupAvailableDate || null, pickupDeadline: pickupDeadline || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderReference: undefined, orderStatusNote, refundReceivedAt });
         toast.success("Compra atualizada");
       } else {
-        await addPurchase({ productId, quantity: 1, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderStatusNote });
+        await addPurchase({ productId, quantity: 1, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, pickupAvailableDate: pickupAvailableDate || null, pickupDeadline: pickupDeadline || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderStatusNote });
         toast.success("Compra registada");
       }
       setDialogOpen(false);
@@ -267,7 +271,7 @@ export default function Purchases() {
   const openSale = (purchase: Purchase) => {
     navigate(`/admin/vendas?produto=${encodeURIComponent(purchase.productId)}&compra=${encodeURIComponent(purchase.id)}`);
   };
-  const pickupDeadline = collectionDeadline(deliveryDate);
+  const pickupDeadline = savedPickupDeadline || collectionDeadline(pickupAvailableDate);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -457,6 +461,7 @@ export default function Purchases() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div><Label>Data de compra *</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
                 <div><Label>Data prevista de entrega</Label><Input aria-label="Data prevista de entrega" type="date" value={estimatedDeliveryDate} onChange={e => setEstimatedDeliveryDate(e.target.value)} /></div>
+                <div><Label>Chegada ao ponto de recolha</Label><Input aria-label="Data de chegada ao ponto de recolha" type="date" value={pickupAvailableDate} onChange={e => { setPickupAvailableDate(e.target.value); setSavedPickupDeadline(""); }} /></div>
                 <div><Label>Data de Entrega</Label><Input aria-label="Data de entrega" type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} /></div>
                 <div><Label>Data Limite levantamento</Label><Input aria-label="Data limite para levantar a encomenda" type="date" value={pickupDeadline} readOnly disabled={!pickupDeadline} /></div>
                 <div><Label>Data Levantamento</Label><Input aria-label="Data de levantamento" type="date" value={collectionDate} disabled={!deliveryDate} onChange={e => { const value = e.target.value; setCollectionDate(value); setReceiptStatus(value ? "received" : "pending"); }} /></div>
@@ -507,7 +512,7 @@ export default function Purchases() {
                   <div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{product?.name ?? "Produto removido"}</h2><p className="mt-0.5 text-sm text-muted-foreground">{product?.category ?? "Sem categoria"} · Compra: {formatDate(p.date)}</p></div>
                     <div className="flex shrink-0 flex-wrap items-center gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} aria-label={`Editar ${product?.name ?? "compra"}`}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }} aria-label={`Remover ${product?.name ?? "compra"}`}><Trash2 className="h-4 w-4" /></Button></div>
                   </div>
-                  <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Data de compra: {formatDate(p.date)}</p>{p.deliveryDate && <p>Data de Entrega: {formatDate(p.deliveryDate)}</p>}{p.deliveryDate && <p>Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}{p.collectionDate && <p>Data Levantamento: {formatDate(p.collectionDate)}</p>}</div></div>
+                  <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Data de compra: {formatDate(p.date)}</p>{p.pickupAvailableDate && <p>Chegada ao ponto de recolha: {formatDate(p.pickupAvailableDate)}</p>}{(p.pickupDeadline || p.pickupAvailableDate) && <p>Data Limite levantamento: {formatDate(p.pickupDeadline || collectionDeadline(p.pickupAvailableDate))}</p>}{p.deliveryDate && <p>Data de Entrega: {formatDate(p.deliveryDate)}</p>}{p.collectionDate && <p>Data Levantamento: {formatDate(p.collectionDate)}</p>}</div></div>
                   <p className="border-t pt-3 text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
                   {p.refundReceivedAt && <p className="text-xs text-muted-foreground">Reembolso recebido: {formatDate(p.refundReceivedAt.slice(0, 10))}</p>}
                   {stockState === "Ativo" && isPurchaseStockEligible(p) && <Button variant="outline" className="w-full" onClick={() => openSale(p)}>Registar venda</Button>}
@@ -544,8 +549,9 @@ export default function Purchases() {
               <p className="text-xs text-muted-foreground">Estado: {commercialStatus(p)}</p>
               {p.estimatedDeliveryDate && <p className="text-xs text-muted-foreground">Data estimada de entrega: {formatDate(p.estimatedDeliveryDate)}</p>}
               <p className="text-xs text-muted-foreground">Data de compra: {formatDate(p.date)}</p>
+              {p.pickupAvailableDate && <p className="text-xs text-muted-foreground">Chegada ao ponto de recolha: {formatDate(p.pickupAvailableDate)}</p>}
+              {(p.pickupDeadline || p.pickupAvailableDate) && <p className="text-xs text-muted-foreground">Data Limite levantamento: {formatDate(p.pickupDeadline || collectionDeadline(p.pickupAvailableDate))}</p>}
               {p.deliveryDate && <p className="text-xs text-muted-foreground">Data de Entrega: {formatDate(p.deliveryDate)}</p>}
-              {p.deliveryDate && <p className="text-xs text-muted-foreground">Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}
               {p.collectionDate && <p className="text-xs text-muted-foreground">Data Levantamento: {formatDate(p.collectionDate)}</p>}
               <p className="text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
               {p.refundReceivedAt && <p className="text-xs text-muted-foreground">Reembolso recebido: {formatDate(p.refundReceivedAt.slice(0, 10))}</p>}
@@ -577,7 +583,7 @@ export default function Purchases() {
                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nenhuma compra encontrada</TableCell></TableRow>
               ) : visible.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}</p><p className="text-xs font-normal text-muted-foreground">Data de compra: {formatDate(p.date)}</p>{p.estimatedDeliveryDate && <p className="text-xs font-normal text-muted-foreground">Data prevista de entrega: {formatDate(p.estimatedDeliveryDate)}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Data de Entrega: {formatDate(p.deliveryDate)}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Data Limite levantamento: {formatDate(collectionDeadline(p.deliveryDate))}</p>}{p.collectionDate && <p className="text-xs font-normal text-muted-foreground">Data Levantamento: {formatDate(p.collectionDate)}</p>}</TableCell>
+                  <TableCell className="font-medium">{getProduct(p.productId)?.name ?? "—"}<p className="text-xs font-normal text-muted-foreground">{getProduct(p.productId)?.category} · {commercialStatus(p)}{getProduct(p.productId)?.sourceData?.row ? ` · Excel, linha ${getProduct(p.productId)?.sourceData?.row}` : ""}</p><p className="text-xs font-normal text-muted-foreground">Estado da encomenda: {orderStatusLabel(p.orderStatus)}</p><p className="text-xs font-normal text-muted-foreground">Data de compra: {formatDate(p.date)}</p>{p.estimatedDeliveryDate && <p className="text-xs font-normal text-muted-foreground">Data prevista de entrega: {formatDate(p.estimatedDeliveryDate)}</p>}{p.pickupAvailableDate && <p className="text-xs font-normal text-muted-foreground">Chegada ao ponto de recolha: {formatDate(p.pickupAvailableDate)}</p>}{(p.pickupDeadline || p.pickupAvailableDate) && <p className="text-xs font-normal text-muted-foreground">Data Limite levantamento: {formatDate(p.pickupDeadline || collectionDeadline(p.pickupAvailableDate))}</p>}{p.deliveryDate && <p className="text-xs font-normal text-muted-foreground">Data de Entrega: {formatDate(p.deliveryDate)}</p>}{p.collectionDate && <p className="text-xs font-normal text-muted-foreground">Data Levantamento: {formatDate(p.collectionDate)}</p>}</TableCell>
                   <TableCell>{fmt(p.price)}</TableCell>
                   <TableCell>{formatDate(p.date)}</TableCell>
                   <TableCell>
