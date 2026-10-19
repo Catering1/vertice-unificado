@@ -1,0 +1,29 @@
+[runtime]
+headless = true
+timezone = "Europe/Lisbon"
+retry_minutes = 15
+max_runtime_minutes = 120
+audit_only = true
+
+[profiles]
+root = "C:\\Users\\bboni\\ChromeProfiles"
+dashboard = "VerticeDashboard"
+olx1 = "VerticeOLX1"
+olx2 = "VerticeOLX2"
+
+[urls]
+dashboard = "https://vertice-unificado.vercel.app/admin/compras"
+olx = "https://www.olx.pt/myaccount/"
+
+[ai]
+# O núcleo funciona sem IA. Ollama só recebe dados comerciais já limpos.
+enabled = false
+provider = "ollama"
+base_url = "http://127.0.0.1:11434"
+model = "gemma3:4b"
+minimum_confidence = 0.85
+
+[notifications]
+# Opcional. Não guardar tokens neste ficheiro versionado; usar variáveis de
+# ambiente VERTICE_TELEGRAM_BOT_TOKEN e VERTICE_TELEGRAM_CHAT_ID.
+telegram = false

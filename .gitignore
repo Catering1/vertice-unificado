@@ -25,6 +25,9 @@ automation/vertice/reports/
 automation/vertice/state/
 automation/vertice/screenshots/
 automation/vertice/*.lock
+automation/vertice/**/__pycache__/
+automation/vertice/.pytest_cache/
+*.pyc
 
 # Editor directories and files
 .vscode/*

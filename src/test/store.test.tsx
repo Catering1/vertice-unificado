@@ -89,22 +89,6 @@ describe("dashboard persistence and purchase identity", () => {
     expect(store.sales[0].profit).toBe(80);
     expect(mock.rows.sales[0].sale_price).toBe(180);
   });
-  it("allows manually editing and persists the pickup deadline", async () => {
-    await mount(true);
-    const button = host.querySelector<HTMLButtonElement>('button[aria-label="Editar Equipamento de teste"]')!;
-    await act(async () => button.click());
-    const dialog = document.querySelector('[role="dialog"]')!;
-    const deadline = dialog.querySelector<HTMLInputElement>('input[aria-label="Data limite para levantar a encomenda"]')!;
-
-    expect(deadline.disabled).toBe(false);
-    expect(deadline.readOnly).toBe(false);
-    fireEvent.change(deadline, { target: { value: "2026-10-21" } });
-
-    const save = Array.from(dialog.querySelectorAll("button")).find(button => button.textContent === "Guardar compra")!;
-    await act(async () => save.click());
-    expect(mock.rows.purchases[0].pickup_deadline).toBe("2026-10-21");
-    expect(store.purchases[0].pickupDeadline).toBe("2026-10-21");
-  });
   it("rejects a new sale of an incoming unit before writing", async () => {
     await expect(store.addSale({ productId, purchaseId: incomingId, quantity: 1, salePrice: 150, date: "2026-10-09" })).rejects.toThrow("elegível");
     expect(mock.writes).toHaveLength(0);
@@ -151,6 +135,22 @@ describe("dashboard persistence and purchase identity", () => {
     await act(async () => save.click());
     expect(store.purchases[0].orderStatus).toBe("received_verified");
     expect(store.purchases[0].orderReference).toBe("PRIVATE-REFERENCE");
+  });
+  it("allows manually editing and persists the pickup deadline", async () => {
+    await mount(true);
+    const button = host.querySelector<HTMLButtonElement>('button[aria-label="Editar Equipamento de teste"]')!;
+    await act(async () => button.click());
+    const dialog = document.querySelector('[role="dialog"]')!;
+    const deadline = dialog.querySelector<HTMLInputElement>('input[aria-label="Data limite para levantar a encomenda"]')!;
+
+    expect(deadline.disabled).toBe(false);
+    expect(deadline.readOnly).toBe(false);
+    fireEvent.change(deadline, { target: { value: "2026-10-21" } });
+
+    const save = Array.from(dialog.querySelectorAll("button")).find(button => button.textContent === "Guardar compra")!;
+    await act(async () => save.click());
+    expect(mock.rows.purchases[0].pickup_deadline).toBe("2026-10-21");
+    expect(store.purchases[0].pickupDeadline).toBe("2026-10-21");
   });
   it("shows only the sales of the selected purchase, even with the same product", async () => {
     await mount(true);
