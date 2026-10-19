@@ -170,7 +170,7 @@ export default function Dashboard() {
         <section aria-labelledby="indicators-heading" className="space-y-3"><h2 id="indicators-heading" className="text-sm font-semibold text-foreground">Outros indicadores</h2><div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{kpis.slice(11).map(kpi => <KpiCard key={kpi.label} {...kpi} />)}</div></section>
       </div>
 
-      <CexPortugalPrices products={data.products} />
+      <CexPortugalPrices products={data.products} purchases={data.purchases} />
       {activeCategory === "all" && summaries.length > 0 && <section className="overflow-hidden rounded-xl border bg-card">
         <h2 className="px-5 pt-5 text-base font-semibold">Comparar categorias</h2>
         <div className="overflow-x-auto p-5"><table className="w-full text-sm"><thead><tr className="border-b text-left text-muted-foreground"><th className="pb-3">Categoria</th><th className="pb-3 text-right">Vendas</th><th className="pb-3 text-right">Lucro apurado</th><th className="pb-3 text-right">Stock</th><th className="pb-3 text-right">Exposição</th></tr></thead>

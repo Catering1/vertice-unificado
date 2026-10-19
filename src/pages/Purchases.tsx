@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Plus, Trash2, Upload, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, Grid2X2, List, Package } from "lucide-react";
 import ProductListingPhotos from "@/components/ProductListingPhotos";
+import CexProductPrice from "@/components/dashboard/CexProductPrice";
 import { toast } from "sonner";
 import { undoToast } from "@/lib/undoToast";
 import { cn } from "@/lib/utils";
@@ -491,6 +492,7 @@ export default function Purchases() {
               <div><Label>Atualização da encomenda (privada)</Label><textarea aria-label="Atualização da encomenda" value={orderStatusNote} onChange={e => setOrderStatusNote(e.target.value)} maxLength={1000} rows={3} className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
               {editingPurchase && orderOutcome !== "normal" && <label className="flex items-start gap-2 rounded-md border p-3 text-sm"><input type="checkbox" checked={refundReceived} onChange={event => setRefundReceived(event.target.checked)} className="mt-0.5" /><span><span className="font-medium">Confirmo que já recebi o reembolso</span><span className="mt-1 block text-xs text-muted-foreground">Quando confirmado e guardado, esta compra fica como reembolsada e deixa de entrar nos cartões e totais do dashboard. O registo mantém-se no histórico.</span></span></label>}
               <div><Label>Descrição para anúncio</Label><textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={4} placeholder="Estado, características, acessórios e defeitos a declarar." className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></div>
+              {editingPurchase && getProduct(editingPurchase.productId) && <CexProductPrice key={editingPurchase.productId} product={getProduct(editingPurchase.productId)!} />}
               {editingPurchase && <section className="space-y-2 rounded-md border p-3"><div><h3 className="text-sm font-semibold">Fotografias próprias desta unidade</h3><p className="text-xs text-muted-foreground">Adiciona aqui as fotos tiradas no telemóvel para o segundo anúncio OLX.</p></div><ProductListingPhotos productId={editingPurchase.productId} productName={productName || "Produto"} /></section>}
               {relatedSales.length > 0 && <section className="space-y-2 rounded-md border p-3" aria-label="Vendas do produto">
                 <h3 className="text-sm font-semibold">Vendas deste produto</h3>
