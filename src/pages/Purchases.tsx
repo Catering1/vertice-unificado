@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Plus, Trash2, Upload, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, Grid2X2, List, Package } from "lucide-react";
 import ProductListingPhotos from "@/components/ProductListingPhotos";
 import { toast } from "sonner";
+import { undoToast } from "@/lib/undoToast";
 import { cn } from "@/lib/utils";
 import { getCatalogPresentation } from "@/lib/catalog";
 import CategoryFilter from "@/components/CategoryFilter";
@@ -92,7 +93,7 @@ function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: str
 }
 
 export default function Purchases() {
-  const { purchases, sales, categories, addPurchase, updatePurchase, deletePurchase, getProduct, addProduct, updateProduct } = useStore();
+  const { purchases, sales, categories, addPurchase, restorePurchase, updatePurchase, deletePurchase, restoreSale, getProduct, addProduct, updateProduct, deleteProduct } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const selectedRecord = searchParams.get("registo");
@@ -236,6 +237,8 @@ export default function Purchases() {
     setSaving(true);
     try {
       const existingProd = editingPurchase ? getProduct(editingPurchase.productId) : undefined;
+      const previousProduct = existingProd ? { ...existingProd } : undefined;
+      const previousPurchase = editingPurchase ? { ...editingPurchase } : undefined;
       let productId: string;
       if (existingProd) {
         productId = existingProd.id;
@@ -245,10 +248,13 @@ export default function Purchases() {
       }
       if (editingPurchase) {
         await updatePurchase({ ...editingPurchase, productId, quantity: editingPurchase.quantity, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, pickupAvailableDate: pickupAvailableDate || null, pickupDeadline: pickupDeadline || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderReference: undefined, orderStatusNote, refundReceivedAt });
-        toast.success("Compra atualizada");
+        undoToast("Compra atualizada", async () => {
+          if (previousProduct) await updateProduct(previousProduct);
+          if (previousPurchase) await updatePurchase(previousPurchase);
+        });
       } else {
-        await addPurchase({ productId, quantity: 1, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, pickupAvailableDate: pickupAvailableDate || null, pickupDeadline: pickupDeadline || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderStatusNote });
-        toast.success("Compra registada");
+        const created = await addPurchase({ productId, quantity: 1, price: priceParsed, date, estimatedDeliveryDate: estimatedDeliveryDate || null, pickupAvailableDate: pickupAvailableDate || null, pickupDeadline: pickupDeadline || null, deliveryDate: deliveryDate || null, collectionDate: collectionDate || null, orderStatus, orderStatusNote });
+        undoToast("Compra registada", async () => { await deletePurchase(created.id); await deleteProduct(productId); });
       }
       setDialogOpen(false);
       setEditingPurchase(null);
@@ -267,6 +273,14 @@ export default function Purchases() {
     if (status === "returning") return "Em devolução";
     if (status === "excluded") return "Fora do stock";
     return status === "active" ? "Ativo" : "Vendido";
+  };
+  const removePurchase = async (purchase: Purchase) => {
+    const linkedSales = sales.filter(sale => sale.purchaseId === purchase.id);
+    await deletePurchase(purchase.id);
+    undoToast("Compra removida", async () => {
+      await restorePurchase(purchase);
+      for (const sale of linkedSales) await restoreSale(sale);
+    });
   };
   const openSale = (purchase: Purchase) => {
     navigate(`/admin/vendas?produto=${encodeURIComponent(purchase.productId)}&compra=${encodeURIComponent(purchase.id)}`);
@@ -357,6 +371,7 @@ export default function Purchases() {
         const rows = parseCSV(text);
         let count = 0;
         let skipped = 0;
+        const created: { purchaseId: string; productId: string }[] = [];
         for (const row of rows) {
           const name = String(row["Produto"] || row["Nome"] || row["produto"] || row["nome"] || "").trim();
           const qty = Number(row["Quantidade"] || row["quantidade"] || row["Qtd"] || row["qtd"] || 1);
@@ -371,10 +386,13 @@ export default function Purchases() {
           if (!/^\d{4}-\d{2}-\d{2}/.test(dateVal)) { skipped++; continue; }
 
           const prodId = await addProduct({ name: name.slice(0, 200), category, purchasePrice: priceVal, supplier, retailPrice: 0, condition: "Verificado", warrantyMonths: 0, description: "", specifications: "", photoUrls: [] });
-          await addPurchase({ productId: prodId, quantity: qty, price: priceVal, date: dateVal });
+          const purchase = await addPurchase({ productId: prodId, quantity: qty, price: priceVal, date: dateVal });
+          created.push({ purchaseId: purchase.id, productId: prodId });
           count++;
         }
-        toast.success(`${count} registos importados${skipped > 0 ? ` (${skipped} ignorados por dados inválidos)` : ""}`);
+        undoToast(`${count} registos importados${skipped > 0 ? ` (${skipped} ignorados por dados inválidos)` : ""}`, async () => {
+          for (const item of [...created].reverse()) { await deletePurchase(item.purchaseId); await deleteProduct(item.productId); }
+        });
       } catch {
         toast.error("Erro ao ler o ficheiro");
       }
@@ -514,7 +532,7 @@ export default function Purchases() {
                 <CardContent className="space-y-3 p-4">
                   <div className="flex gap-3">
                   <div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{product?.name ?? "Produto removido"}</h2><p className="mt-0.5 text-sm text-muted-foreground">{product?.category ?? "Sem categoria"} · Compra: {formatDate(p.date)}</p></div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} aria-label={`Editar ${product?.name ?? "compra"}`}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }} aria-label={`Remover ${product?.name ?? "compra"}`}><Trash2 className="h-4 w-4" /></Button></div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} aria-label={`Editar ${product?.name ?? "compra"}`}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => void removePurchase(p)} aria-label={`Remover ${product?.name ?? "compra"}`}><Trash2 className="h-4 w-4" /></Button></div>
                   </div>
                   <div className="flex items-end justify-between border-t pt-3"><div><p className="text-xs text-muted-foreground">Custo de compra</p><p className="font-semibold">{fmt(p.price)}</p></div><div className="text-right text-xs text-muted-foreground"><p>Data de compra: {formatDate(p.date)}</p>{p.pickupAvailableDate && <p>Chegada ao ponto de recolha: {formatDate(p.pickupAvailableDate)}</p>}{(p.pickupDeadline || p.pickupAvailableDate) && <p>Data Limite levantamento: {formatDate(p.pickupDeadline || collectionDeadline(p.pickupAvailableDate))}</p>}{p.deliveryDate && <p>Data de Entrega: {formatDate(p.deliveryDate)}</p>}{p.collectionDate && <p>Data Levantamento: {formatDate(p.collectionDate)}</p>}</div></div>
                   <p className="border-t pt-3 text-xs text-muted-foreground">Encomenda: {orderStatusLabel(p.orderStatus)}</p>
@@ -540,7 +558,7 @@ export default function Purchases() {
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)} aria-label={`Editar ${getProduct(p.productId)?.name ?? "compra"}`}>
                     <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => void removePurchase(p)}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
                 </div>
@@ -596,7 +614,7 @@ export default function Purchases() {
                       <Button variant="ghost" size="icon" onClick={() => openEdit(p)} aria-label={`Editar ${getProduct(p.productId)?.name ?? "compra"}`}>
                         <Pencil className="h-4 w-4 text-muted-foreground" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={async () => { await deletePurchase(p.id); toast.success("Compra removida"); }}>
+                      <Button variant="ghost" size="icon" onClick={() => void removePurchase(p)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>

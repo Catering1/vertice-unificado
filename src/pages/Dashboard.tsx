@@ -5,7 +5,6 @@ import { categoryData, computeDashboard, money } from "@/lib/dashboardMetrics";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, Clock, Calculator, RefreshCw, AlertTriangle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { planDateRepairs } from "@/lib/repairDates";
 import { toast } from "sonner";
 import KpiCard from "@/components/dashboard/KpiCard";
@@ -15,6 +14,7 @@ import ProfitByProductChart from "@/components/dashboard/ProfitByProductChart";
 import PurchasesVsSalesChart from "@/components/dashboard/PurchasesVsSalesChart";
 import AnalyzeDialog from "@/components/dashboard/AnalyzeDialog";
 import CexPortugalPrices from "@/components/dashboard/CexPortugalPrices";
+import { undoToast } from "@/lib/undoToast";
 
 function derivedPickupDeadline(pickupAvailableDate: string) {
   const [year, month, day] = pickupAvailableDate.split("-").map(Number);
@@ -55,16 +55,21 @@ export default function Dashboard() {
     if (repairing) return;
     setRepairing(true);
     try {
+      const previousPurchases = dateRepairs.purchaseUpdates.flatMap(update => store.purchases.find(item => item.id === update.id) ?? []);
+      const previousSales = dateRepairs.saleUpdates.flatMap(update => store.sales.find(item => item.id === update.id) ?? []);
       for (const update of dateRepairs.purchaseUpdates) {
-        const { data, error } = await supabase.from("purchases").update({ date: update.date }).eq("id", update.id).select("id,date").single();
-        if (error || data?.date !== update.date) throw error ?? new Error("Compra não atualizada");
+        const purchase = store.purchases.find(item => item.id === update.id);
+        if (purchase) await store.updatePurchase({ ...purchase, date: update.date });
       }
       for (const update of dateRepairs.saleUpdates) {
-        const { data, error } = await supabase.from("sales").update({ date: update.date }).eq("id", update.id).select("id,date").single();
-        if (error || data?.date !== update.date) throw error ?? new Error("Venda não atualizada");
+        const sale = store.sales.find(item => item.id === update.id);
+        if (sale) await store.updateSale({ ...sale, date: update.date });
       }
-      toast.success(`${dateRepairs.purchaseUpdates.length} compras e ${dateRepairs.saleUpdates.length} vendas corrigidas`);
-      window.location.reload();
+      undoToast(`${dateRepairs.purchaseUpdates.length} compras e ${dateRepairs.saleUpdates.length} vendas corrigidas`, async () => {
+        for (const purchase of previousPurchases) await store.updatePurchase(purchase);
+        for (const sale of previousSales) await store.updateSale(sale);
+      });
+      setRepairing(false);
     } catch {
       toast.error("Não foi possível concluir a correção. Tente novamente; as datas já corrigidas não serão alteradas.");
       setRepairing(false);
@@ -142,7 +147,7 @@ export default function Dashboard() {
           <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{activeCategory === "all" ? "Todas as categorias" : activeCategory}</h1>
           <p className="mt-2 text-sm text-muted-foreground">Receitas, resultados e inventário · todo o histórico</p>
         </div>
-        <AnalyzeDialog key={activeCategory} dashboardData={analyzeData} />
+        <div className="flex flex-wrap gap-2"><Button asChild variant="outline"><a href="#precos-cex">Ver preços CeX</a></Button><AnalyzeDialog key={activeCategory} dashboardData={analyzeData} /></div>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-2" role="group" aria-label="Filtrar por categoria">
         {["all",...categories].map(c => <Button key={c} size="sm" className="min-h-10 shrink-0 rounded-full px-4 text-sm font-medium" aria-pressed={activeCategory===c} variant={activeCategory===c ? "default" : "outline"} onClick={() => setCategory(c)}>{c === "all" ? "Todas as categorias" : c}</Button>)}

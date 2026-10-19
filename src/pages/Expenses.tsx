@@ -11,12 +11,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { undoToast } from "@/lib/undoToast";
 import { useSearchParams } from "react-router-dom";
 
 const today = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Lisbon", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
 export default function Expenses() {
-  const { expenses, categories, addExpense, updateExpense, deleteExpense, loading, error } = useStore();
+  const { expenses, categories, addExpense, updateExpense, deleteExpense, restoreExpense, loading, error } = useStore();
   const [searchParams] = useSearchParams();
   const detailCategory = searchParams.get("categoria");
   const [search, setSearch] = useState("");
@@ -64,12 +65,14 @@ export default function Expenses() {
     try {
       const fields = { description: description.trim(), category, amount: value, date };
       if (editing) {
+        const previous = { ...editing };
         await updateExpense({ ...fields, id: editing.id });
+        undoToast("Despesa atualizada", () => updateExpense(previous));
       } else {
-        await addExpense(fields);
+        const created = await addExpense(fields);
+        undoToast("Despesa registada", () => deleteExpense(created.id));
       }
       setDialogOpen(false);
-      toast.success(editing ? "Despesa atualizada" : "Despesa registada");
     } catch {
       toast.error(editing ? "Não foi possível atualizar a despesa." : "Não foi possível registar a despesa.");
     } finally {
@@ -81,9 +84,10 @@ export default function Expenses() {
     if (!deleting) return;
     setSaving(true);
     try {
-      await deleteExpense(deleting.id);
+      const removed = { ...deleting };
+      await deleteExpense(removed.id);
       setDeleting(null);
-      toast.success("Despesa eliminada");
+      undoToast("Despesa eliminada", () => restoreExpense(removed));
     } catch {
       toast.error("Não foi possível eliminar a despesa.");
     } finally {

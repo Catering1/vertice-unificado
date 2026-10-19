@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Product, Purchase, Sale, Expense, VintedOrderStatus } from "@/types";
 import { z } from "zod";
 import { toast } from "sonner";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Json, Tables } from "@/integrations/supabase/types";
 import { isPurchaseStockEligible } from "@/lib/inventory";
 
 const ProductSchema = z.object({
@@ -65,15 +65,18 @@ interface StoreContextType {
   addProduct: (p: Omit<Product, "id">) => Promise<string>;
   updateProduct: (p: Product) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
-  addPurchase: (p: Omit<Purchase, "id">) => Promise<void>;
+  addPurchase: (p: Omit<Purchase, "id">) => Promise<Purchase>;
+  restorePurchase: (p: Purchase) => Promise<void>;
   updatePurchase: (p: Purchase) => Promise<void>;
   deletePurchase: (id: string) => Promise<void>;
   addSale: (s: Omit<Sale, "id" | "profit"> & { purchasePrice?: number }) => Promise<Sale>;
   updateSale: (s: Omit<Sale, "profit"> & { purchasePrice?: number }) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
-  addExpense: (expense: Omit<Expense, "id">) => Promise<void>;
+  restoreSale: (sale: Sale) => Promise<void>;
+  addExpense: (expense: Omit<Expense, "id">) => Promise<Expense>;
   updateExpense: (expense: Expense) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
+  restoreExpense: (expense: Expense) => Promise<void>;
   addCategory: (c: string) => Promise<void>;
   updateCategory: (oldName: string, newName: string) => Promise<void>;
   deleteCategory: (c: string) => Promise<void>;
@@ -170,6 +173,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       retail_price: p.retailPrice, condition: p.condition, warranty_months: p.warrantyMonths,
       description: p.description, specifications: p.specifications, photo_urls: p.photoUrls,
       inventory_use: p.inventoryUse ?? "business", store_visible: p.storeVisible ?? true,
+      source_ref: p.sourceRef ?? null, source_data: (p.sourceData ?? {}) as Json,
     }).eq("id", p.id);
     if (error) throw error;
     setProducts(prev => prev.map(x => x.id === p.id ? p : x));
@@ -196,7 +200,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       refund_received_at: validated.refundReceivedAt || null,
     }).select().single();
     if (error) throw error;
-    setPurchases(prev => [...prev, { id: data.id, productId: data.product_id, quantity: data.quantity, price: data.price == null ? null : Number(data.price), date: data.date ?? "", estimatedDeliveryDate: data.estimated_delivery_date ?? null, pickupAvailableDate: data.pickup_available_date ?? null, pickupDeadline: data.pickup_deadline ?? null, deliveryDate: data.delivery_date ?? null, collectionDate: data.collection_date ?? null, orderStatus: data.order_status as VintedOrderStatus, orderReference: data.order_reference ?? "", orderStatusNote: data.order_status_note ?? "", orderStatusUpdatedAt: data.order_status_updated_at, refundReceivedAt: data.refund_received_at }]);
+    const purchase: Purchase = { id: data.id, productId: data.product_id, quantity: data.quantity, price: data.price == null ? null : Number(data.price), date: data.date ?? "", estimatedDeliveryDate: data.estimated_delivery_date ?? null, pickupAvailableDate: data.pickup_available_date ?? null, pickupDeadline: data.pickup_deadline ?? null, deliveryDate: data.delivery_date ?? null, collectionDate: data.collection_date ?? null, orderStatus: data.order_status as VintedOrderStatus, orderReference: data.order_reference ?? "", orderStatusNote: data.order_status_note ?? "", orderStatusUpdatedAt: data.order_status_updated_at, refundReceivedAt: data.refund_received_at };
+    setPurchases(prev => [...prev, purchase]);
+    return purchase;
+  };
+
+  const restorePurchase = async (p: Purchase) => {
+    const { error } = await supabase.from("purchases").insert({ id: p.id, user_id: user!.id, product_id: p.productId, quantity: p.quantity, price: p.price, date: p.date || null, estimated_delivery_date: p.estimatedDeliveryDate || null, pickup_available_date: p.pickupAvailableDate || null, pickup_deadline: p.pickupDeadline || null, delivery_date: p.deliveryDate || null, collection_date: p.collectionDate || null, order_status: p.orderStatus ?? "not_tracked", order_reference: p.orderReference || null, order_status_note: p.orderStatusNote || null, order_status_updated_at: p.orderStatusUpdatedAt || null, refund_received_at: p.refundReceivedAt || null });
+    if (error) throw error;
+    setPurchases(prev => prev.some(item => item.id === p.id) ? prev : [...prev, p]);
   };
 
   const updatePurchase = async (p: Purchase) => {
@@ -243,6 +255,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.from("purchases").delete().eq("id", id);
     if (error) throw error;
     setPurchases(prev => prev.filter(x => x.id !== id));
+    setSales(prev => prev.filter(x => x.purchaseId !== id));
   };
 
   const addSale = async (s: Omit<Sale, "id" | "profit"> & { purchasePrice?: number }): Promise<Sale> => {
@@ -292,6 +305,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setSales(prev => prev.filter(x => x.id !== id));
   };
 
+  const restoreSale = async (sale: Sale) => {
+    const { error } = await supabase.from("sales").insert({ id: sale.id, user_id: user!.id, product_id: sale.productId, purchase_id: sale.purchaseId, quantity: sale.quantity, sale_price: sale.salePrice, profit: sale.profit, date: sale.date || null });
+    if (error) throw error;
+    setSales(prev => prev.some(item => item.id === sale.id) ? prev : [...prev, sale]);
+  };
+
   const addExpense = async (expense: Omit<Expense, "id">) => {
     const validated = ExpenseSchema.parse(expense);
     const { data, error } = await supabase.from("expenses").insert({
@@ -299,7 +318,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       amount: validated.amount, date: validated.date,
     }).select("id,category,description,amount,date").single();
     if (error) throw error;
-    setExpenses(previous => [...previous, { id: data.id, category: data.category, description: data.description, amount: Number(data.amount), date: data.date ?? "" }]);
+    const created: Expense = { id: data.id, category: data.category, description: data.description, amount: Number(data.amount), date: data.date ?? "" };
+    setExpenses(previous => [...previous, created]);
+    return created;
   };
 
   const updateExpense = async (expense: Expense) => {
@@ -318,6 +339,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.from("expenses").delete().eq("id", id).eq("user_id", user!.id).select("id").single();
     if (error) throw error;
     setExpenses(previous => previous.filter(item => item.id !== id));
+  };
+
+  const restoreExpense = async (expense: Expense) => {
+    const { error } = await supabase.from("expenses").insert({ id: expense.id, user_id: user!.id, category: expense.category, description: expense.description, amount: expense.amount, date: expense.date || null });
+    if (error) throw error;
+    setExpenses(previous => previous.some(item => item.id === expense.id) ? previous : [...previous, expense]);
   };
 
   const addCategory = async (c: string) => {
@@ -352,8 +379,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     <StoreContext.Provider value={{
       products, purchases, sales, expenses, categories, loading, error,
       addProduct, updateProduct, deleteProduct,
-      addPurchase, updatePurchase, deletePurchase,
-      addSale, updateSale, deleteSale, addExpense, updateExpense, deleteExpense,
+      addPurchase, restorePurchase, updatePurchase, deletePurchase,
+      addSale, updateSale, deleteSale, restoreSale, addExpense, updateExpense, deleteExpense, restoreExpense,
       addCategory, updateCategory, deleteCategory, getProduct,
     }}>
       {children}

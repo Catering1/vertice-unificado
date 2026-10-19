@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Download, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { exportDashboardXlsx } from "@/lib/exportDashboard";
+import { undoToast } from "@/lib/undoToast";
 
 function downloadCSV(filename: string, headers: string[], rows: string[][]) {
   const csv = [headers.join(";"), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";"))].join("\n");
@@ -28,8 +29,9 @@ export default function SettingsPage() {
   const addCat = async () => {
     if (!newCat.trim()) return;
     await addCategory(newCat.trim());
+    const added = newCat.trim();
     setNewCat("");
-    toast.success("Categoria adicionada");
+    undoToast("Categoria adicionada", () => deleteCategory(added));
   };
 
   const startEdit = (cat: string) => {
@@ -40,8 +42,10 @@ export default function SettingsPage() {
   const saveEdit = async () => {
     if (!editingCat || !editValue.trim()) return;
     if (editValue.trim() !== editingCat) {
-      await updateCategory(editingCat, editValue.trim());
-      toast.success("Categoria renomeada");
+      const previous = editingCat;
+      const renamed = editValue.trim();
+      await updateCategory(previous, renamed);
+      undoToast("Categoria renomeada", () => updateCategory(renamed, previous));
     }
     setEditingCat(null);
   };
@@ -119,7 +123,7 @@ export default function SettingsPage() {
                         <Button aria-label={`Editar categoria ${c}`} variant="ghost" size="icon" onClick={() => startEdit(c)}>
                           <Pencil className="h-4 w-4 text-muted-foreground" />
                         </Button>
-                        <Button aria-label={`Eliminar categoria ${c}`} variant="ghost" size="icon" onClick={async () => { await deleteCategory(c); toast.success("Categoria removida"); }}>
+                        <Button aria-label={`Eliminar categoria ${c}`} variant="ghost" size="icon" onClick={async () => { await deleteCategory(c); undoToast("Categoria removida", () => addCategory(c)); }}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>

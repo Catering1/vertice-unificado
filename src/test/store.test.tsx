@@ -123,6 +123,17 @@ describe("dashboard persistence and purchase identity", () => {
     await act(async () => store.deleteExpense(expense.id));
     expect(store.expenses).toHaveLength(0);
     expect(mock.rows.expenses).toHaveLength(0);
+    await act(async () => store.restoreExpense(expense));
+    expect(store.expenses[0]).toEqual(expense);
+    expect(mock.rows.expenses[0].id).toBe(expense.id);
+  });
+  it("restores a deleted purchase with its original identity and private fields", async () => {
+    const purchase = { ...store.purchases[1] };
+    await act(async () => store.deletePurchase(purchase.id));
+    expect(store.purchases.some(item => item.id === purchase.id)).toBe(false);
+    await act(async () => store.restorePurchase(purchase));
+    expect(store.purchases.find(item => item.id === purchase.id)).toEqual(purchase);
+    expect(mock.rows.purchases.find(row => row.id === purchase.id)?.order_reference).toBe("PRIVATE-INCOMING");
   });
   it("opens and saves a received purchase without downgrading it or showing the reference", async () => {
     await mount(true);

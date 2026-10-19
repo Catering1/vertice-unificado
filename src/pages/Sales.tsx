@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Plus, Trash2, Pencil, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, Grid2X2, List, Package } from "lucide-react";
 import { toast } from "sonner";
+import { undoToast } from "@/lib/undoToast";
 import { activeUnitsByPurchase, isPurchaseStockEligible, purchaseCommercialStatus } from "@/lib/inventory";
 import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -66,7 +67,7 @@ function MonthYearPicker({ value, onChange }: { value: string; onChange: (v: str
 }
 
 export default function Sales() {
-  const { sales, purchases, products, categories, addSale, updateSale, deleteSale, getProduct, updatePurchase } = useStore();
+  const { sales, purchases, products, categories, addSale, updateSale, deleteSale, restoreSale, getProduct, updatePurchase } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedRecord = searchParams.get("registo");
   const targetProductId = searchParams.get("produto");
@@ -200,13 +201,18 @@ export default function Sales() {
 
     setSaving(true);
     try {
+      const previousPurchase = { ...purchase };
       if (overridePrice != null && purchase.price !== overridePrice) await updatePurchase({ ...purchase, price: overridePrice });
       if (editingSale) {
+        const previousSale = { ...editingSale };
         await updateSale({ id: editingSale.id, productId, purchaseId, quantity: editingSale.quantity, salePrice: parsedSalePrice, date, purchasePrice: effectivePurchasePrice ?? undefined });
-        toast.success("Venda atualizada");
+        undoToast("Venda atualizada", async () => {
+          await updatePurchase(previousPurchase);
+          await updateSale({ ...previousSale, purchasePrice: previousSale.profit == null ? undefined : previousSale.salePrice - previousSale.profit / previousSale.quantity });
+        });
       } else {
         const sale = await addSale({ productId, purchaseId, quantity: 1, salePrice: parsedSalePrice, date, purchasePrice: effectivePurchasePrice ?? undefined });
-        toast.success(`Venda registada — Lucro: ${money(sale.profit)}`);
+        undoToast(`Venda registada — Lucro: ${money(sale.profit)}`, async () => { await deleteSale(sale.id); await updatePurchase(previousPurchase); });
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível guardar a venda.");
@@ -230,6 +236,10 @@ export default function Sales() {
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return <ArrowUpDown className="ml-1 h-3.5 w-3.5 text-muted-foreground/50" />;
     return sortDir === "asc" ? <ArrowUp className="ml-1 h-3.5 w-3.5" /> : <ArrowDown className="ml-1 h-3.5 w-3.5" />;
+  };
+  const removeSale = async (sale: Sale) => {
+    await deleteSale(sale.id);
+    undoToast("Venda removida", () => restoreSale(sale));
   };
 
   const filtered = useMemo(() => {
@@ -389,7 +399,7 @@ export default function Sales() {
             <div className="aspect-[16/10] bg-secondary">{photoUrl ? <img src={photoUrl} alt={product?.name ?? "Produto"} className="h-full w-full object-cover" /> : <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground"><Package className="h-9 w-9" /><span className="text-sm">Sem fotografia</span></div>}</div>
             <CardContent className="space-y-3 p-4"><div><h2 className="font-semibold">{product?.name ?? "Produto removido"}</h2><p className="text-sm text-muted-foreground">{product?.category} · {formatDate(sale.date)}</p></div>
               <div className="grid grid-cols-3 gap-2 border-t pt-3 text-sm"><div><p className="text-xs text-muted-foreground">Venda</p><p className="font-semibold">{fmt(sale.salePrice)}</p></div><div><p className="text-xs text-muted-foreground">Lucro</p><p className="font-semibold">{fmt(sale.profit)}</p></div><div><p className="text-xs text-muted-foreground">Margem</p><p className="font-semibold">{margin == null ? "Por confirmar" : `${margin.toFixed(1)}%`}</p></div></div>
-              <div className="flex justify-end gap-1"><Button variant="ghost" size="icon" aria-label={`Editar venda de ${product?.name ?? "produto"}`} onClick={() => openEdit(sale)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" aria-label={`Remover venda de ${product?.name ?? "produto"}`} onClick={async () => { await deleteSale(sale.id); toast.success("Venda removida"); }}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
+              <div className="flex justify-end gap-1"><Button variant="ghost" size="icon" aria-label={`Editar venda de ${product?.name ?? "produto"}`} onClick={() => openEdit(sale)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" aria-label={`Remover venda de ${product?.name ?? "produto"}`} onClick={() => void removeSale(sale)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div>
             </CardContent>
           </Card>;
         })}
@@ -410,7 +420,7 @@ export default function Sales() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(s)}>
                       <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={async () => { await deleteSale(s.id); toast.success("Venda removida"); }}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => void removeSale(s)}>
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </div>
@@ -476,7 +486,7 @@ export default function Sales() {
                         <Button variant="ghost" size="icon" onClick={() => openEdit(s)}>
                           <Pencil className="h-4 w-4 text-muted-foreground" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={async () => { await deleteSale(s.id); toast.success("Venda removida"); }}>
+                        <Button variant="ghost" size="icon" onClick={() => void removeSale(s)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>

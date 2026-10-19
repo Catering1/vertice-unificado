@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { undoToast } from "@/lib/undoToast";
 
 const BUCKET = "product-listing-photos";
 const MAX_PHOTOS = 10;
@@ -94,6 +95,7 @@ export default function ProductListingPhotos({ productId, productName }: { produ
     }
     setUploading(true);
     let uploaded = 0;
+    const uploadedPaths: string[] = [];
     const storage = supabase.storage.from(BUCKET);
     for (const file of files) {
       try {
@@ -107,6 +109,7 @@ export default function ProductListingPhotos({ productId, productName }: { produ
         const { error: uploadError } = await storage.upload(path, optimized, { contentType: "image/jpeg", cacheControl: "31536000", upsert: false });
         if (uploadError) throw uploadError;
         uploaded += 1;
+        uploadedPaths.push(path);
       } catch (uploadError) {
         const message = uploadError instanceof Error ? uploadError.message : "Não foi possível carregar uma das fotografias.";
         toast.error(`${file.name}: ${message}`);
@@ -114,19 +117,30 @@ export default function ProductListingPhotos({ productId, productName }: { produ
     }
     if (inputRef.current) inputRef.current.value = "";
     await refresh();
-    if (uploaded > 0) toast.success(`${uploaded} ${uploaded === 1 ? "fotografia guardada" : "fotografias guardadas"} para este produto.`);
+    if (uploaded > 0) undoToast(`${uploaded} ${uploaded === 1 ? "fotografia guardada" : "fotografias guardadas"} para este produto.`, async () => {
+      const { error: removeError } = await storage.remove(uploadedPaths);
+      if (removeError) throw removeError;
+      await refresh();
+    });
     setUploading(false);
   }
 
   async function deletePhoto(photo: ListingPhoto) {
     if (!window.confirm("Queres eliminar esta fotografia guardada para anúncios?")) return;
-    const { error: removeError } = await supabase.storage.from(BUCKET).remove([photo.path]);
+    const storage = supabase.storage.from(BUCKET);
+    const { data: backup, error: downloadError } = await storage.download(photo.path);
+    if (downloadError || !backup) { toast.error("Não foi possível preparar a anulação da fotografia."); return; }
+    const { error: removeError } = await storage.remove([photo.path]);
     if (removeError) {
       toast.error("Não foi possível eliminar a fotografia.");
       return;
     }
     await refresh();
-    toast.success("Fotografia eliminada.");
+    undoToast("Fotografia eliminada.", async () => {
+      const { error: restoreError } = await storage.upload(photo.path, backup, { contentType: backup.type || "image/jpeg", cacheControl: "31536000", upsert: false });
+      if (restoreError) throw restoreError;
+      await refresh();
+    });
   }
 
   return (
