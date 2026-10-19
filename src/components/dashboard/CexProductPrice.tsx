@@ -73,7 +73,7 @@ export default function CexProductPrice({ product }: { product: Product }) {
     <div><Label htmlFor="cex-box-id">Referência CeX (opcional)</Label><Input id="cex-box-id" value={boxId} onChange={event => setBoxId(event.target.value)} placeholder="Código do artigo CeX" maxLength={80} /></div>
     <div className="flex flex-wrap items-center gap-2">
       <Button type="button" size="sm" onClick={() => void save()} disabled={saving}>{saving ? "A guardar…" : "Guardar preço CeX"}</Button>
-      <Button asChild type="button" size="sm" variant="outline"><a href={cexSearchUrl(boxId.trim() || product.name)} target="_blank" rel="noreferrer">Consultar CeXDB</a></Button>
+      <Button asChild type="button" size="sm" variant="outline"><a href={cexSearchUrl(boxId.trim() || product.name)} target="_blank" rel="noreferrer">Consultar CeX Portugal</a></Button>
     </div>
     {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
     {current.checkedAt && <p className="text-xs text-muted-foreground">Registado em {new Date(current.checkedAt).toLocaleString("pt-PT")}. Confirma o valor atual na fonte.</p>}

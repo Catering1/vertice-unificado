@@ -22,5 +22,5 @@ export function cexPrice(product: Product): CexPrice {
 }
 
 export function cexSearchUrl(query: string): string {
-  return `https://pt.cexdb.com/search?q=${encodeURIComponent(query)}`;
+  return `https://pt.webuy.com/search/?stext=${encodeURIComponent(query)}`;
 }
