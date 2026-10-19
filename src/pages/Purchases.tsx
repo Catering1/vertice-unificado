@@ -243,7 +243,7 @@ export default function Purchases() {
       let productId: string;
       if (existingProd) {
         productId = existingProd.id;
-        await updateProduct({...existingProd,name:productName.trim(),category:productCategory,supplier:productSupplier,purchasePrice:purchases.filter(p => p.productId === existingProd.id).length > 1 ? existingProd.purchasePrice : priceParsed,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,inventoryUse});
+        await updateProduct({...existingProd,name:productName.trim(),category:productCategory,supplier:productSupplier,purchasePrice:purchases.filter(p => p.productId === existingProd.id).length > 1 ? existingProd.purchasePrice : priceParsed,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,inventoryUse,storeVisible:productCategory !== "Livros" && inventoryUse === "business"});
       } else {
         productId = await addProduct({name:productName.trim(),category:productCategory,purchasePrice:priceParsed,supplier:productSupplier,retailPrice:retailPriceParsed,condition,warrantyMonths:warrantyMonthsParsed,description,specifications,photoUrls:[],inventoryUse,storeVisible:productCategory !== "Livros" && inventoryUse !== "personal"});
       }
@@ -460,6 +460,17 @@ export default function Purchases() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label>Finalidade</Label>
+                <Select value={inventoryUse} onValueChange={value => setInventoryUse(value as "business" | "personal")}>
+                  <SelectTrigger aria-label="Finalidade do produto"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="business">Comercial</SelectItem>
+                    <SelectItem value="personal">Uso pessoal</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">Se não houver indicação em contrário, o produto é considerado comercial. Podes alterar esta opção a qualquer momento.</p>
               </div>
               <div><Label>Preço de Compra *</Label><Input type="number" min={0} step={0.01} inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} /></div>
               <div>

@@ -141,6 +141,7 @@ describe("dashboard persistence and purchase identity", () => {
     await act(async () => button.click());
     const dialog = document.querySelector('[role="dialog"]')!;
     expect(dialog.querySelector('[aria-label="Estado de receção"]')?.textContent).toBe("Recebido");
+    expect(dialog.querySelector('[aria-label="Finalidade do produto"]')?.textContent).toBe("Comercial");
     expect(document.body.textContent).not.toContain("PRIVATE-REFERENCE");
     const save = Array.from(dialog.querySelectorAll("button")).find(button => button.textContent === "Guardar compra")!;
     await act(async () => save.click());
