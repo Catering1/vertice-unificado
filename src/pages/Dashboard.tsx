@@ -116,7 +116,7 @@ export default function Dashboard() {
   ];
   const topProducts = d.topProducts.map(([name,qty]) => ({name,qty}));
   const profitByProduct = d.profitByProduct.map(([name,profit]) => ({name,profit}));
-  const {profitOverTime,purchasesVsSales} = d;
+  const {profitOverTime,purchasesVsSales,monthly} = d;
   const pricedPurchases = data.purchases.filter(purchase => purchase.price != null);
   const pricedUnits = pricedPurchases.reduce((total, purchase) => total + purchase.quantity, 0);
   const soldUnitsWithKnownCost = data.sales.filter(sale => sale.profit != null).reduce((total, sale) => total + sale.quantity, 0);
@@ -129,6 +129,8 @@ export default function Dashboard() {
   });
   const analyzeData = {
     category: activeCategory === "all" ? "Todas as categorias" : activeCategory,
+    monthlySeries: monthly.map(m => ({mes:m.month,unidadesVendidas:m.unidadesVendidas,receita:+m.vendas.toFixed(2),lucro:+m.profit.toFixed(2),unidadesCompradas:m.unidadesCompradas,compras:+m.compras.toFixed(2)})),
+    monthlyCoverage: monthly.length ? `${monthly[0].month} a ${monthly[monthly.length-1].month} (${monthly.length} meses)` : "sem datas",
     totalPurchases:d.totalPurchases.toFixed(2), totalSales:d.totalSales.toFixed(2),totalProfit:d.totalProfit.toFixed(2),
     avgMargin:(d.avgMargin*100).toFixed(1),roiRealized:(d.roiRealized*100).toFixed(1),
     stockValue:d.stockValue.toFixed(2),exposureValue:d.exposureValue.toFixed(2),avgVelocity:d.avgVelocity.toFixed(0),avgProfitPerSale:d.avgProfitPerSale.toFixed(2),
