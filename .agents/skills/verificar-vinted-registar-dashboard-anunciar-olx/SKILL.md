@@ -5,7 +5,7 @@ description: Revê compras e pedidos na conta Vinted, mantém os registos e esta
 
 # Rotina Vinted → dashboard Vértice → OLX
 
-Executa esta rotina quando solicitado ou pela automação diária. Trabalha apenas no repositório `Catering1/vertice-unificado` e no respetivo dashboard. Antes de começar, lê `vertice-unificado/MEMORY.md` (quando estiver na raiz do projeto local, o caminho relativo é `MEMORY.md`) e verifica a data/resultado da última execução para evitar duplicados.
+Executa esta rotina quando solicitado ou pela automação diária. Trabalha apenas no repositório `Catering1/vertice-unificado` e no respetivo dashboard. Antes de começar, lê `vertice-unificado/MEMORY.md` (quando estiver na raiz do projeto local, o caminho relativo é `MEMORY.md`) e `docs/estado-operacional.md` (factos pontuais, a confirmar no dashboard) e verifica a data/resultado da última execução para evitar duplicados.
 
 ## Contrato de conclusão da execução
 

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, Clock, Calculator, RefreshCw, AlertTriangle } from "lucide-react";
 import { planDateRepairs } from "@/lib/repairDates";
+import { STOCK_AGING_CRITICAL_DAYS, STOCK_AGING_WARNING_DAYS, stockAgingAlerts } from "@/lib/stockAging";
 import { toast } from "sonner";
 import KpiCard from "@/components/dashboard/KpiCard";
 import ProfitOverTimeChart from "@/components/dashboard/ProfitOverTimeChart";
@@ -92,6 +93,8 @@ export default function Dashboard() {
       }];
     }).sort((a, b) => a.daysRemaining - b.daysRemaining);
   }, [data]);
+  const stockAging = useMemo(() => stockAgingAlerts(data.purchases, data.sales, data.products, new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Lisbon", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())), [data]);
+  const criticalStock = stockAging.filter(alert => alert.level === "critical").length;
   const kpis = [
     {label: "Total das compras", shortLabel: "Total compras", value: fmt(d.totalPurchases), href: detailQuery("purchases", "/admin/compras"), icon: ShoppingCart, iconBg:"bg-orange-200", iconColor:"text-orange-800", valueClassName:"text-orange-800", accentClassName:"border-orange-200"},
     {label: "Unidades compradas", shortLabel: "Unid. compradas", value: String(data.purchases.reduce((total, purchase) => total + purchase.quantity, 0)), href: detailQuery("purchases", "/admin/compras"), icon: Package, iconBg:"bg-orange-200", iconColor:"text-orange-800", valueClassName:"text-orange-800", accentClassName:"border-orange-200"},
@@ -161,6 +164,12 @@ export default function Dashboard() {
         <div className="mb-3 flex items-start gap-3"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" /><div><h2 id="pickup-alerts-heading" className="font-semibold">Encomendas para levantar</h2><p className="text-sm text-amber-900">{pickupAlerts.length} {pickupAlerts.length === 1 ? "encomenda aproxima-se" : "encomendas aproximam-se"} da data limite.</p></div></div>
         <div className="divide-y divide-amber-200">
           {pickupAlerts.map(alert => <Link key={alert.id} to={`/admin/compras?registo=${encodeURIComponent(alert.id)}`} className="flex min-h-12 items-center justify-between gap-3 py-2 text-sm hover:underline"><span className="min-w-0"><strong className="block truncate">{alert.name}</strong><span className="text-xs text-amber-900">Levantar até {new Intl.DateTimeFormat("pt-PT").format(new Date(`${alert.deadline}T00:00:00`))}</span></span><span className="shrink-0 rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold">{alert.daysRemaining < 0 ? `${Math.abs(alert.daysRemaining)} d em atraso` : alert.daysRemaining === 0 ? "Termina hoje" : `${alert.daysRemaining} d restantes`}</span></Link>)}
+        </div>
+      </section>}
+      {stockAging.length > 0 && <section className={`rounded-xl border p-4 sm:p-5 ${criticalStock ? "border-red-300 bg-red-50 text-red-950" : "border-amber-300 bg-amber-50 text-amber-950"}`} aria-labelledby="stock-aging-heading">
+        <div className="mb-3 flex items-start gap-3"><Clock className={`mt-0.5 h-5 w-5 shrink-0 ${criticalStock ? "text-red-700" : "text-amber-700"}`} aria-hidden="true" /><div><h2 id="stock-aging-heading" className="font-semibold">Stock parado</h2><p className="text-sm">{stockAging.length} {stockAging.length === 1 ? "compra em stock" : "compras em stock"} há {STOCK_AGING_WARNING_DAYS}+ dias{criticalStock ? `, ${criticalStock} há ${STOCK_AGING_CRITICAL_DAYS}+ dias` : ""}. Rever o preço do anúncio.</p></div></div>
+        <div className="divide-y divide-black/10">
+          {stockAging.map(alert => <Link key={alert.purchaseId} to={`/admin/compras?registo=${encodeURIComponent(alert.purchaseId)}`} className="flex min-h-12 items-center justify-between gap-3 py-2 text-sm hover:underline"><span className="min-w-0"><strong className="block truncate">{alert.name}</strong><span className="text-xs opacity-80">{alert.cost != null ? `${fmt(alert.cost)} parados` : "Custo por confirmar"}{alert.estimated ? " · data de receção em falta (conta desde a compra)" : ""}</span></span><span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${alert.level === "critical" ? "bg-red-200" : "bg-amber-200"}`}>{alert.days} dias</span></Link>)}
         </div>
       </section>}
       {/* KPIs */}
