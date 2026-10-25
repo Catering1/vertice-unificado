@@ -139,3 +139,21 @@ describe("purchase identity and active stock value", () => {
     expect(computeDashboard([{ ...pendingRefund, refundReceivedAt: "2026-10-09T12:00:00Z" }], [], products).totalPurchases).toBe(0);
   });
 });
+
+describe("monthly series for the AI analysis", () => {
+  it("groups units, revenue and profit by month", () => {
+    const products: Product[] = [{
+      id: "p", name: "Produto", category: "Eletrónica", purchasePrice: null, supplier: "", retailPrice: 0,
+      condition: "Usado", warrantyMonths: 0, description: "", specifications: "", photoUrls: [],
+    }];
+    const purchases: Purchase[] = [{ ...purchase("not_tracked"), id: "a", productId: "p", price: 100, quantity: 2, date: "2026-02-10" }];
+    const sales: Sale[] = [
+      { id: "s1", productId: "p", purchaseId: "a", quantity: 1, salePrice: 150, profit: 50, date: "2026-02-20" },
+      { id: "s2", productId: "p", purchaseId: "a", quantity: 1, salePrice: 160, profit: 60, date: "2026-04-02" },
+    ];
+    expect(computeDashboard(purchases, sales, products).monthly).toEqual([
+      { month: "2026-02", compras: 200, vendas: 150, profit: 50, unidadesCompradas: 2, unidadesVendidas: 1 },
+      { month: "2026-04", compras: 0, vendas: 160, profit: 60, unidadesCompradas: 0, unidadesVendidas: 1 },
+    ]);
+  });
+});

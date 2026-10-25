@@ -56,18 +56,18 @@ export function computeDashboard(allPurchases: Purchase[], allSales: Sale[], all
     else if (Number.isFinite(diff)) { days += diff; datedSales++; }
   });
   const topMap = new Map<string, number>(), profitMap = new Map<string, number>();
-  const months = new Map<string, { compras: number; vendas: number; profit: number }>();
+  const months = new Map<string, { compras: number; vendas: number; profit: number; unidadesCompradas: number; unidadesVendidas: number }>();
   const monthEntry = (date: string) => {
     const key = date.slice(0, 7);
-    if (!months.has(key)) months.set(key, { compras: 0, vendas: 0, profit: 0 });
+    if (!months.has(key)) months.set(key, { compras: 0, vendas: 0, profit: 0, unidadesCompradas: 0, unidadesVendidas: 0 });
     return months.get(key)!;
   };
-  purchases.forEach(p => { if (p.date) monthEntry(p.date).compras += (p.price ?? 0) * p.quantity; });
+  purchases.forEach(p => { if (p.date) { const entry = monthEntry(p.date); entry.compras += (p.price ?? 0) * p.quantity; entry.unidadesCompradas += p.quantity; } });
   sales.forEach(s => {
     const name = byId.get(s.productId)?.name ?? "Desconhecido";
     topMap.set(name, (topMap.get(name) ?? 0) + s.quantity);
     if (s.profit != null) profitMap.set(name, (profitMap.get(name) ?? 0) + s.profit);
-    if (s.date) { const entry = monthEntry(s.date); entry.vendas += s.salePrice * s.quantity; entry.profit += s.profit ?? 0; }
+    if (s.date) { const entry = monthEntry(s.date); entry.vendas += s.salePrice * s.quantity; entry.profit += s.profit ?? 0; entry.unidadesVendidas += s.quantity; }
   });
   const sorted = [...months.keys()].sort();
   const profitOverTime: {month: string; profit: number}[] = [];
@@ -102,6 +102,7 @@ export function computeDashboard(allPurchases: Purchase[], allSales: Sale[], all
     topProducts: [...topMap.entries()].sort((a,b) => b[1]-a[1]).slice(0,5),
     profitByProduct: [...profitMap.entries()].sort((a,b) => b[1]-a[1]).slice(0,8),
     profitOverTime,
+    monthly: sorted.map(month => ({month, ...months.get(month)!})),
     purchasesVsSales: sorted.map(month => ({month, compras: months.get(month)!.compras, vendas: months.get(month)!.vendas})),
   };
 }
