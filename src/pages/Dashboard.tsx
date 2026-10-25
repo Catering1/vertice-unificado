@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { DollarSign, ShoppingCart, TrendingUp, Package, Warehouse, Percent, Clock, Calculator, RefreshCw, AlertTriangle } from "lucide-react";
 import { planDateRepairs } from "@/lib/repairDates";
+import { salesByMonthPart, salesLog } from "@/lib/salesPatterns";
 import { STOCK_AGING_CRITICAL_DAYS, STOCK_AGING_WARNING_DAYS, stockAgingAlerts } from "@/lib/stockAging";
 import { toast } from "sonner";
 import KpiCard from "@/components/dashboard/KpiCard";
@@ -130,6 +131,8 @@ export default function Dashboard() {
   const analyzeData = {
     category: activeCategory === "all" ? "Todas as categorias" : activeCategory,
     monthlySeries: monthly.map(m => ({mes:m.month,unidadesVendidas:m.unidadesVendidas,receita:+m.vendas.toFixed(2),lucro:+m.profit.toFixed(2),unidadesCompradas:m.unidadesCompradas,compras:+m.compras.toFixed(2)})),
+    salesByMonthPart: salesByMonthPart(data.sales, new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Lisbon" }).format(new Date())),
+    salesLog: salesLog(data.sales, data.products),
     monthlyCoverage: monthly.length ? `${monthly[0].month} a ${monthly[monthly.length-1].month} (${monthly.length} meses)` : "sem datas",
     totalPurchases:d.totalPurchases.toFixed(2), totalSales:d.totalSales.toFixed(2),totalProfit:d.totalProfit.toFixed(2),
     avgMargin:(d.avgMargin*100).toFixed(1),roiRealized:(d.roiRealized*100).toFixed(1),
