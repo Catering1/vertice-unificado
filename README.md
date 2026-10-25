@@ -23,7 +23,7 @@ O site e o dashboard de produção estão em `https://vertice-unificado.vercel.a
 
 ## Análise por IA (opcional)
 
-A análise do dashboard usa uma Edge Function própria e um fornecedor compatível com a API Chat Completions. Para a ativar, define `OPENAI_API_KEY` nos secrets das Edge Functions do projeto Supabase. Opcionalmente, define `AI_MODEL` ou `AI_CHAT_COMPLETIONS_URL` para selecionar outro modelo ou fornecedor compatível. Sem uma chave, o resto da aplicação continua disponível e a análise informa que ainda não foi configurada. Os dados enviados para análise são os indicadores e os produtos agregados apresentados pelo dashboard.
+A análise do dashboard usa a Edge Function `analyze-dashboard`. Para a ativar, define `GEMINI_API_KEY` nos secrets das Edge Functions do projeto Supabase (Google Gemini; modelo por defeito `gemini-3.5-flash-lite`, alterável com `GEMINI_MODEL`). Como alternativa, sem chave Gemini a função usa um fornecedor compatível com a API Chat Completions: define `OPENAI_API_KEY` (ou `AI_API_KEY`) e, opcionalmente, `AI_MODEL` ou `AI_CHAT_COMPLETIONS_URL`. A chave Gemini tem prioridade se ambas existirem. Sem nenhuma chave, o resto da aplicação continua disponível e a análise informa que ainda não foi configurada. Os dados enviados para análise são os indicadores e os produtos agregados apresentados pelo dashboard.
 
 Depois de enviar alterações para main, verifica se houve um deployment Vercel concluído e se o domínio estável serve o bundle novo. Quando a integração Git não publicar, executa `npx vercel --prod --yes` no projeto ligado e confirma os dois domínios Vercel. Um HTTP 200, por si só, não confirma a versão.
 
